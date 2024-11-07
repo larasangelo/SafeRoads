@@ -26,11 +26,12 @@ app.use(cors({ origin: '*' }));
 
 app.post('/send', (req, res) => {
   const receivedToken = req.body.fcmToken;
+  // console.log("receivedToken: ", receivedToken)
 
   const message = {
     notification: {
-      title: 'Notif',
-      body: 'This is a Test Notification',
+      title: 'Destination Set',
+      body: 'You have set a new destination!',
     },
     token: receivedToken,
   };
