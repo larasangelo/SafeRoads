@@ -5,6 +5,8 @@ import 'package:safe_roads/firebase_options.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/loading.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:safe_roads/pages/login.dart';
+import 'package:safe_roads/pages/register.dart';
 import 'package:safe_roads/pages/welcome.dart';
 
 // For Background Messaging
@@ -28,6 +30,8 @@ void main() async {
       '/': (context) => Loading(),
       '/home': (context) => const MapPage(),
       '/welcome': (context) => const WelcomePage(),
+      '/login': (context) => const LoginPage(),
+      '/register': (context) => const RegisterPage(),
     },
   ));
 }
