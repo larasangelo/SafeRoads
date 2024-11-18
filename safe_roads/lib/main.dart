@@ -4,6 +4,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:safe_roads/firebase_options.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/loading.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:safe_roads/pages/welcome.dart';
 
 // For Background Messaging
 @pragma('vm:entry-point')
@@ -21,10 +23,11 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(MaterialApp(
-    initialRoute: '/home',
+    initialRoute: '/welcome',
     routes: {
       '/': (context) => Loading(),
       '/home': (context) => const MapPage(),
+      '/welcome': (context) => const WelcomePage(),
     },
   ));
 }
