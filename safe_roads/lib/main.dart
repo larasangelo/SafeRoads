@@ -4,7 +4,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:safe_roads/firebase_options.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/loading.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:safe_roads/pages/login.dart';
 import 'package:safe_roads/pages/register.dart';
 import 'package:safe_roads/pages/welcome.dart';
