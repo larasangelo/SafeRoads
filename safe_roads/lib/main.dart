@@ -5,6 +5,7 @@ import 'package:safe_roads/firebase_options.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/loading.dart';
 import 'package:safe_roads/pages/login.dart';
+import 'package:safe_roads/pages/navigation_bar.dart';
 import 'package:safe_roads/pages/register.dart';
 import 'package:safe_roads/pages/welcome.dart';
 
@@ -24,13 +25,14 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(MaterialApp(
-    initialRoute: '/welcome',
+    initialRoute: '/navigation',
     routes: {
       '/': (context) => Loading(),
       '/home': (context) => const MapPage(),
       '/welcome': (context) => const WelcomePage(),
       '/login': (context) => const LoginPage(),
       '/register': (context) => const RegisterPage(),
+      '/navigation': (context) => const NavigationBarExample(), // Add the NavigationBarExample
     },
   ));
 }

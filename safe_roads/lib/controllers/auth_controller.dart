@@ -4,6 +4,7 @@ import '../models/auth_model.dart';
 class AuthController {
   final AuthModel _authModel = AuthModel();
 
+  // Registering a new user
   Future<void> registerUser({
     required BuildContext context,
     required String username,
@@ -20,7 +21,7 @@ class AuthController {
       _showErrorDialog(context, "Passwords do not match.");
       return;
     }
-
+    // It also gets an error if the password is less than 6 chars
     try {
       await _authModel.registerUser(
         email: email,
@@ -34,7 +35,7 @@ class AuthController {
       _showErrorDialog(context, e.toString());
     }
   }
-
+  // Login a user
   Future<void> loginUser({
     required BuildContext context,
     required String email,

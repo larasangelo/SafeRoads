@@ -2,7 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthModel {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
+  
+  // Comunication with Firebase for Register
   Future<User?> registerUser({
     required String email,
     required String password,
@@ -23,6 +24,7 @@ class AuthModel {
     }
   }
 
+  // Comunication with Firebase for Login
   Future<User?> loginUser({required String email, required String password}) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -36,6 +38,7 @@ class AuthModel {
     }
   }
 
+  // Logout
   Future<void> logout() async {
     await _auth.signOut();
   }
