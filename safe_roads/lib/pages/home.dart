@@ -89,13 +89,15 @@ void _showForegroundNotification(RemoteMessage message) {
     if (message.notification != null) {
       scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 5.0),
           content: Text("${message.notification!.title}: ${message.notification!.body}"),
+          dismissDirection: DismissDirection.none
         ),
       );
     }
   }
-// Paste the _MapPageState class here from your current code
-// Ensure that any imports required are adjusted appropriately
+
  void _setDestination() async {
     if (_latController.text.isNotEmpty && _lngController.text.isNotEmpty) {
       final double lat = double.parse(_latController.text);
