@@ -25,14 +25,14 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(MaterialApp(
-    initialRoute: '/navigation',
+    initialRoute: '/welcome',
     routes: {
       '/': (context) => Loading(),
       '/home': (context) => const MapPage(),
       '/welcome': (context) => const WelcomePage(),
       '/login': (context) => const LoginPage(),
       '/register': (context) => const RegisterPage(),
-      '/navigation': (context) => const NavigationBarExample(), // Add the NavigationBarExample
+      '/navigation': (context) => const NavigationBarExample(),
     },
   ));
 }

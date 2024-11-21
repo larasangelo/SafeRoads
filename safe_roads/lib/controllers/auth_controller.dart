@@ -50,7 +50,7 @@ class AuthController {
       await _authModel.loginUser(email: email, password: password);
 
       // Navigate to the home page after successful login
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/navigation');
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }
