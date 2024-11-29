@@ -25,7 +25,8 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(MaterialApp(
-    initialRoute: '/welcome',
+    // initialRoute: '/welcome',  //THIS IS THE RIGHT ONE
+    initialRoute: '/navigation', //FOR TESTING THE NAVIGATION
     routes: {
       '/': (context) => Loading(),
       '/home': (context) => const MapPage(),

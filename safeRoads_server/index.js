@@ -40,12 +40,15 @@ const closeDatabaseConnection = async () => {
 // Route computation function
 const getRoute = async (start, end) => {
   try {
+    console.log("inside the getRoute");
     const startNode = await pool.query(`
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${start.lon}, ${start.lat}), 4326)::geography) AS dist
       FROM ways_vertices_pgr
       ORDER BY dist ASC
       LIMIT 1;
     `);
+    // 38.902464, -9.163266
+    // 1596063
 
     const endNode = await pool.query(`
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)::geography) AS dist
@@ -54,15 +57,20 @@ const getRoute = async (start, end) => {
       LIMIT 1;
     `);
 
+    // 38.902290, -9.177862
+    // 1696467
+
     const route = await pool.query(`
-      SELECT *
+      SELECT *,
+      ST_AsGeoJSON(geom) AS geojson
       FROM pgr_dijkstra(
-        'SELECT gid AS id, source, target, cost FROM ways',
+        'SELECT gid AS id, source, target, length_m as cost FROM ways',
         ${startNode.rows[0].id}, ${endNode.rows[0].id},
         directed := false
       ) AS route
       JOIN ways ON route.edge = ways.gid;
     `);
+    
 
     return route.rows;
   } catch (err) {
@@ -70,10 +78,10 @@ const getRoute = async (start, end) => {
   }
 };
 
-// Example usage
-getRoute({ lon: -7.863333, lat: 42.336388 }, { lon: -7.77115, lat: 42.60876 })
-  .then((route) => console.log(route))
-  .catch((err) => console.error(err))
+// Example usage with Coruña to Chantada:
+// getRoute({ lon: -7.863333, lat: 42.336388 }, { lon: -7.77115, lat: 42.60876 })
+//   .then((route) => console.log(route))
+//   .catch((err) => console.error(err))
 
 // Firebase Admin initialization
 admin.initializeApp({
@@ -118,6 +126,45 @@ app.post("/send", (req, res) => {
       console.log("Error sending message:", error);
     });
 });
+
+app.post("/route", async (req, res) => {
+  try {
+    // console.log("inside the /route post");
+    const { start, end } = req.body;
+    // console.log("start", start);
+    // console.log("end", end);
+
+    const route = await getRoute(start, end);
+    if (!route) {
+      return res.status(404).json({ error: "Route not found" });
+    }
+
+    console.log("route", route);
+
+    const routePoints = route.map((row) => {
+      
+      const geojson = row.geojson; // Parse the GeoJSON string
+      console.log("geojson", geojson);
+      const coordinates = geojson.coordinates;
+      console.log("coordinates", coordinates);
+    
+      // Flatten the coordinates into lat and lon
+      return coordinates.map((coord) => ({
+        lat: coord[1],  // The second element is latitude
+        lon: coord[0],  // The first element is longitude
+      }));
+    }).flat(); // Use flat() to merge all the arrays into a single list of points
+    
+    // Send the response with the flattened route points
+    res.status(200).json({ route: routePoints });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 
 // Shutdown handler to ensure clean exit
 const shutdown = async () => {

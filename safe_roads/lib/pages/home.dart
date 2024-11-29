@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -15,7 +14,6 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-  String? fcmToken;
   final MapController _mapController = MapController();
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
@@ -30,110 +28,83 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _requestLocationPermission() async {
-  // Request location permissions first
-  Location location = Location();
+    Location location = Location();
 
-  bool serviceEnabled = await location.serviceEnabled();
-  if (!serviceEnabled) {
-    serviceEnabled = await location.requestService();
-    if (!serviceEnabled) return;
+    bool serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) return;
+    }
+
+    PermissionStatus permissionGranted = await location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) return;
+    }
+
+    _currentLocation = await location.getLocation();
+    setState(() {
+      if (_currentLocation != null) {
+        _mapController.move(
+          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          // LatLng(42.336388, -7.863333), // Test with coordinates of Coruña
+          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          13.0,
+        );
+      }
+    });
   }
 
-  PermissionStatus permissionGranted = await location.hasPermission();
-  if (permissionGranted == PermissionStatus.denied) {
-    permissionGranted = await location.requestPermission();
-    if (permissionGranted != PermissionStatus.granted) return;
-  }
-
-  // Fetch location if permission is granted
-  _currentLocation = await location.getLocation();
-  setState(() {
-    if (_currentLocation != null) {
-      _routePoints = [
-        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
-      ];
-      _mapController.move(
-        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-        13.0,
+  Future<void> _fetchRoute(LatLng start, LatLng end) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.1.82:3000/route'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "start": {"lat": start.latitude, "lon": start.longitude},
+          "end": {"lat": end.latitude, "lon": end.longitude},
+        }),
       );
-    }
-  });
 
-  // Setup Firebase messaging only after requesting location permissions
-  await _setupFirebaseMessaging();
-}
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<LatLng> points = (data['route'] as List).map((point) {
+          return LatLng(point['lat'], point['lon']);
+        }).toList();
 
-Future<void> _setupFirebaseMessaging() async {
-    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+        setState(() {
+          _routePoints = points;
+        });
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print("Notification permission granted");
-
-      fcmToken = await FirebaseMessaging.instance.getToken();
-      print("FCM Token: $fcmToken");
-
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print("Foreground message received: ${message.notification?.title}");
-        _showForegroundNotification(message);
-      });
-    } else {
-      print("Notification permission denied");
-    }
-}
-
-void _showForegroundNotification(RemoteMessage message) {
-    if (message.notification != null) {
-      scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: 5.0),
-          content: Text("${message.notification!.title}: ${message.notification!.body}"),
-          dismissDirection: DismissDirection.none
-        ),
-      );
+        if (points.isNotEmpty) {
+          _mapController.move(points.first, 13.0);
+        }
+      } else {
+        throw Exception("Failed to fetch route: ${response.body}");
+      }
+    } catch (e) {
+      print("Error fetching route: $e");
     }
   }
 
- void _setDestination() async {
+  void _setDestination() async {
     if (_latController.text.isNotEmpty && _lngController.text.isNotEmpty) {
       final double lat = double.parse(_latController.text);
       final double lng = double.parse(_lngController.text);
 
+      LatLng destination = LatLng(lat, lng);
       setState(() {
-        _destinationLocation = LatLng(lat, lng);
-        _routePoints = [
-          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          _destinationLocation!,
-        ];
+        _destinationLocation = destination;
       });
-      _mapController.move(_destinationLocation!, 13.0);
 
-      // Send push notification
-      if (fcmToken != null) {
-        await _sendPushNotification(fcmToken!);
+      if (_currentLocation != null) {
+        await _fetchRoute(
+          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          // LatLng(42.336388, -7.863333), // Test with coordinates of Coruña
+          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          destination,
+        );
       }
-    }
-  }
-
-  Future<void> _sendPushNotification(String fcmToken) async {
-    const serverUrl = 'http://192.168.1.82:3000/send'; 
-    try {
-      final response = await http.post(
-        Uri.parse(serverUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"fcmToken": fcmToken}),
-      );
-      if (response.statusCode == 200) {
-        print("Notification sent successfully");
-      } else {
-        print("Failed to send notification: ${response.body}");
-      }
-    } catch (e) {
-      print("Error sending token to server: $e");
     }
   }
 
@@ -148,7 +119,7 @@ void _showForegroundNotification(RemoteMessage message) {
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: LatLng(0, 0), // Placeholder; updated when location is fetched
+                initialCenter: LatLng(0, 0),
                 initialZoom: 13.0,
               ),
               children: [
@@ -160,7 +131,8 @@ void _showForegroundNotification(RemoteMessage message) {
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -174,7 +146,7 @@ void _showForegroundNotification(RemoteMessage message) {
                       ),
                     ],
                   ),
-                if (_routePoints.length == 2)
+                if (_routePoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
                       Polyline(
