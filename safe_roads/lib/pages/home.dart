@@ -71,13 +71,16 @@ class _MapPageState extends State<MapPage> {
         List<LatLng> points = (data['route'] as List).map((point) {
           return LatLng(point['lat'], point['lon']);
         }).toList();
+        print("points:  $points ");
 
         setState(() {
           _routePoints = points;
         });
 
         if (points.isNotEmpty) {
-          _mapController.move(points.first, 13.0);
+          // Calculate bounds and adjust map view
+          LatLngBounds bounds = _calculateBounds(points);
+          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: EdgeInsets.all(20))); // Padding for better visibility
         }
       } else {
         throw Exception("Failed to fetch route: ${response.body}");
@@ -85,6 +88,23 @@ class _MapPageState extends State<MapPage> {
     } catch (e) {
       print("Error fetching route: $e");
     }
+  }
+
+
+  LatLngBounds _calculateBounds(List<LatLng> points) {
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (LatLng point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
   }
 
   void _setDestination() async {
