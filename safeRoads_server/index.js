@@ -126,23 +126,100 @@ app.post("/send", (req, res) => {
 
 app.post("/route", async (req, res) => {
   try {
-      const { start, end } = req.body;
-      const route = await getRoute(start, end);
-      if (!route) {
-          return res.status(404).json({ error: "Route not found" });
+    const { start, end } = req.body;
+    const route = await getRoute(start, end);
+    if (!route) {
+      return res.status(404).json({ error: "Route not found" });
+    }
+
+    let routePoints = [];
+
+    route.forEach((row, index) => {
+      const geojson = JSON.parse(row.geojson); // Parse the GeoJSON
+      if (geojson.type === "LineString") {
+        const coordinates = geojson.coordinates;
+        const firstCoord = coordinates[0];
+        const lastCoord = coordinates[coordinates.length - 1];
+
+        if (index === 0) {
+          // First set of coordinates, determine the best orientation
+          const startDistanceToFirst = calculateDistance(
+            start.lat,
+            start.lon,
+            firstCoord[1],
+            firstCoord[0]
+          );
+          const startDistanceToLast = calculateDistance(
+            start.lat,
+            start.lon,
+            lastCoord[1],
+            lastCoord[0]
+          );
+
+          if (startDistanceToLast < startDistanceToFirst) {
+            // If last coordinate is closer to start, reverse the segment
+            routePoints.push(
+              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon }))
+            );
+          } else {
+            // Otherwise, add normally
+            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon })));
+          }
+        } else {
+          // For subsequent sets of coordinates
+          const lastPointInRoute = routePoints[routePoints.length - 1];
+
+          const distanceToFirst = calculateDistance(
+            lastPointInRoute.lat,
+            lastPointInRoute.lon,
+            firstCoord[1],
+            firstCoord[0]
+          );
+          const distanceToLast = calculateDistance(
+            lastPointInRoute.lat,
+            lastPointInRoute.lon,
+            lastCoord[1],
+            lastCoord[0]
+          );
+
+          if (distanceToLast < distanceToFirst) {
+            // If the last coordinate is closer, reverse the order
+            routePoints.push(
+              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon }))
+            );
+          } else {
+            // Otherwise, add normally
+            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon })));
+          }
+        }
       }
+    });
 
-      const routePoints = route.map((row) => {
-          const geojson = JSON.parse(row.geojson); // Parse the GeoJSON
-          return geojson.coordinates.map(([lon, lat]) => ({ lat, lon })); // Extract points
-      }).flat(); // Flatten the array of points
-
-      res.status(200).json({ route: routePoints });
+    console.log("routePoints:", routePoints);
+    res.status(200).json({ route: routePoints });
   } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Internal server error" });
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// Helper function to calculate distance between two coordinates
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Earth's radius in meters
+  const rad = (deg) => (deg * Math.PI) / 180;
+  const φ1 = rad(lat1);
+  const φ2 = rad(lat2);
+  const Δφ = rad(lat2 - lat1);
+  const Δλ = rad(lon2 - lon1);
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distance in meters
+}
+
 
 // Shutdown handler to ensure clean exit
 const shutdown = async () => {
