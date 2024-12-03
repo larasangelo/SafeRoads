@@ -221,6 +221,36 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 
+app.post("/geocode", async (req, res) => {
+  const { address } = req.body;
+  console.log("address", address);
+  if (!address) {
+    return res.status(400).json({ error: "Address is required" });
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json`
+    );
+    if (response.ok) {
+      const data = await response.json();
+      if (data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        return res.status(200).json({ lat, lon });
+      } else {
+        return res.status(404).json({ error: "Address not found" });
+      }
+    } else {
+      return res.status(response.status).json({ error: "Failed to fetch coordinates" });
+    }
+  } catch (err) {
+    console.error("Error fetching coordinates:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 // Shutdown handler to ensure clean exit
 const shutdown = async () => {
   await closeDatabaseConnection();

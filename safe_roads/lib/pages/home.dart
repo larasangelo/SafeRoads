@@ -18,8 +18,7 @@ class _MapPageState extends State<MapPage> {
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
   List<LatLng> _routePoints = [];
-  final TextEditingController _latController = TextEditingController();
-  final TextEditingController _lngController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
 
   @override
   void initState() {
@@ -58,7 +57,8 @@ class _MapPageState extends State<MapPage> {
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/route'),
+        // Uri.parse('http://192.168.1.82:3000/route'),
+        Uri.parse('http://192.168.56.1:3000/route'), // Replace with your backend URL
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -107,23 +107,70 @@ class _MapPageState extends State<MapPage> {
     return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
   }
 
-  void _setDestination() async {
-    if (_latController.text.isNotEmpty && _lngController.text.isNotEmpty) {
-      final double lat = double.parse(_latController.text);
-      final double lng = double.parse(_lngController.text);
+    Future<LatLng?> _getCoordinatesFromAddress(String address) async {
+    try {
+      // print("inside the _getCoodinates");
+      final response = await http.post(
+        // Uri.parse('http://192.168.1.82:3000/geocode'), // Replace with your backend URL
+        Uri.parse('http://192.168.56.1:3000/geocode'), // Replace with your backend URL
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"address": address}),
+      );
 
-      LatLng destination = LatLng(lat, lng);
-      setState(() {
-        _destinationLocation = destination;
-      });
-
-      if (_currentLocation != null) {
-        await _fetchRoute(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          // LatLng(42.336388, -7.863333), // Test with coordinates of Coruña
-          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-          destination,
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final lat = data['lat'];
+        final lon = data['lon'];
+        return LatLng(lat, lon);
+      } else {
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(content: Text("Error: ${jsonDecode(response.body)['error']}")),
         );
+      }
+    } catch (e) {
+      print("Error fetching coordinates: $e");
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        const SnackBar(content: Text("Failed to fetch coordinates")),
+      );
+    }
+    return null;
+  }
+
+
+  // void _setDestination() async {
+  //   if (_latController.text.isNotEmpty && _lngController.text.isNotEmpty) {
+  //     final double lat = double.parse(_latController.text);
+  //     final double lng = double.parse(_lngController.text);
+
+  //     LatLng destination = LatLng(lat, lng);
+  //     setState(() {
+  //       _destinationLocation = destination;
+  //     });
+
+  //     if (_currentLocation != null) {
+  //       await _fetchRoute(
+  //         // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+  //         // LatLng(42.336388, -7.863333), // Test with coordinates of Coruña
+  //         LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+  //         destination,
+  //       );
+  //     }
+  //   }
+  // }
+    Future<void> _setDestination() async {
+    if (_addressController.text.isNotEmpty) {
+      final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
+      if (destination != null) {
+        setState(() {
+          _destinationLocation = destination;
+        });
+
+        if (_currentLocation != null) {
+          await _fetchRoute(
+            LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+            destination,
+          );
+        }
       }
     }
   }
@@ -213,24 +260,33 @@ class _MapPageState extends State<MapPage> {
               right: 10.0,
               child: Column(
                 children: [
+                  // TextField(
+                  //   controller: _latController,
+                  //   decoration: const InputDecoration(
+                  //     labelText: "Destination Latitude",
+                  //     filled: true,
+                  //     fillColor: Colors.white,
+                  //   ),
+                  //   keyboardType: TextInputType.number,
+                  // ),
+                  // const SizedBox(height: 8.0),
+                  // TextField(
+                  //   controller: _lngController,
+                  //   decoration: const InputDecoration(
+                  //     labelText: "Destination Longitude",
+                  //     filled: true,
+                  //     fillColor: Colors.white,
+                  //   ),
+                  //   keyboardType: TextInputType.number,
+                  // ),
                   TextField(
-                    controller: _latController,
+                    controller: _addressController,
                     decoration: const InputDecoration(
-                      labelText: "Destination Latitude",
+                      labelText: "Destination",
                       filled: true,
                       fillColor: Colors.white,
                     ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 8.0),
-                  TextField(
-                    controller: _lngController,
-                    decoration: const InputDecoration(
-                      labelText: "Destination Longitude",
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    keyboardType: TextInputType.number,
+                    keyboardType: TextInputType.text,
                   ),
                   const SizedBox(height: 8.0),
                   ElevatedButton(
