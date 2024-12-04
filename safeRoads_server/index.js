@@ -40,7 +40,7 @@ const closeDatabaseConnection = async () => {
 // Route computation function
 const getRoute = async (start, end) => {
   try {
-    console.log("inside the getRoute");
+    // console.log("inside the getRoute");
     const startNode = await pool.query(`
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${start.lon}, ${start.lat}), 4326)::geography) AS dist
       FROM ways_vertices_pgr
@@ -49,7 +49,7 @@ const getRoute = async (start, end) => {
     `);
     // 38.902464, -9.163266
     // 1596063
-    console.log("startNode: ", startNode);
+    // console.log("startNode: ", startNode);
 
     const endNode = await pool.query(`
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)::geography) AS dist
@@ -60,7 +60,7 @@ const getRoute = async (start, end) => {
 
     // 38.902290, -9.177862
     // 1696467
-    console.log("endNode: ", endNode);
+    // console.log("endNode: ", endNode);
 
     const route = await pool.query(`
       SELECT *,
@@ -195,7 +195,7 @@ app.post("/route", async (req, res) => {
       }
     });
 
-    console.log("routePoints:", routePoints);
+    // console.log("routePoints:", routePoints);
     res.status(200).json({ route: routePoints });
   } catch (err) {
     console.error(err);
@@ -249,6 +249,25 @@ app.post("/geocode", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.get("/search", async (req, res) => {
+  const { query, lat, lon, limit = 5, lang = 'en' } = req.query;
+  console.log("query:", query)
+
+  if (!query) {
+    return res.status(400).json({ error: "Query parameter is required" });
+  }
+
+  try {
+    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}&limit=${limit}&lang=${lang}`);
+    const data = await response.json();
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Error fetching search results:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 
 // Shutdown handler to ensure clean exit

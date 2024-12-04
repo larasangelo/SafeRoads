@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -19,11 +20,14 @@ class _MapPageState extends State<MapPage> {
   LatLng? _destinationLocation;
   List<LatLng> _routePoints = [];
   final TextEditingController _addressController = TextEditingController();
+  List<String> _suggestions = []; // Stores autocomplete suggestions
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _requestLocationPermission();
+    _setupAutocompleteListener();
   }
 
   Future<void> _requestLocationPermission() async {
@@ -45,9 +49,7 @@ class _MapPageState extends State<MapPage> {
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          // LatLng(42.336388, -7.863333), // Test with coordinates of Coruña
-          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          LatLng(38.902464, -9.163266), // Test coordinates
           13.0,
         );
       }
@@ -57,8 +59,7 @@ class _MapPageState extends State<MapPage> {
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
     try {
       final response = await http.post(
-        // Uri.parse('http://192.168.1.82:3000/route'),
-        Uri.parse('http://192.168.56.1:3000/route'), // Replace with your backend URL
+        Uri.parse('http://192.168.56.1:3000/route'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -71,7 +72,6 @@ class _MapPageState extends State<MapPage> {
         List<LatLng> points = (data['route'] as List).map((point) {
           return LatLng(point['lat'], point['lon']);
         }).toList();
-        print("points:  $points ");
 
         setState(() {
           _routePoints = points;
@@ -90,29 +90,10 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-
-  LatLngBounds _calculateBounds(List<LatLng> points) {
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (LatLng point in points) {
-      if (point.latitude < minLat) minLat = point.latitude;
-      if (point.latitude > maxLat) maxLat = point.latitude;
-      if (point.longitude < minLng) minLng = point.longitude;
-      if (point.longitude > maxLng) maxLng = point.longitude;
-    }
-
-    return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
-  }
-
-    Future<LatLng?> _getCoordinatesFromAddress(String address) async {
+  Future<LatLng?> _getCoordinatesFromAddress(String address) async {
     try {
-      // print("inside the _getCoodinates");
       final response = await http.post(
-        // Uri.parse('http://192.168.1.82:3000/geocode'), // Replace with your backend URL
-        Uri.parse('http://192.168.56.1:3000/geocode'), // Replace with your backend URL
+        Uri.parse('http://192.168.56.1:3000/geocode'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -129,35 +110,41 @@ class _MapPageState extends State<MapPage> {
       }
     } catch (e) {
       print("Error fetching coordinates: $e");
-      scaffoldMessengerKey.currentState?.showSnackBar(
-        const SnackBar(content: Text("Failed to fetch coordinates")),
-      );
     }
     return null;
   }
 
+  void _setupAutocompleteListener() {
+    _addressController.addListener(() {
+      String query = _addressController.text;
+      if (query.length > 2) {
+        _fetchSearchSuggestions(query);
+      }
+    });
+  }
 
-  // void _setDestination() async {
-  //   if (_latController.text.isNotEmpty && _lngController.text.isNotEmpty) {
-  //     final double lat = double.parse(_latController.text);
-  //     final double lng = double.parse(_lngController.text);
+  Future<void> _fetchSearchSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://photon.komoot.io/api/?q=$query&limit=5&lang=en'),
+      );
 
-  //     LatLng destination = LatLng(lat, lng);
-  //     setState(() {
-  //       _destinationLocation = destination;
-  //     });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<String> suggestions = (data['features'] as List)
+            .map((feature) => feature['properties']['name'] as String)
+            .toList();
 
-  //     if (_currentLocation != null) {
-  //       await _fetchRoute(
-  //         // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-  //         // LatLng(42.336388, -7.863333), // Test with coordinates of Coruña
-  //         LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-  //         destination,
-  //       );
-  //     }
-  //   }
-  // }
-    Future<void> _setDestination() async {
+        setState(() {
+          _suggestions = suggestions;
+        });
+      }
+    } catch (e) {
+      print("Error fetching suggestions: $e");
+    }
+  }
+
+  Future<void> _setDestination() async {
     if (_addressController.text.isNotEmpty) {
       final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
       if (destination != null) {
@@ -167,12 +154,28 @@ class _MapPageState extends State<MapPage> {
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+            LatLng(38.902464, -9.163266),
             destination,
           );
         }
       }
     }
+  }
+
+  LatLngBounds _calculateBounds(List<LatLng> points) {
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (LatLng point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
   }
 
   @override
@@ -198,8 +201,7 @@ class _MapPageState extends State<MapPage> {
                   MarkerLayer(
                     markers: [
                       Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        point: LatLng(38.902464, -9.163266),
                         child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -218,36 +220,6 @@ class _MapPageState extends State<MapPage> {
                     polylines: [
                       Polyline(
                         points: _routePoints,
-//                         points: [                 
-//  LatLng(38.9024504,  -9.1632766 ),
-//  LatLng( 38.9022349, -9.1631267 ),
-
-//  LatLng( 38.9022349, -9.1631267 ),
-//  LatLng( 38.9021135, -9.1630423 ),
-
-//  LatLng( 38.9021135, -9.1630423 ),
-//  LatLng( 38.9019865, -9.1629071 ),
-//  LatLng( 38.9019334, -9.1628878 ),
-
-//  LatLng( 38.9017845, -9.162898 ),
-//  LatLng( 38.9019334, -9.1628878 ),
-
-//  LatLng( 38.9017845, -9.162898 ),
-//  LatLng( 38.9017386, -9.1628296 ),
-//  LatLng( 38.9016852, -9.162745 ),
-//  LatLng( 38.9016637, -9.16261 ),
-//  LatLng( 38.9016488, -9.1624625 ),
-
-
-//  LatLng( 38.9015804, -9.1622714 ),
-//  LatLng( 38.9016488, -9.1624625 ),
-
-//  LatLng( 38.9015804, -9.1622714 ),
-//  LatLng( 38.9015246, -9.1623293 ),
-//  LatLng( 38.9015246, -9.162517 ),
-
-//  ],
-                      
                         color: Colors.blue,
                       ),
                     ],
@@ -260,35 +232,34 @@ class _MapPageState extends State<MapPage> {
               right: 10.0,
               child: Column(
                 children: [
-                  // TextField(
-                  //   controller: _latController,
-                  //   decoration: const InputDecoration(
-                  //     labelText: "Destination Latitude",
-                  //     filled: true,
-                  //     fillColor: Colors.white,
-                  //   ),
-                  //   keyboardType: TextInputType.number,
-                  // ),
-                  // const SizedBox(height: 8.0),
-                  // TextField(
-                  //   controller: _lngController,
-                  //   decoration: const InputDecoration(
-                  //     labelText: "Destination Longitude",
-                  //     filled: true,
-                  //     fillColor: Colors.white,
-                  //   ),
-                  //   keyboardType: TextInputType.number,
-                  // ),
                   TextField(
                     controller: _addressController,
-                    decoration: const InputDecoration(
-                      labelText: "Destination",
+                    decoration: InputDecoration(
+                      labelText: "Enter Destination",
                       filled: true,
                       fillColor: Colors.white,
                     ),
-                    keyboardType: TextInputType.text,
                   ),
                   const SizedBox(height: 8.0),
+                  if (_suggestions.isNotEmpty)
+                    Container(
+                      color: Colors.white,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _suggestions.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            title: Text(_suggestions[index]),
+                            onTap: () {
+                              _addressController.text = _suggestions[index];
+                              setState(() {
+                                _suggestions.clear(); // Clear suggestions after selection
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
                   ElevatedButton(
                     onPressed: _setDestination,
                     child: const Text("Set Destination"),
