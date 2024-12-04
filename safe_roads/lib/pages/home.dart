@@ -18,10 +18,11 @@ class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
-  List<LatLng> _routePoints = [];
+  List<LatLng> _routePoints = []; // Stores points for the polyline
   final TextEditingController _addressController = TextEditingController();
-  List<String> _suggestions = []; // Stores autocomplete suggestions
-  Timer? _debounce;
+  List<Map<String, dynamic>> _suggestions = []; // Stores autocomplete suggestions
+  Timer? _debounce; // To avoid over calling the API
+
 
   @override
   void initState() {
@@ -49,7 +50,8 @@ class _MapPageState extends State<MapPage> {
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          LatLng(38.902464, -9.163266), // Test coordinates
+          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           13.0,
         );
       }
@@ -116,34 +118,52 @@ class _MapPageState extends State<MapPage> {
 
   void _setupAutocompleteListener() {
     _addressController.addListener(() {
-      String query = _addressController.text;
-      if (query.length > 2) {
-        _fetchSearchSuggestions(query);
-      }
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        String query = _addressController.text;
+        if (query.length > 2) {
+          _fetchSearchSuggestions(query);
+        } else {
+          setState(() {
+            _suggestions.clear(); // Clear if text is too short
+          });
+        }
+      });
     });
   }
 
-  Future<void> _fetchSearchSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse('https://photon.komoot.io/api/?q=$query&limit=5&lang=en'),
-      );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        List<String> suggestions = (data['features'] as List)
-            .map((feature) => feature['properties']['name'] as String)
-            .toList();
 
-        setState(() {
-          _suggestions = suggestions;
-        });
-      }
-    } catch (e) {
-      print("Error fetching suggestions: $e");
+Future<void> _fetchSearchSuggestions(String query) async {
+  try {
+    final response = await http.get(
+      Uri.parse('http://192.168.56.1:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      List<Map<String, dynamic>> suggestions = (data['features'] as List).map((feature) {
+        final props = feature['properties'];
+        return {
+          'name': props['name'],
+          'city': props['city'] ?? '',
+          'country': props['country'] ?? '',
+        };
+      }).toList();
+
+      setState(() {
+        _suggestions = suggestions;
+      });
+    } else {
+      print("Error fetching suggestions: ${response.reasonPhrase}");
     }
+  } catch (e) {
+    print("Error fetching suggestions: $e");
   }
+}
 
+
+  // 
   Future<void> _setDestination() async {
     if (_addressController.text.isNotEmpty) {
       final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
@@ -154,7 +174,8 @@ class _MapPageState extends State<MapPage> {
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            LatLng(38.902464, -9.163266),
+            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
             destination,
           );
         }
@@ -162,6 +183,7 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  // Function to re-adjust the zoom when a route is set
   LatLngBounds _calculateBounds(List<LatLng> points) {
     double minLat = points.first.latitude;
     double maxLat = points.first.latitude;
@@ -183,7 +205,6 @@ class _MapPageState extends State<MapPage> {
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey,
       home: Scaffold(
-        appBar: AppBar(title: const Text("Safe Roads")),
         body: Stack(
           children: [
             FlutterMap(
@@ -201,7 +222,8 @@ class _MapPageState extends State<MapPage> {
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: LatLng(38.902464, -9.163266),
+                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -248,10 +270,20 @@ class _MapPageState extends State<MapPage> {
                         shrinkWrap: true,
                         itemCount: _suggestions.length,
                         itemBuilder: (context, index) {
+                          // Assuming _suggestions holds a list of maps with name, city, and country
+                          final suggestion = _suggestions[index];
                           return ListTile(
-                            title: Text(_suggestions[index]),
+                            title: Text(
+                              suggestion['name'], // Name of the place
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(
+                              '${suggestion['city']}, ${suggestion['country']}', // City and country
+                              style: const TextStyle(fontSize: 12), // Smaller font size
+                            ),
                             onTap: () {
-                              _addressController.text = _suggestions[index];
+                              // When tapped, set the selected address in the text field and clear suggestions
+                              _addressController.text = suggestion['name'];
                               setState(() {
                                 _suggestions.clear(); // Clear suggestions after selection
                               });

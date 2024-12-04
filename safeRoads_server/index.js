@@ -251,7 +251,7 @@ app.post("/geocode", async (req, res) => {
 });
 
 app.get("/search", async (req, res) => {
-  const { query, lat, lon, limit = 5, lang = 'en' } = req.query;
+  const { query, limit = 5, lang = 'en' } = req.query;
   console.log("query:", query)
 
   if (!query) {
@@ -259,8 +259,9 @@ app.get("/search", async (req, res) => {
   }
 
   try {
-    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}&limit=${limit}&lang=${lang}`);
+    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=${limit}&lang=${lang}`);
     const data = await response.json();
+    console.log(data.features[0]);
     res.status(200).json(data);
   } catch (err) {
     console.error("Error fetching search results:", err);
