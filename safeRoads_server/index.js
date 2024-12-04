@@ -261,7 +261,7 @@ app.get("/search", async (req, res) => {
   try {
     const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=${limit}&lang=${lang}`);
     const data = await response.json();
-    console.log(data.features[0]);
+    // console.log(data.features[0]);
     res.status(200).json(data);
   } catch (err) {
     console.error("Error fetching search results:", err);

@@ -13,7 +13,7 @@ class MapPage extends StatefulWidget {
   _MapPageState createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
+class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
   LocationData? _currentLocation;
@@ -22,6 +22,8 @@ class _MapPageState extends State<MapPage> {
   final TextEditingController _addressController = TextEditingController();
   List<Map<String, dynamic>> _suggestions = []; // Stores autocomplete suggestions
   Timer? _debounce; // To avoid over calling the API
+  LatLng _currentCenter = LatLng(0, 0);
+  double _currentZoom = 13.0;
 
 
   @override
@@ -134,33 +136,33 @@ class _MapPageState extends State<MapPage> {
 
 
 
-Future<void> _fetchSearchSuggestions(String query) async {
-  try {
-    final response = await http.get(
-      Uri.parse('http://192.168.56.1:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-    );
+  Future<void> _fetchSearchSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://192.168.56.1:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      List<Map<String, dynamic>> suggestions = (data['features'] as List).map((feature) {
-        final props = feature['properties'];
-        return {
-          'name': props['name'],
-          'city': props['city'] ?? '',
-          'country': props['country'] ?? '',
-        };
-      }).toList();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<Map<String, dynamic>> suggestions = (data['features'] as List).map((feature) {
+          final props = feature['properties'];
+          return {
+            'name': props['name'],
+            'city': props['city'] ?? '',
+            'country': props['country'] ?? '',
+          };
+        }).toList();
 
-      setState(() {
-        _suggestions = suggestions;
-      });
-    } else {
-      print("Error fetching suggestions: ${response.reasonPhrase}");
+        setState(() {
+          _suggestions = suggestions;
+        });
+      } else {
+        print("Error fetching suggestions: ${response.reasonPhrase}");
+      }
+    } catch (e) {
+      print("Error fetching suggestions: $e");
     }
-  } catch (e) {
-    print("Error fetching suggestions: $e");
   }
-}
 
 
   // 
@@ -168,20 +170,23 @@ Future<void> _fetchSearchSuggestions(String query) async {
     if (_addressController.text.isNotEmpty) {
       final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
       if (destination != null) {
+        // Smoothly move the map to the destination
+        _animatedMapMove(destination, 15.0); // Zoom level 15 for closer view
         setState(() {
           _destinationLocation = destination;
         });
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+            LatLng(38.902464, -9.163266), // Current location for testing
             destination,
           );
+
         }
       }
     }
   }
+
 
   // Function to re-adjust the zoom when a route is set
   LatLngBounds _calculateBounds(List<LatLng> points) {
@@ -200,6 +205,39 @@ Future<void> _fetchSearchSuggestions(String query) async {
     return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
   }
 
+  void _animatedMapMove(LatLng destLocation, double destZoom) {
+    final latTween = Tween<double>(
+        begin: _currentCenter.latitude, end: destLocation.latitude);
+    final lngTween = Tween<double>(
+        begin: _currentCenter.longitude, end: destLocation.longitude);
+    final zoomTween = Tween<double>(begin: _currentZoom, end: destZoom);
+
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    final Animation<double> animation =
+        CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+
+    controller.addListener(() {
+      _mapController.move(
+        LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
+        zoomTween.evaluate(animation),
+      );
+    });
+
+    animation.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        controller.dispose();
+      } else if (status == AnimationStatus.dismissed) {
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -210,9 +248,13 @@ Future<void> _fetchSearchSuggestions(String query) async {
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                initialCenter: LatLng(0, 0),
-                initialZoom: 13.0,
-              ),
+              initialCenter: LatLng(0, 0),
+              initialZoom: 13.0,
+              onPositionChanged: (position, hasGesture) {
+                _currentCenter = position.center;
+                _currentZoom = position.zoom;
+              },
+            ),
               children: [
                 TileLayer(
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
