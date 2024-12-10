@@ -3,7 +3,6 @@ import 'package:safe_roads/pages/about.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/profile.dart';
 
-
 class NavigationBarExample extends StatefulWidget {
   const NavigationBarExample({Key? key}) : super(key: key);
 
@@ -39,14 +38,17 @@ class _NavigationBarExampleState extends State<NavigationBarExample> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.info_outline),
+            selectedIcon: Icon(Icons.info), // Filled icon for selected state
             label: "About",
           ),
           NavigationDestination(
-            icon: Icon(Icons.home),
-            label: "Home",
+            icon: Icon(Icons.place_outlined),
+            selectedIcon: Icon(Icons.place), // Filled icon for selected state
+            label: "Navigation",
           ),
           NavigationDestination(
-            icon: Icon(Icons.person),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person), // Filled icon for selected state
             label: "Profile",
           ),
         ],
