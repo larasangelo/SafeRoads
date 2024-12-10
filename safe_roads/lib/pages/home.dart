@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,6 +17,7 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
+  String? fcmToken;
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
   List<LatLng> _routePoints = []; // Stores points for the polyline
@@ -24,6 +26,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
   Timer? _debounce; // To avoid over calling the API
   LatLng _currentCenter = LatLng(0, 0);
   double _currentZoom = 13.0;
+  bool destinationSelected = false;
 
 
   @override
@@ -58,12 +61,43 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
         );
       }
     });
+
+    await _setupFirebaseMessaging();
   }
+
+  Future<void> _setupFirebaseMessaging() async {
+    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print("Notification permission granted");
+      fcmToken = await FirebaseMessaging.instance.getToken();
+      print("FCM Token: $fcmToken");
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print("Foreground message received: ${message.notification?.title}");
+        _showForegroundNotification(message);
+      });
+    } else {
+      print("Notification permission denied");
+    }
+  }
+  
+  void _showForegroundNotification(RemoteMessage message) {
+      if (message.notification != null) {
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text("${message.notification!.title}: ${message.notification!.body}"),
+          ),
+        );
+      }
+    }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.56.1:3000/route'),
+        Uri.parse('http://192.168.1.82:3000/route'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -97,7 +131,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
   Future<LatLng?> _getCoordinatesFromAddress(String address) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.56.1:3000/geocode'),
+        Uri.parse('http://192.168.1.82:3000/geocode'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -123,6 +157,15 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
       if (_debounce?.isActive ?? false) _debounce!.cancel();
       _debounce = Timer(const Duration(milliseconds: 300), () {
         String query = _addressController.text;
+        print("destinationSelect dentro do _setup:  $destinationSelected");
+        
+        // Reset destinationSelected when the user starts typing
+        if (destinationSelected && query.isNotEmpty) {
+          setState(() {
+            destinationSelected = false;
+          });
+        }
+
         if (query.length > 2) {
           _fetchSearchSuggestions(query);
         } else {
@@ -135,11 +178,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
   }
 
 
-
   Future<void> _fetchSearchSuggestions(String query) async {
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.56.1:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+        Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
       );
 
       if (response.statusCode == 200) {
@@ -174,10 +216,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
         _animatedMapMove(destination, 15.0); // Zoom level 15 for closer view
         setState(() {
           _destinationLocation = destination;
+          _suggestions.clear();
         });
 
         if (_currentLocation != null) {
           await _fetchRoute(
+            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
             LatLng(38.902464, -9.163266), // Current location for testing
             destination,
           );
@@ -305,7 +349,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                     ),
                   ),
                   const SizedBox(height: 8.0),
-                  if (_suggestions.isNotEmpty)
+                  if (_suggestions.isNotEmpty && !destinationSelected)
                     Container(
                       color: Colors.white,
                       child: ListView.builder(
@@ -314,6 +358,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                         itemBuilder: (context, index) {
                           // Assuming _suggestions holds a list of maps with name, city, and country
                           final suggestion = _suggestions[index];
+                          print("dentro do if que so deve passar SE destinationSelected for falso: $destinationSelected");
                           return ListTile(
                             title: Text(
                               suggestion['name'], // Name of the place
@@ -327,7 +372,10 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                               // When tapped, set the selected address in the text field and clear suggestions
                               _addressController.text = suggestion['name'];
                               setState(() {
+                                print("dentro do setState para dar clean das sugestions");
                                 _suggestions.clear(); // Clear suggestions after selection
+                                destinationSelected = true;
+                                print("destinationSelect dentro do setState:  $destinationSelected");
                               });
                             },
                           );
