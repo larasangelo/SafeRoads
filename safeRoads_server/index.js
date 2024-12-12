@@ -49,7 +49,7 @@ const getRoute = async (start, end) => {
     `);
     // 38.902464, -9.163266
     // 1596063
-    // console.log("startNode: ", startNode);
+    console.log("startNode: ", startNode);
 
     const endNode = await pool.query(`
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)::geography) AS dist
@@ -60,20 +60,20 @@ const getRoute = async (start, end) => {
 
     // 38.902290, -9.177862
     // 1696467
-    // console.log("endNode: ", endNode);
+    console.log("endNode: ", endNode);
 
     const route = await pool.query(`
       SELECT *,
       ST_AsGeoJSON(the_geom) AS geojson
       FROM pgr_dijkstra(
-        'SELECT gid AS id, source, target, cost FROM ways',
+        'SELECT gid AS id, source, target, cost, reverse_cost FROM ways',
         ${startNode.rows[0].id}, ${endNode.rows[0].id},
-        directed := false
+        directed := true
       ) AS route
       JOIN ways ON route.edge = ways.gid;
     `);
     
-
+    console.log(route.rows)
     return route.rows;
   } catch (err) {
     console.error(err);
@@ -259,7 +259,7 @@ app.get("/search", async (req, res) => {
   }
 
   try {
-    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=${limit}&lang=${lang}`);
+    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)},portugal&limit=${limit}&lang=${lang}`); //Added Portugal to restrict the options
     const data = await response.json();
     // console.log(data.features[0]);
     res.status(200).json(data);
