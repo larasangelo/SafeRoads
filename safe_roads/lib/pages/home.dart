@@ -56,7 +56,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
       if (_currentLocation != null) {
         _mapController.move(
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           13.0,
         );
       }
@@ -222,7 +223,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
         if (_currentLocation != null) {
           await _fetchRoute(
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
-            LatLng(38.902464, -9.163266), // Current location for testing
+            // LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
+            LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             destination,
           );
 
@@ -230,7 +232,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
       }
     }
   }
-
 
   // Function to re-adjust the zoom when a route is set
   LatLngBounds _calculateBounds(List<LatLng> points) {
@@ -309,7 +310,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                     markers: [
                       Marker(
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
