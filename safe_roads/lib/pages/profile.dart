@@ -1,4 +1,10 @@
+import 'dart:io';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
+import 'package:notification_permissions/notification_permissions.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class Profile extends StatefulWidget {  
   const Profile({Key? key}) : super(key: key);
@@ -6,12 +12,71 @@ class Profile extends StatefulWidget {
   @override
   _ProfileState createState() => _ProfileState();
 }
-class _ProfileState extends State<Profile>{
+class _ProfileState extends State<Profile> with WidgetsBindingObserver{
 
   bool re_route = true;
   bool notifications = true;
   bool tolls = false;
   String measure = "km";
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    checkNotificationPermissions();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Remove the observer
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // Recheck permissions when the app returns to the foreground
+      checkNotificationPermissions();
+    }
+  }
+
+  Future<void> checkNotificationPermissions() async {
+    // Check the current notification permission status
+    PermissionStatus status =
+        await NotificationPermissions.getNotificationPermissionStatus();
+
+    // Update the switch state based on the permission status
+    setState(() {
+      notifications = (status == PermissionStatus.granted);
+    });
+  }
+
+  Future<void> handleNotificationPermission() async {
+    PermissionStatus status =
+        await NotificationPermissions.getNotificationPermissionStatus();
+
+    if (status == PermissionStatus.denied || status == PermissionStatus.unknown) {
+      await NotificationPermissions.requestNotificationPermissions();
+    } else if (status == PermissionStatus.granted) {
+      if (Platform.isAndroid) {
+        final AndroidIntent intent = AndroidIntent(
+          action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+          arguments: <String, dynamic>{
+            'android.provider.extra.APP_PACKAGE': 'com.example.safe_roads', 
+          },
+        );
+        await intent.launch();
+      } else if (Platform.isIOS) {
+        const url = 'app-settings:';
+        if (await canLaunch(url)) {
+          await launch(url);
+        } else {
+          throw 'Could not launch $url';
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,10 +180,9 @@ class _ProfileState extends State<Profile>{
               _buildSwitchTile(
                 "Allow notifications",
                 notifications,
-                (bool newValue) {
-                  setState(() {
-                    notifications = newValue;
-                  });
+                (bool newValue) async {
+                  await handleNotificationPermission();
+                  checkNotificationPermissions();
                 },
               ),
               _buildSwitchTile(
