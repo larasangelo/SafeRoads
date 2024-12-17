@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "736869357654",
+    "firebase_url": "https://flutter-saferoads-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "flutter-saferoads",
     "storage_bucket": "flutter-saferoads.firebasestorage.app"
   },

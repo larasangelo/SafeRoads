@@ -1,8 +1,10 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../models/auth_model.dart';
 
 class AuthController {
   final AuthModel _authModel = AuthModel();
+  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
 
   // Registering a new user
   Future<void> registerUser({
@@ -23,18 +25,24 @@ class AuthController {
     }
     // It also gets an error if the password is less than 6 chars
     try {
-      await _authModel.registerUser(
-        email: email,
-        password: password,
-        username: username,
-      );
-
-      // Navigate to Login page
+      final user = await _authModel.registerUser(email: email, password: password, username: username);
+      if (user != null) {
+        await _databaseRef.child('users/${user.uid}/profile').set({
+          'username': username,
+          'email': email,
+          'location': 'Portugal',
+          'level': 1,
+          'distance': 0,
+          'targetDistance': 200,
+        });
+      }
       Navigator.pushNamed(context, '/login');
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }
   }
+
+
   // Login a user
   Future<void> loginUser({
     required BuildContext context,

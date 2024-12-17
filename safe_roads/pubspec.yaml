@@ -45,6 +45,8 @@ dependencies:
   notification_permissions: ^0.6.1
   android_intent_plus: ^5.2.1
   url_launcher: ^6.3.1
+  cloud_firestore: ^5.5.1
+  firebase_database: ^11.2.0
 
 dev_dependencies:
   flutter_test:

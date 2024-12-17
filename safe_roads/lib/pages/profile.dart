@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:notification_permissions/notification_permissions.dart';
 import 'package:flutter/services.dart';
@@ -19,11 +21,22 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
   bool tolls = false;
   String measure = "km";
 
+  String name = "Loading...";
+  String username = "Loading...";
+  String location = "Loading...";
+  int level = 1;
+  int distance = 0;
+  int targetDistance = 200;
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     checkNotificationPermissions();
+    fetchUserProfile();
   }
 
   @override
@@ -38,6 +51,28 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
     if (state == AppLifecycleState.resumed) {
       // Recheck permissions when the app returns to the foreground
       checkNotificationPermissions();
+    }
+  }
+
+  Future<void> fetchUserProfile() async {
+    try {
+      final User? user = _auth.currentUser;
+
+      if (user != null) {
+        final DataSnapshot snapshot = await _databaseRef.child('users/${user.uid}/profile').get();
+        if (snapshot.exists) {
+          final data = Map<String, dynamic>.from(snapshot.value as Map);
+          setState(() {
+            username = data['username'] ?? "Unknown";
+            location = data['location'] ?? "Unknown";
+            level = data['level'] ?? 1;
+            distance = data['distance'] ?? 0;
+            targetDistance = data['targetDistance'] ?? 200;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user profile: $e");
     }
   }
 
@@ -83,63 +118,49 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Profile Header
               Row(
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 60,
-                    backgroundImage: AssetImage('assets/avatar_placeholder.png'), // Placeholder image
+                    backgroundImage: AssetImage('assets/avatar_placeholder.png'),
                   ),
                   const SizedBox(width: 16.0),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "O Seu Nome",
-                        style: TextStyle(fontSize: 20.0),
+                        username,
+                        style: const TextStyle(fontSize: 20.0),
                       ),
-                      const Text(
-                        "@o_seu_nome",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8.0),
-                      Row(
-                        children: const [
-                          Icon(Icons.location_on, size: 16.0, color: Colors.grey),
-                          SizedBox(width: 4.0),
-                          Text("Portugal", style: TextStyle(color: Colors.grey)),
-                        ],
+                      Text(
+                        location,
+                        style: const TextStyle(color: Colors.grey),
                       ),
                     ],
                   ),
                 ],
               ),
               const SizedBox(height: 24.0),
-
-              // Level Bar
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Lvl 1"),
-                      const Text("110/200 km"),
+                      Text("Lvl $level"),
+                      Text("$distance/$targetDistance km"),
                     ],
                   ),
                   const SizedBox(height: 8.0),
                   LinearProgressIndicator(
-                    value: 110 / 200,
+                    value: distance / targetDistance,
                     backgroundColor: Colors.grey[300],
                     color: Theme.of(context).primaryColor,
                     minHeight: 18.0,
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(10),
-                    ),
                   ),
                 ],
               ),
