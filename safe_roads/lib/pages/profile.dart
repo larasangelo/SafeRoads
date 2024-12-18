@@ -23,7 +23,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
 
   String name = "Loading...";
   String username = "Loading...";
-  String location = "Loading...";
+  String country = "Loading...";
   int level = 1;
   int distance = 0;
   int targetDistance = 200;
@@ -67,7 +67,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
           final data = Map<String, dynamic>.from(snapshot.value as Map);
           setState(() {
             username = data['username'] ?? "Unknown";
-            location = data['location'] ?? "Unknown";
+            country = data['location'] ?? "Unknown";
             level = data['level'] ?? 1;
             distance = data['distance'] ?? 0;
             targetDistance = data['targetDistance'] ?? 200;
@@ -145,7 +145,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
                         style: const TextStyle(fontSize: 20.0),
                       ),
                       Text(
-                        location,
+                        country,
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ],
@@ -310,8 +310,14 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
                         child: ListTile(
                           title: const Text("Edit profile"),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            Navigator.pushNamed(context, '/editProfile');
+                          onTap: () async {
+                            // Navigate to Edit Profile and wait for the result
+                            final result = await Navigator.pushNamed(context, '/editProfile');
+                            
+                            // Check if the user updated their profile
+                            if (result == true) {
+                              fetchUserProfile(); // Refresh profile information
+                            }
                           },
                         ),
                       ),

@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:safe_roads/controllers/auth_controller.dart';
 
 
@@ -15,7 +14,7 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
 
   String name = "Loading...";
   String username = "Loading...";
-  String location = "Loading...";
+  String country = "Loading...";
   String email = "Loading...";
 
   final AuthController _authController = AuthController();
@@ -47,7 +46,7 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
           final data = Map<String, dynamic>.from(snapshot.value as Map);
           setState(() {
             username = data['username'] ?? "Unknown";
-            location = data['location'] ?? "Unknown";
+            country = data['location'] ?? "Unknown";
             email = data['email'] ?? "Unknown";
           });
         }
@@ -79,12 +78,12 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: const CircleAvatar(
-                    radius: 60,
-                    backgroundImage: AssetImage('assets/avatar_placeholder.png'),
-                  ),
-                ),
+                // Center(
+                //   child: const CircleAvatar(
+                //     radius: 60,
+                //     backgroundImage: AssetImage('assets/avatar_placeholder.png'),
+                //   ),
+                // ),
                 const SizedBox(height: 40.0),
                 Text("Username"),
                 TextFormField(
@@ -116,41 +115,53 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
                 TextFormField(
                   controller: _countryController,
                   decoration: InputDecoration(
-                    labelText: "$location",
+                    labelText: "$country",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
                     fillColor: Colors.grey[200],
                   ),
-                  obscureText: true,
                 ),
                 const SizedBox(height: 20.0),
-                Text("Password"),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: "Confirm password",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                  ),
-                  obscureText: true,
-                ),
+                // Text("Password"),
+                // TextFormField(
+                //   controller: _passwordController,
+                //   decoration: InputDecoration(
+                //     labelText: "Confirm password",
+                //     border: OutlineInputBorder(
+                //       borderRadius: BorderRadius.circular(10.0),
+                //     ),
+                //     filled: true,
+                //     fillColor: Colors.grey[200],
+                //   ),
+                //   obscureText: true,
+                // ),
                 const SizedBox(height: 30.0),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      _authController.updateUser(
-                        context: context,
-                        username: _usernameController.text.trim(),
-                        email: email,
-                        country: _countryController.text.trim(),
-                        password: _passwordController.text.trim(),
-                      );
+                    onPressed: () async {
+                      print("coutry: $country");
+                      print("_countryController: $_countryController");
+                      try {
+                        await _authController.updateUser(
+                          context: context,
+                          username: _usernameController.text.trim().isNotEmpty
+                              ? _usernameController.text.trim()
+                              : username, // Use the existing username if the field is empty
+                          email: email, // Email remains uneditable as per current implementation
+                          country: _countryController.text.trim().isNotEmpty
+                              ? _countryController.text.trim()
+                              : country, // Use the existing location if the field is empty
+                          // password: _passwordController.text.trim(),
+                          
+                        );
+                        // Return `true` to indicate successful update
+                        Navigator.pop(context, true);
+                      } catch (e) {
+                        print("Error updating profile: $e");
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,

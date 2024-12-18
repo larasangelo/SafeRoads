@@ -38,25 +38,37 @@ class AuthModel {
     }
   }
 
-  Future<User?> updateUser({
+  Future<void> updateUser({
     required String email,
-    required String password,
+    // required String password,
     required String username,
   }) async {
+    print("auth_model: $username, $email");
+
+    final User? user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception("No user is currently signed in.");
+    }
+
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      // Update the password if provided
+      // if (password.isNotEmpty) {
+      //   await user.updatePassword(password);
+      // }
 
-      // Update user's display name
-      await userCredential.user?.updateDisplayName(username);
+      // Update display name
+      if (username.isNotEmpty) {
+        await user.updateDisplayName(username);
+      }
 
-      return userCredential.user;
+      // Reload the user to apply changes
+      await user.reload();
     } on FirebaseAuthException catch (e) {
-      throw Exception(e.message ?? "An unknown error occurred.");
+      throw Exception(e.message ?? "Failed to update user.");
     }
   }
+
 
   // Logout
   Future<void> logout() async {

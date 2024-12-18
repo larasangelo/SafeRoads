@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../models/auth_model.dart';
@@ -91,35 +92,42 @@ class AuthController {
     required BuildContext context,
     required String username,
     required String email,
-    required String country, 
-    required String password
+    required String country,
+    // required String password,
   }) async {
-    if (username.isEmpty || email.isEmpty || country.isEmpty || password.isEmpty) {
+    print("auth_controller: $username, $email, $country");
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      _showErrorDialog(context, "No user is currently signed in.");
+      return;
+    }
+
+    if (username.isEmpty || email.isEmpty || country.isEmpty) {
       _showErrorDialog(context, "All fields are required.");
       return;
     }
 
-    // It also gets an error if the password is less than 6 chars
     try {
-      final user = await _authModel.updateUser(email: email, password: password, username: username);
-      if (user != null) {
-        await _databaseRef.child('users/${user.uid}/profile').set({
-          'username': username,
-          'email': email,
-          'location': country,
-          'level': 1,
-          'distance': 0,
-          'targetDistance': 200,
-          'totalKm': 0,
-          'places': 0,
-          'tolls': true,
-          're_route': true,
-          'measure': 'km',
-        });
-      }
-      Navigator.pushNamed(context, '/login');
+      // Update the user's authentication details
+      // await _authModel.updateUser(email: email, password: password, username: username);
+      await _authModel.updateUser(email: email, username: username);
+
+
+      // Update the user's profile in the database
+      await _databaseRef.child('users/${user.uid}/profile').update({
+        'username': username,
+        'email': email,
+        'location': country,
+      });
+
+      // Show success feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile updated successfully!")),
+      );
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }
   }
+
 }
