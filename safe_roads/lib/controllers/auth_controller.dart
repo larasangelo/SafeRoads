@@ -86,4 +86,40 @@ class AuthController {
       ),
     );
   }
+
+  Future<void> updateUser({
+    required BuildContext context,
+    required String username,
+    required String email,
+    required String country, 
+    required String password
+  }) async {
+    if (username.isEmpty || email.isEmpty || country.isEmpty || password.isEmpty) {
+      _showErrorDialog(context, "All fields are required.");
+      return;
+    }
+
+    // It also gets an error if the password is less than 6 chars
+    try {
+      final user = await _authModel.updateUser(email: email, password: password, username: username);
+      if (user != null) {
+        await _databaseRef.child('users/${user.uid}/profile').set({
+          'username': username,
+          'email': email,
+          'location': country,
+          'level': 1,
+          'distance': 0,
+          'targetDistance': 200,
+          'totalKm': 0,
+          'places': 0,
+          'tolls': true,
+          're_route': true,
+          'measure': 'km',
+        });
+      }
+      Navigator.pushNamed(context, '/login');
+    } catch (e) {
+      _showErrorDialog(context, e.toString());
+    }
+  }
 }

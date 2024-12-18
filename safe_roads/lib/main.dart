@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:safe_roads/firebase_options.dart';
+import 'package:safe_roads/pages/edit_profile.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/loading.dart';
 import 'package:safe_roads/pages/login.dart';
@@ -34,6 +35,7 @@ void main() async {
       '/login': (context) => const LoginPage(),
       '/register': (context) => const RegisterPage(),
       '/navigation': (context) => const NavigationBarExample(),
+      '/editProfile': (context) => const EditProfile()
     },
   ));
 }

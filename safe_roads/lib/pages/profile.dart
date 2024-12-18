@@ -310,7 +310,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
                         child: ListTile(
                           title: const Text("Edit profile"),
                           trailing: const Icon(Icons.chevron_right),
-                          onTap: () {},
+                          onTap: () {
+                            Navigator.pushNamed(context, '/editProfile');
+                          },
                         ),
                       ),
                       Divider(),
