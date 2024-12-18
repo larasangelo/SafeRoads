@@ -27,6 +27,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
   int level = 1;
   int distance = 0;
   int targetDistance = 200;
+  int totalKm = 0;
+  int places = 0;
+
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
@@ -68,6 +71,11 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
             level = data['level'] ?? 1;
             distance = data['distance'] ?? 0;
             targetDistance = data['targetDistance'] ?? 200;
+            totalKm = data['totalKm'] ?? 0;
+            places = data['places'] ?? 0;
+            tolls = data['tolls'] ?? true;
+            re_route = data['re_route'] ?? true;
+            measure = data['measure'] ?? "km";
           });
         }
       }
@@ -171,8 +179,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildStatisticCard("110", "Total km", Icons.flash_on),
-                  _buildStatisticCard("3", "Places", Icons.map),
+                  _buildStatisticCard("$totalKm", "Total km", Icons.flash_on),
+                  _buildStatisticCard("$places", "Places", Icons.map),
                 ],
               ),
               const SizedBox(height: 16.0),
@@ -189,46 +197,75 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
               // Preferences
               const Text("Preferences", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
               const SizedBox(height: 8.0),
-              _buildSwitchTile(
-                "Allow re-routing",
-                re_route,
-                (bool newValue) {
-                  setState(() {
-                    re_route = newValue;
-                  });
-                },
-              ),
-              _buildSwitchTile(
-                "Allow notifications",
-                notifications,
-                (bool newValue) async {
-                  await handleNotificationPermission();
-                  checkNotificationPermissions();
-                },
-              ),
-              _buildSwitchTile(
-                "Allow tolls",
-                tolls,
-                (bool newValue) {
-                  setState(() {
-                    tolls = newValue;
-                  });
-                },
-              ),
-
-              ListTile(
-                title: Text("Unit of measure"),
-                trailing: DropdownButton<String>(
-                  value: measure,
-                  items: [
-                    DropdownMenuItem(value: "km", child: Text("km")),
-                    DropdownMenuItem(value: "mi", child: Text("mi")),
-                  ],
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      measure = newValue!;
-                    });
-                  },
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        blurRadius: 6.0,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10.0),
+                        child: _buildSwitchTile(
+                          "Allow re-routing",
+                          re_route,
+                          (bool newValue) {
+                            setState(() {
+                              re_route = newValue;
+                            });
+                          },
+                        ),
+                      ),
+                      Divider(),
+                      _buildSwitchTile(
+                        "Allow notifications",
+                        notifications,
+                        (bool newValue) async {
+                          await handleNotificationPermission();
+                          checkNotificationPermissions();
+                        },
+                      ),
+                      Divider(),
+                      _buildSwitchTile(
+                        "Allow tolls",
+                        tolls,
+                        (bool newValue) {
+                          setState(() {
+                            tolls = newValue;
+                          });
+                        },
+                      ),
+                      Divider(),
+                      
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10.0),
+                        child: ListTile(
+                          title: Text("Unit of measure"),
+                          trailing: DropdownButton<String>(
+                            value: measure,
+                            items: [
+                              DropdownMenuItem(value: "km", child: Text("km")),
+                              DropdownMenuItem(value: "mi", child: Text("mi")),
+                            ],
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                measure = newValue!;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -252,20 +289,50 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver{
               // Settings
               const Text("Settings", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
               const SizedBox(height: 8.0),
-              ListTile(
-                title: const Text("Edit profile"),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
-              ),
-              ListTile(
-                title: const Text("Sign out"),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
-              ),
-              ListTile(
-                title: const Text("Delete account"),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        blurRadius: 6.0,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10.0),
+                        child: ListTile(
+                          title: const Text("Edit profile"),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {},
+                        ),
+                      ),
+                      Divider(),
+                
+                      ListTile(
+                        title: const Text("Sign out", style: TextStyle(color: Colors.red)),
+                        // trailing: const Icon(Icons.chevron_right),
+                        onTap: () {},
+                      ),
+                      Divider(),
+                
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10.0),
+                        child: ListTile(
+                          title: const Text("Delete account", style: TextStyle(color: Colors.red)),
+                          // trailing: const Icon(Icons.chevron_right),
+                          onTap: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

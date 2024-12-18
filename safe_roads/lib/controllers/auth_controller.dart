@@ -34,6 +34,11 @@ class AuthController {
           'level': 1,
           'distance': 0,
           'targetDistance': 200,
+          'totalKm': 0,
+          'places': 0,
+          'tolls': true,
+          're_route': true,
+          'measure': 'km',
         });
       }
       Navigator.pushNamed(context, '/login');
