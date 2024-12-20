@@ -35,13 +35,14 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     fetchUserProfile();
+    checkNotificationPermissions();
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   WidgetsBinding.instance.removeObserver(this);
+  //   super.dispose();
+  // }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -49,20 +50,24 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // Recheck permissions when the app returns to the foreground
       checkNotificationPermissions();
+      print("entrei no didChangeAppLifecycleState");
     }
   }
 
   Future<void> fetchUserProfile() async {
     try {
       final userProfile = await _profileController.fetchUserProfile();
-      setState(() {
-        username = userProfile['username'] ?? "Unknown";
-        country = userProfile['country'] ?? "Unknown";
-      });
+      if (mounted) {  // Check if the widget is still in the tree
+        setState(() {
+          username = userProfile['username'] ?? "Unknown";
+          country = userProfile['country'] ?? "Unknown";
+        });
+      }
     } catch (e) {
       print("Error fetching user profile: $e");
     }
   }
+
 
   Future<void> _showSignOutConfirmation() async {
     final bool? shouldSignOut = await showDialog<bool>(
@@ -91,18 +96,20 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
 
    Future<void> checkNotificationPermissions() async {
     // Check the current notification permission status
-    PermissionStatus status =
-        await NotificationPermissions.getNotificationPermissionStatus();
+    PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
 
     // Update the switch state based on the permission status
-    setState(() {
-      notifications = (status == PermissionStatus.granted);
-    });
+    if (mounted) {  // Check if the widget is still in the tree
+      setState(() {
+        notifications = (status == PermissionStatus.granted);
+        print("notifications: $notifications");
+      });
+    }
   }
 
+
   Future<void> handleNotificationPermission() async {
-    PermissionStatus status =
-        await NotificationPermissions.getNotificationPermissionStatus();
+    PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
 
     if (status == PermissionStatus.denied || status == PermissionStatus.unknown) {
       await NotificationPermissions.requestNotificationPermissions();
@@ -124,7 +131,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         }
       }
     }
+
+    // Check if the widget is mounted before calling setState()
+    if (mounted) {
+      checkNotificationPermissions();
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {

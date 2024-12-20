@@ -230,13 +230,13 @@ app.post("/geocode", async (req, res) => {
 
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json`
+      `https://photon.komoot.io/api/?q=${encodeURIComponent(address)}`
     );
     if (response.ok) {
       const data = await response.json();
-      if (data.length > 0) {
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
+      if (data.features && data.features.length > 0) {
+        const lat = data.features[0].geometry.coordinates[1];
+        const lon = data.features[0].geometry.coordinates[0];
         return res.status(200).json({ lat, lon });
       } else {
         return res.status(404).json({ error: "Address not found" });
