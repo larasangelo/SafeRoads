@@ -1,58 +1,64 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:safe_roads/controllers/auth_controller.dart';
+import 'package:safe_roads/controllers/profile_controller.dart';
 
-
-class EditProfile extends StatefulWidget {  
+class EditProfile extends StatefulWidget {
   const EditProfile({Key? key}) : super(key: key);
 
   @override
   _EditProfileState createState() => _EditProfileState();
 }
-class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
 
-  String name = "Loading...";
+class _EditProfileState extends State<EditProfile> {
   String username = "Loading...";
-  String country = "Loading...";
   String email = "Loading...";
+  String country = "Loading...";
 
-  final AuthController _authController = AuthController();
-
+  final ProfileController _profileController = ProfileController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
   final _formKey = GlobalKey<FormState>();
-
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     fetchUserProfile();
   }
 
   Future<void> fetchUserProfile() async {
     try {
-      final User? user = _auth.currentUser;
-
-      if (user != null) {
-        final DataSnapshot snapshot = await _databaseRef.child('users/${user.uid}/profile').get();
-        if (snapshot.exists) {
-          final data = Map<String, dynamic>.from(snapshot.value as Map);
-          setState(() {
-            username = data['username'] ?? "Unknown";
-            country = data['location'] ?? "Unknown";
-            email = data['email'] ?? "Unknown";
-          });
-        }
-      }
+      final profileData = await _profileController.fetchUserProfile();
+      setState(() {
+        username = profileData['username']!;
+        email = profileData['email']!;
+        country = profileData['country']!;
+      });
     } catch (e) {
-      print("Error fetching user profile: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error fetching profile: $e")),
+      );
+    }
+  }
+
+  Future<void> updateProfile() async {
+    try {
+      await _profileController.updateUser(
+        username: _usernameController.text.trim().isNotEmpty
+            ? _usernameController.text.trim()
+            : username,
+        email: email, // Uneditable in current implementation
+        country: _countryController.text.trim().isNotEmpty
+            ? _countryController.text.trim()
+            : country,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile updated successfully!")),
+      );
+      
+      Navigator.pop(context, true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error updating profile: $e")),
+      );
     }
   }
 
@@ -60,14 +66,12 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Edit Profile"),
+        title: const Text("Edit Profile"),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(
@@ -78,18 +82,12 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Center(
-                //   child: const CircleAvatar(
-                //     radius: 60,
-                //     backgroundImage: AssetImage('assets/avatar_placeholder.png'),
-                //   ),
-                // ),
                 const SizedBox(height: 40.0),
-                Text("Username"),
+                const Text("Username"),
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
-                    labelText: "$username",
+                    labelText: username,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -98,24 +96,24 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                Text("Email"),
+                const Text("Email"),
                 TextFormField(
+                  enabled: false,
                   decoration: InputDecoration(
-                    labelText: "$email",
+                    labelText: email,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
                     fillColor: Colors.grey[200],
                   ),
-                  keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 20.0),
-                Text("Country"),
+                const Text("Country"),
                 TextFormField(
                   controller: _countryController,
                   decoration: InputDecoration(
-                    labelText: "$country",
+                    labelText: country,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -123,46 +121,11 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
                     fillColor: Colors.grey[200],
                   ),
                 ),
-                const SizedBox(height: 20.0),
-                // Text("Password"),
-                // TextFormField(
-                //   controller: _passwordController,
-                //   decoration: InputDecoration(
-                //     labelText: "Confirm password",
-                //     border: OutlineInputBorder(
-                //       borderRadius: BorderRadius.circular(10.0),
-                //     ),
-                //     filled: true,
-                //     fillColor: Colors.grey[200],
-                //   ),
-                //   obscureText: true,
-                // ),
                 const SizedBox(height: 30.0),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      print("coutry: $country");
-                      print("_countryController: $_countryController");
-                      try {
-                        await _authController.updateUser(
-                          context: context,
-                          username: _usernameController.text.trim().isNotEmpty
-                              ? _usernameController.text.trim()
-                              : username, // Use the existing username if the field is empty
-                          email: email, // Email remains uneditable as per current implementation
-                          country: _countryController.text.trim().isNotEmpty
-                              ? _countryController.text.trim()
-                              : country, // Use the existing location if the field is empty
-                          // password: _passwordController.text.trim(),
-                          
-                        );
-                        // Return `true` to indicate successful update
-                        Navigator.pop(context, true);
-                      } catch (e) {
-                        print("Error updating profile: $e");
-                      }
-                    },
+                    onPressed: updateProfile,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -181,8 +144,6 @@ class _EditProfileState extends State<EditProfile> with WidgetsBindingObserver{
           ),
         ),
       ),
-
     );
   }
-
 }

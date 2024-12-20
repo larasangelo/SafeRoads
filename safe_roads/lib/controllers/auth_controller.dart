@@ -1,11 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:safe_roads/models/profile_model.dart';
+import 'package:safe_roads/repositories/user_profile_repository.dart';
 import '../models/auth_model.dart';
 
 class AuthController {
   final AuthModel _authModel = AuthModel();
-  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
+  final ProfileModel _profileModel = ProfileModel();
+  final UserProfileRepository _userProfileRepository = UserProfileRepository();
 
   // Registering a new user
   Future<void> registerUser({
@@ -24,11 +26,11 @@ class AuthController {
       _showErrorDialog(context, "Passwords do not match.");
       return;
     }
-    // It also gets an error if the password is less than 6 chars
+
     try {
       final user = await _authModel.registerUser(email: email, password: password, username: username);
       if (user != null) {
-        await _databaseRef.child('users/${user.uid}/profile').set({
+        await _userProfileRepository.updateUserProfile(user.uid, {
           'username': username,
           'email': email,
           'location': 'Portugal',
@@ -47,7 +49,6 @@ class AuthController {
       _showErrorDialog(context, e.toString());
     }
   }
-
 
   // Login a user
   Future<void> loginUser({
@@ -70,6 +71,46 @@ class AuthController {
     }
   }
 
+  // Update a user's profile
+  Future<void> updateUser({
+    required BuildContext context,
+    required String username,
+    required String email,
+    required String country,
+  }) async {
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      _showErrorDialog(context, "No user is currently signed in.");
+      return;
+    }
+
+    if (username.isEmpty || email.isEmpty || country.isEmpty) {
+      _showErrorDialog(context, "All fields are required.");
+      return;
+    }
+
+    try {
+      // Update the user's authentication details
+      await _profileModel.updateUser(email: email, username: username);
+
+      // Update the user's profile in the database
+      await _userProfileRepository.updateUserProfile(user.uid, {
+        'username': username,
+        'email': email,
+        'location': country,
+      });
+
+      // Show success feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile updated successfully!")),
+      );
+    } catch (e) {
+      _showErrorDialog(context, e.toString());
+    }
+  }
+
+  // Show error dialog
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -87,47 +128,4 @@ class AuthController {
       ),
     );
   }
-
-  Future<void> updateUser({
-    required BuildContext context,
-    required String username,
-    required String email,
-    required String country,
-    // required String password,
-  }) async {
-    print("auth_controller: $username, $email, $country");
-    final User? user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      _showErrorDialog(context, "No user is currently signed in.");
-      return;
-    }
-
-    if (username.isEmpty || email.isEmpty || country.isEmpty) {
-      _showErrorDialog(context, "All fields are required.");
-      return;
-    }
-
-    try {
-      // Update the user's authentication details
-      // await _authModel.updateUser(email: email, password: password, username: username);
-      await _authModel.updateUser(email: email, username: username);
-
-
-      // Update the user's profile in the database
-      await _databaseRef.child('users/${user.uid}/profile').update({
-        'username': username,
-        'email': email,
-        'location': country,
-      });
-
-      // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully!")),
-      );
-    } catch (e) {
-      _showErrorDialog(context, e.toString());
-    }
-  }
-
 }
