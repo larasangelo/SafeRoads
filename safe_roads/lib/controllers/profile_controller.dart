@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:safe_roads/repositories/user_profile_repository.dart';
 
 class ProfileController {
-  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
+  final UserProfileRepository _userProfileRepository = UserProfileRepository();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Fetch user profile
@@ -13,17 +13,12 @@ class ProfileController {
       throw Exception("No user is currently signed in.");
     }
 
-    final DataSnapshot snapshot = await _databaseRef.child('users/${user.uid}/profile').get();
-    if (snapshot.exists) {
-      final data = Map<String, dynamic>.from(snapshot.value as Map);
-      return {
-        'username': data['username'] ?? "Unknown",
-        'country': data['location'] ?? "Unknown",
-        'email': data['email'] ?? "Unknown",
-      };
-    } else {
-      throw Exception("User profile not found.");
-    }
+    final data = await _userProfileRepository.fetchUserProfile(user.uid);
+    return {
+      'username': data['username'] ?? "Unknown",
+      'country': data['location'] ?? "Unknown",
+      'email': data['email'] ?? "Unknown",
+    };
   }
 
   // Update user profile
@@ -38,7 +33,7 @@ class ProfileController {
       throw Exception("No user is currently signed in.");
     }
 
-    await _databaseRef.child('users/${user.uid}/profile').update({
+    await _userProfileRepository.updateUserProfile(user.uid, {
       'username': username,
       'email': email,
       'location': country,

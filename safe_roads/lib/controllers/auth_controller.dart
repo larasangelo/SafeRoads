@@ -110,6 +110,10 @@ class AuthController {
     }
   }
 
+  Future<void> logout() async {
+    await _authModel.logout();
+  }
+
   // Show error dialog
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
