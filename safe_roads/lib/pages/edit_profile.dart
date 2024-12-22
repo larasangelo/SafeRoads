@@ -16,6 +16,8 @@ class _EditProfileState extends State<EditProfile> {
   final ProfileController _profileController = ProfileController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -51,10 +53,19 @@ class _EditProfileState extends State<EditProfile> {
             ? _countryController.text.trim()
             : country,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
+
+      // Change password if both fields are filled
+      if (_currentPasswordController.text.isNotEmpty &&
+          _newPasswordController.text.isNotEmpty) {
+        await _profileController.changePassword(_currentPasswordController.text.trim(), _newPasswordController.text.trim());
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Password updated successfully!")),
+        );
+      } else {ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile updated successfully!")),
       );
-      
+      }
+
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +95,7 @@ class _EditProfileState extends State<EditProfile> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40.0),
-                const Text("Username"),
+                const Text("Username", style: const TextStyle(fontSize: 18.0),),
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
@@ -97,7 +108,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Email"),
+                const Text("Email", style: const TextStyle(fontSize: 18.0),),
                 TextFormField(
                   enabled: false,
                   decoration: InputDecoration(
@@ -110,11 +121,39 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Country"),
+                const Text("Country", style: const TextStyle(fontSize: 18.0),),
                 TextFormField(
                   controller: _countryController,
                   decoration: InputDecoration(
                     labelText: country,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                  ),
+                ),
+                const SizedBox(height: 20.0),
+                const Text("Current Password", style: const TextStyle(fontSize: 18.0),),
+                TextFormField(
+                  controller: _currentPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: "Enter current password",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                  ),
+                ),
+                const SizedBox(height: 20.0),
+                const Text("New Password", style: const TextStyle(fontSize: 18.0),),
+                TextFormField(
+                  controller: _newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: "Enter new password",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),

@@ -105,7 +105,7 @@ class ProfileController {
   }
 
 
-Future<void> updateUserPreference({
+  Future<void> updateUserPreference({
     required BuildContext context,
     required String key,
     required dynamic value,
@@ -130,6 +130,21 @@ Future<void> updateUserPreference({
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }
+  }
+
+  Future<void> reauthenticate(String currentPassword) async {
+    final user = FirebaseAuth.instance.currentUser;
+    final cred = EmailAuthProvider.credential(
+      email: user!.email!,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(cred);
+  }
+
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    await reauthenticate(currentPassword);
+    await FirebaseAuth.instance.currentUser!.updatePassword(newPassword);
   }
 
   void _showErrorDialog(BuildContext context, String message) {
