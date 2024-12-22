@@ -50,6 +50,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // Recheck permissions when the app returns to the foreground
       checkNotificationPermissions();
+      fetchUserProfile();
       print("entrei no didChangeAppLifecycleState");
     }
   }
@@ -59,8 +60,16 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       final userProfile = await _profileController.fetchUserProfile();
       if (mounted) {  // Check if the widget is still in the tree
         setState(() {
+          re_route = userProfile['re_route'] as bool;
           username = userProfile['username'] ?? "Unknown";
           country = userProfile['country'] ?? "Unknown";
+          tolls = userProfile['tolls'] as bool;
+          measure = userProfile['measure'] ?? "km";
+          level = userProfile['level'] as int;
+          distance = userProfile['distance'] as int;
+          targetDistance = userProfile['targetDistance'] as int;
+          totalKm = userProfile['totalKm'] as int;
+          places = userProfile['places'] as int;
         });
       }
     } catch (e) {
@@ -102,7 +111,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     if (mounted) {  // Check if the widget is still in the tree
       setState(() {
         notifications = (status == PermissionStatus.granted);
-        print("notifications: $notifications");
+        // print("notifications: $notifications");
       });
     }
   }
@@ -138,6 +147,15 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> updatePreference(String key, dynamic value) async {
+    try {
+      await _profileController.updateUserPreference(context: context, key: key, value: value);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update preference: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -261,17 +279,20 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             setState(() {
               re_route = newValue;
             });
+            updatePreference("re_route", newValue);
           }),
           Divider(),
           _buildSwitchTile("Allow notifications", notifications, (bool newValue) async {
             await handleNotificationPermission();
-            checkNotificationPermissions();
+            await checkNotificationPermissions();
+            updatePreference("notifications", notifications);
           }),
           Divider(),
           _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
             setState(() {
               tolls = newValue;
             });
+            updatePreference("tolls", newValue);
           }),
           Divider(),
           buildMeasureDropdown(),
@@ -280,7 +301,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     );
   }
 
-  Widget buildMeasureDropdown() {
+
+  buildMeasureDropdown() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: ListTile(
@@ -295,11 +317,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             setState(() {
               measure = newValue!;
             });
+            updatePreference("measure", measure);
           },
         ),
       ),
     );
   }
+
 
   Widget buildSettingsSection(BuildContext context) {
     return Column(

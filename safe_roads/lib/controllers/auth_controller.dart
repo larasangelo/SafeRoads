@@ -1,12 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:safe_roads/models/profile_model.dart';
 import 'package:safe_roads/repositories/user_profile_repository.dart';
 import '../models/auth_model.dart';
 
 class AuthController {
   final AuthModel _authModel = AuthModel();
-  final ProfileModel _profileModel = ProfileModel();
   final UserProfileRepository _userProfileRepository = UserProfileRepository();
 
   // Registering a new user
@@ -66,45 +63,6 @@ class AuthController {
 
       // Navigate to the home page after successful login
       Navigator.pushReplacementNamed(context, '/navigation');
-    } catch (e) {
-      _showErrorDialog(context, e.toString());
-    }
-  }
-
-  // Update a user's profile
-  Future<void> updateUser({
-    required BuildContext context,
-    required String username,
-    required String email,
-    required String country,
-  }) async {
-    final User? user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      _showErrorDialog(context, "No user is currently signed in.");
-      return;
-    }
-
-    if (username.isEmpty || email.isEmpty || country.isEmpty) {
-      _showErrorDialog(context, "All fields are required.");
-      return;
-    }
-
-    try {
-      // Update the user's authentication details
-      await _profileModel.updateUser(email: email, username: username);
-
-      // Update the user's profile in the database
-      await _userProfileRepository.updateUserProfile(user.uid, {
-        'username': username,
-        'email': email,
-        'location': country,
-      });
-
-      // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully!")),
-      );
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }

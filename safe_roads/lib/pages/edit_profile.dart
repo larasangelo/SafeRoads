@@ -42,6 +42,7 @@ class _EditProfileState extends State<EditProfile> {
   Future<void> updateProfile() async {
     try {
       await _profileController.updateUser(
+        context: context,
         username: _usernameController.text.trim().isNotEmpty
             ? _usernameController.text.trim()
             : username,
