@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
+import 'package:safe_roads/pages/navigation.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({Key? key}) : super(key: key);
@@ -27,6 +28,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
   LatLng _currentCenter = LatLng(0, 0);
   double _currentZoom = 13.0;
   bool destinationSelected = false;
+  String distance = "0";
+  String minutes = "0";
 
 
   @override
@@ -108,12 +111,17 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        // print(data);
         List<LatLng> points = (data['route'] as List).map((point) {
           return LatLng(point['lat'], point['lon']);
         }).toList();
+        String totalDistanceKm = data['totalDistanceKm'];
+        String totalTimeMinutes = data['totalTimeMinutes'];
 
         setState(() {
           _routePoints = points;
+          distance = totalDistanceKm;
+          minutes = totalTimeMinutes;
         });
 
         if (points.isNotEmpty) {
@@ -293,7 +301,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
             FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-              initialCenter: LatLng(0, 0),
+              initialCenter: const LatLng(0, 0),
               initialZoom: 13.0,
               onPositionChanged: (position, hasGesture) {
                 _currentCenter = position.center;
@@ -303,16 +311,16 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
               children: [
                 TileLayer(
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: ['a', 'b', 'c'],
+                  subdomains: const ['a', 'b', 'c'],
                 ),
                 if (_currentLocation != null)
-                  MarkerLayer(
+                  const MarkerLayer(
                     markers: [
                       Marker(
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
+                        child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
                   ),
@@ -344,7 +352,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                 children: [
                   TextField(
                     controller: _addressController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: "Enter Destination",
                       filled: true,
                       fillColor: Colors.white,
@@ -389,6 +397,66 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                     child: const Text("Set Destination"),
                   ),
                 ],
+              ),
+            ),
+            //button when 
+            if (_routePoints.isNotEmpty)
+            Positioned(
+              bottom: 0, // Align the container to the bottom of the screen
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 150,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(30.0), // Rounded top corners
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Space items evenly
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          "${distance} km",
+                          style: const TextStyle(
+                            fontSize: 20.0, // Larger font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        Text(
+                          "${minutes} min",
+                          style: const TextStyle(
+                            fontSize: 20.0, // Larger font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20), // Add more spacing between the Row and the button
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NavigationPage(_routePoints),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Start",
+                        style: TextStyle(fontSize: 18.0),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

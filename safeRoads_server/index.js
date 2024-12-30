@@ -64,9 +64,11 @@ const getRoute = async (start, end) => {
 
     const route = await pool.query(`
       SELECT *,
-      ST_AsGeoJSON(the_geom) AS geojson
+      ST_AsGeoJSON(the_geom) AS geojson,
+      maxspeed_forward,
+      maxspeed_backward
       FROM pgr_dijkstra(
-        'SELECT gid AS id, source, target, cost, reverse_cost FROM ways',
+        'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM ways',
         ${startNode.rows[0].id}, ${endNode.rows[0].id},
         directed := true
       ) AS route
@@ -128,14 +130,36 @@ app.post("/route", async (req, res) => {
   try {
     const { start, end } = req.body;
     const route = await getRoute(start, end);
-    if (!route) {
+
+    if (!route || route.length === 0) {
       return res.status(404).json({ error: "Route not found" });
     }
 
     let routePoints = [];
+    let totalDistance = 0; // in meters
+    let totalTime = 0; // in hours
 
     route.forEach((row, index) => {
       const geojson = JSON.parse(row.geojson); // Parse the GeoJSON
+      const segmentDistance = parseFloat(row.length_m); // Distance in meters
+
+      // Determine the speed to use based on direction
+      const speed =
+        row.reverse_cost === -1
+          ? row.maxspeed_forward // If reverse_cost is -1, use forward speed
+          : row.maxspeed_backward;
+
+      if (!speed || speed <= 0) {
+        console.warn("Invalid speed value for segment, skipping:", row);
+        return; // Skip segments with invalid speed
+      }
+
+      // Convert speed to m/s and calculate time for this segment
+      const speedMps = (speed * 1000) / 3600; // Convert km/h to m/s
+      const segmentTime = segmentDistance / speedMps; // Time in seconds
+      totalTime += segmentTime / 3600; // Convert to hours and accumulate
+      totalDistance += segmentDistance; // Accumulate distance
+
       if (geojson.type === "LineString") {
         const coordinates = geojson.coordinates;
         const firstCoord = coordinates[0];
@@ -157,12 +181,10 @@ app.post("/route", async (req, res) => {
           );
 
           if (startDistanceToLast < startDistanceToFirst) {
-            // If last coordinate is closer to start, reverse the segment
             routePoints.push(
               ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon }))
             );
           } else {
-            // Otherwise, add normally
             routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon })));
           }
         } else {
@@ -183,25 +205,35 @@ app.post("/route", async (req, res) => {
           );
 
           if (distanceToLast < distanceToFirst) {
-            // If the last coordinate is closer, reverse the order
             routePoints.push(
               ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon }))
             );
           } else {
-            // Otherwise, add normally
             routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon })));
           }
         }
       }
     });
 
-    // console.log("routePoints:", routePoints);
-    res.status(200).json({ route: routePoints });
+    // Convert total distance to kilometers
+    const totalDistanceKm = totalDistance / 1000;
+
+    console.log("totalDistanceKm:", totalDistanceKm)
+    console.log("totalTime:", totalTime)
+
+
+    res.status(200).json({
+      route: routePoints,
+      totalDistanceKm: totalDistanceKm.toFixed(2),
+      totalTimeMinutes: (totalTime * 60).toFixed(0), // Convert hours to minutes
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 // Helper function to calculate distance between two coordinates
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -268,6 +300,15 @@ app.get("/search", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.post("/update-position", async (req, res) => {
+  const { userId, lat, lon } = req.body;
+  console.log(`User ${userId} updated position: ${lat}, ${lon}`);
+  
+  // Optionally, store or process the position
+  res.status(200).json({ message: "Position updated successfully" });
+});
+
 
 
 
