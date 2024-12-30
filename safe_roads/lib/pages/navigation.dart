@@ -63,11 +63,11 @@ class _NavigationPageState extends State<NavigationPage> {
           FlutterMap(
             options: MapOptions(
               initialCenter: currentPosition ?? widget.routeCoordinates.first,
-              initialZoom: 15.0,
+              initialZoom: 19.0,
             ),
             children: [
               TileLayer(
-                urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 subdomains: ['a', 'b', 'c'],
               ),
               PolylineLayer(

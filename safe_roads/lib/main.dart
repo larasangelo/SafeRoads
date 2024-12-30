@@ -27,15 +27,17 @@ void main() async {
 
   runApp(MaterialApp(
     // initialRoute: '/welcome',  //THIS IS THE RIGHT ONE
-    initialRoute: '/navigation', //FOR TESTING THE NAVIGATION
+    initialRoute: '/navigation', // FOR TESTING THE NAVIGATION
     routes: {
       '/': (context) => Loading(),
       '/home': (context) => const MapPage(),
       '/welcome': (context) => const WelcomePage(),
       '/login': (context) => const LoginPage(),
       '/register': (context) => const RegisterPage(),
-      '/navigation': (context) => const NavigationBarExample(),
+      '/navigation': (context) => NavigationBarExample(key: navigationBarKey), // Use the key here
       '/editProfile': (context) => const EditProfile()
     },
   ));
 }
+
+GlobalKey<NavigationBarExampleState> navigationBarKey = GlobalKey<NavigationBarExampleState>();

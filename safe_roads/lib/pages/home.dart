@@ -6,16 +6,17 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
+import 'package:safe_roads/main.dart';
 import 'package:safe_roads/pages/navigation.dart';
 
 class MapPage extends StatefulWidget {
-  const MapPage({Key? key}) : super(key: key);
+  const MapPage({super.key});
 
   @override
   _MapPageState createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  {
+class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
   String? fcmToken;
@@ -25,11 +26,12 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
   final TextEditingController _addressController = TextEditingController();
   List<Map<String, dynamic>> _suggestions = []; // Stores autocomplete suggestions
   Timer? _debounce; // To avoid over calling the API
-  LatLng _currentCenter = LatLng(0, 0);
+  LatLng _currentCenter = const LatLng(0, 0);
   double _currentZoom = 13.0;
   bool destinationSelected = false;
   String distance = "0";
   String minutes = "0";
+  bool setDestVis = true;
 
 
   @override
@@ -60,7 +62,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
         _mapController.move(
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-          LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+          const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           13.0,
         );
       }
@@ -117,6 +119,8 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
         }).toList();
         String totalDistanceKm = data['totalDistanceKm'];
         String totalTimeMinutes = data['totalTimeMinutes'];
+        // Hide the navigation bar when the "Start" button is pressed
+        navigationBarKey.currentState?.toggleNavigationBar(false);
 
         setState(() {
           _routePoints = points;
@@ -127,7 +131,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
         if (points.isNotEmpty) {
           // Calculate bounds and adjust map view
           LatLngBounds bounds = _calculateBounds(points);
-          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: EdgeInsets.all(20))); // Padding for better visibility
+          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(20))); // Padding for better visibility
         }
       } else {
         throw Exception("Failed to fetch route: ${response.body}");
@@ -216,7 +220,6 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
   }
 
 
-  // 
   Future<void> _setDestination() async {
     if (_addressController.text.isNotEmpty) {
       final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
@@ -232,7 +235,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
           await _fetchRoute(
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
             // LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
-            LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+            const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             destination,
           );
 
@@ -350,12 +353,48 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
               right: 10.0,
               child: Column(
                 children: [
+                  if(_routePoints.isNotEmpty)
+                  TextField(
+                    controller: _addressController,
+                    decoration: InputDecoration(
+                      labelText: "Enter Destination",
+                      filled: true,
+                      fillColor: Colors.white,
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          navigationBarKey.currentState?.toggleNavigationBar(true);
+
+                          // Reset the map state and UI elements
+                          setState(() {
+                            _routePoints.clear();
+                            destinationSelected = false;
+                            _destinationLocation = null;
+                            _addressController.text = "";
+                            _suggestions.clear();
+                            setDestVis = true;
+                          });
+
+                          // Center the map on the user's current location
+                          if (_currentLocation != null) {
+                            _mapController.move(
+                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                              13.0, // Adjust zoom level as needed
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  if(!_routePoints.isNotEmpty)
                   TextField(
                     controller: _addressController,
                     decoration: const InputDecoration(
                       labelText: "Enter Destination",
                       filled: true,
                       fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.search),
                     ),
                   ),
                   const SizedBox(height: 8.0),
@@ -392,8 +431,14 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                         },
                       ),
                     ),
+                  if(!_routePoints.isNotEmpty && setDestVis)
                   ElevatedButton(
-                    onPressed: _setDestination,
+                    onPressed: () {
+                      _setDestination();
+                      setState(() {
+                        setDestVis = false;
+                      });
+                    },
                     child: const Text("Set Destination"),
                   ),
                 ],
@@ -402,7 +447,7 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
             //button when 
             if (_routePoints.isNotEmpty)
             Positioned(
-              bottom: 0, // Align the container to the bottom of the screen
+              bottom: 0,
               left: 0,
               right: 0,
               child: Container(
@@ -412,35 +457,35 @@ class _MapPageState extends State<MapPage> with SingleTickerProviderStateMixin  
                   color: Colors.white,
                   shape: BoxShape.rectangle,
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(30.0), // Rounded top corners
+                    top: Radius.circular(30.0),
                   ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Space items evenly
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           "${distance} km",
                           style: const TextStyle(
-                            fontSize: 20.0, // Larger font size
+                            fontSize: 22.0,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
                         ),
+                        const SizedBox(width: 30), // Add some spacing
                         Text(
                           "${minutes} min",
                           style: const TextStyle(
-                            fontSize: 20.0, // Larger font size
+                            fontSize: 22.0,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20), // Add more spacing between the Row and the button
+                    const SizedBox(height: 20), // Add some spacing
                     ElevatedButton(
                       onPressed: () {
                         Navigator.push(
