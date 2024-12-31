@@ -29,6 +29,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
   LatLng _currentCenter = const LatLng(0, 0);
   double _currentZoom = 13.0;
   bool destinationSelected = false;
+  String? selectedDestination;
   String distance = "0";
   String minutes = "0";
   bool setDestVis = true;
@@ -170,25 +171,27 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
       if (_debounce?.isActive ?? false) _debounce!.cancel();
       _debounce = Timer(const Duration(milliseconds: 300), () {
         String query = _addressController.text;
-        print("destinationSelect dentro do _setup:  $destinationSelected");
-        
-        // Reset destinationSelected when the user starts typing
-        if (destinationSelected && query.isNotEmpty) {
+
+        // If the user modifies the text, reset the destinationSelected flag
+        if (destinationSelected && query != selectedDestination) {
           setState(() {
             destinationSelected = false;
           });
         }
 
+        // Fetch suggestions if query length is sufficient
         if (query.length > 2) {
           _fetchSearchSuggestions(query);
         } else {
+          // Clear suggestions if text is too short
           setState(() {
-            _suggestions.clear(); // Clear if text is too short
+            _suggestions.clear();
           });
         }
       });
     });
   }
+
 
 
   Future<void> _fetchSearchSuggestions(String query) async {
@@ -369,6 +372,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                           setState(() {
                             _routePoints.clear();
                             destinationSelected = false;
+                            selectedDestination = "";
                             _destinationLocation = null;
                             _addressController.text = "";
                             _suggestions.clear();
@@ -418,15 +422,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                               style: const TextStyle(fontSize: 12), // Smaller font size
                             ),
                             onTap: () {
-                              // When tapped, set the selected address in the text field and clear suggestions
+                              // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag
                               _addressController.text = suggestion['name'];
+                              FocusScope.of(context).unfocus(); // Dismiss the keyboard
                               setState(() {
-                                print("dentro do setState para dar clean das sugestions");
-                                _suggestions.clear(); // Clear suggestions after selection
+                                _suggestions.clear();
                                 destinationSelected = true;
-                                print("destinationSelect dentro do setState:  $destinationSelected");
+                                selectedDestination = _addressController.text;
                               });
-                            },
+                            }
                           );
                         },
                       ),
