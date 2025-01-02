@@ -45,10 +45,13 @@ class _NavigationPageState extends State<NavigationPage> {
         setState(() {
           if (previousPosition != null) {
             // Calculate bearing between previous and current position
-            bearing = _calculateBearing(previousPosition!, newPosition);
+            // bearing = _calculateBearing(previousPosition!, newPosition);
           }
           previousPosition = currentPosition;
           currentPosition = newPosition;
+
+          print("previousPosition: $previousPosition");
+          print("newPosition: $newPosition");
         });
 
         if (isFirstLocationUpdate) {
@@ -239,7 +242,7 @@ class _NavigationPageState extends State<NavigationPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "${widget.distance} km",
+                          widget.distance,
                           style: const TextStyle(
                             fontSize: 22.0,
                             fontWeight: FontWeight.bold,
@@ -248,7 +251,7 @@ class _NavigationPageState extends State<NavigationPage> {
                         ),
                         const SizedBox(width: 30), // Add some spacing
                         Text(
-                          "${widget.time} min",
+                          widget.time,
                           style: const TextStyle(
                             fontSize: 22.0,
                             fontWeight: FontWeight.bold,
@@ -257,7 +260,7 @@ class _NavigationPageState extends State<NavigationPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 20), // Add some spacing
+                    const SizedBox(height: 20), // Add some spacing
                     // ElevatedButton(
                     //   onPressed: () {
                     //     Navigator.pop(context); // Stop navigation and return to the previous page

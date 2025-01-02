@@ -16,7 +16,7 @@ class MapPage extends StatefulWidget {
   _MapPageState createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
+class _MapPageState extends State<MapPage> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin  {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
   String? fcmToken;
@@ -36,6 +36,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
   bool _isFetchingRoute = false;
   bool _cancelFetchingRoute = false;
 
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -314,6 +317,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Ensure the state is kept alive.
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey,
       home: Scaffold(
@@ -341,7 +345,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                         point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
+                        child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
                   ),
@@ -384,7 +388,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                       labelText: "Enter Destination",
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: Icon(Icons.search),
+                      prefixIcon: const Icon(Icons.search),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.close),
                         onPressed: () {
@@ -415,16 +419,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                       ),
                     ),
                   ),
-                  // if(!_routePoints.isNotEmpty)    // Nao tem a route
-                  // TextField(
-                  //   controller: _addressController,
-                  //   decoration: const InputDecoration(
-                  //     labelText: "Enter Destination",
-                  //     filled: true,
-                  //     fillColor: Colors.white,
-                  //     prefixIcon: Icon(Icons.search),
-                  //   ),
-                  // ),
                   const SizedBox(height: 8.0),
                   if (_suggestions.isNotEmpty && !destinationSelected)
                     Container(

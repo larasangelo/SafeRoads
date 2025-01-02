@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:safe_roads/main.dart';
 import 'package:safe_roads/pages/about.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/profile.dart';
@@ -12,22 +11,10 @@ class NavigationBarExample extends StatefulWidget {
 }
 
 class NavigationBarExampleState extends State<NavigationBarExample> {
-  int _selectedIndex = 1; // Default to Home page
+  int _selectedIndex = 1; // Default to the MapPage
   bool _showNavigationBar = true; // Track visibility of navigation bar
-
-  // List of pages
-  final List<Widget> _pages = [
-    const About(),
-    MapPage(), // Assuming MapPage is the second page in your navigation
-    const Profile(),
-  ];
-
-  // Handle tab change
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  final PageController _pageController = PageController(initialPage: 1);
+  final PageStorageBucket _bucket = PageStorageBucket(); // For persisting state
 
   // Toggle navigation bar visibility
   void toggleNavigationBar(bool show) {
@@ -35,24 +22,39 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
       _showNavigationBar = show;
     });
   }
-  
+
   @override
   void dispose() {
-    // Show the navigation bar when exiting the page
-    navigationBarKey.currentState?.toggleNavigationBar(true);
-    super.dispose(); // Call to dispose the widget
+    _pageController.dispose();
+    super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex], // Display the selected page
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        children: [
+          const About(),
+          PageStorage(
+            bucket: _bucket,
+            child: MapPage(), // Use PageStorage to preserve MapPage state
+          ),
+          const Profile(),
+        ],
+      ),
       bottomNavigationBar: _showNavigationBar
           ? NavigationBar(
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              selectedIndex: _selectedIndex, // Highlight the selected tab
-              onDestinationSelected: _onItemTapped, // Update the selected index
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (int index) {
+                _pageController.jumpToPage(index);
+              },
               destinations: const [
                 NavigationDestination(
                   icon: Icon(Icons.info_outline),
@@ -73,7 +75,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
               backgroundColor: Colors.white,
               elevation: 3,
             )
-          : null, // Hide navigation bar when _showNavigationBar is false
+          : null,
     );
   }
 }
