@@ -31,8 +31,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
   bool destinationSelected = false;
   String? selectedDestination;
   String distance = "0";
-  String minutes = "0";
+  String time = "0";
   bool setDestVis = true;
+  bool _isFetchingRoute = false;
+  bool _cancelFetchingRoute = false;
 
 
   @override
@@ -61,9 +63,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-          const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+          // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           13.0,
         );
       }
@@ -103,6 +105,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
     try {
+      setState(() {
+        _isFetchingRoute = true; // Show the progress bar
+        _cancelFetchingRoute = false; // Reset the cancellation flag
+      });
+
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
         headers: {"Content-Type": "application/json"},
@@ -112,33 +119,41 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
         }),
       );
 
+      if (_cancelFetchingRoute) return; // Exit if route-fetching is canceled
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // print(data);
         List<LatLng> points = (data['route'] as List).map((point) {
           return LatLng(point['lat'], point['lon']);
         }).toList();
-        String totalDistanceKm = data['totalDistanceKm'];
-        String totalTimeMinutes = data['totalTimeMinutes'];
-        // Hide the navigation bar when the "Start" button is pressed
+        String totalDistanceKm = data['distance'];
+        String totalTimeMinutes = data['time'];
+
+        // Hide the navigation bar when the user gets the route
         navigationBarKey.currentState?.toggleNavigationBar(false);
 
         setState(() {
           _routePoints = points;
           distance = totalDistanceKm;
-          minutes = totalTimeMinutes;
+          time = totalTimeMinutes;
+          _isFetchingRoute = false; // Hide the progress bar
         });
 
         if (points.isNotEmpty) {
           // Calculate bounds and adjust map view
           LatLngBounds bounds = _calculateBounds(points);
-          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(20))); // Padding for better visibility
+          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(20)));
         }
       } else {
         throw Exception("Failed to fetch route: ${response.body}");
       }
     } catch (e) {
-      print("Error fetching route: $e");
+      if (!_cancelFetchingRoute) {
+        print("Error fetching route: $e");
+      }
+      setState(() {
+        _isFetchingRoute = false; // Hide the progress bar
+      });
     }
   }
 
@@ -236,9 +251,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
+            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
-            const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+            // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             destination,
           );
 
@@ -320,12 +335,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                   subdomains: const ['a', 'b', 'c'],
                 ),
                 if (_currentLocation != null)
-                  const MarkerLayer(
+                  MarkerLayer(
                     markers: [
                       Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                        point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                        // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -344,6 +359,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                     polylines: [
                       Polyline(
                         points: _routePoints,
+                        strokeWidth: 4.0,
                         color: Colors.blue,
                       ),
                     ],
@@ -356,13 +372,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
               right: 10.0,
               child: Column(
                 children: [
-                  if(_routePoints.isNotEmpty)
+                  if (_isFetchingRoute)       // Esta fetching a route E Nao tem a route
+                  LinearProgressIndicator(
+                    value: null, // Indeterminate progress
+                    backgroundColor: Colors.grey[200],
+                    color: Colors.blue,
+                  ),  // Nao esta fetching a route E ja tem a route
                   TextField(
                     controller: _addressController,
                     decoration: InputDecoration(
                       labelText: "Enter Destination",
                       filled: true,
                       fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.search),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.close),
                         onPressed: () {
@@ -370,6 +392,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
 
                           // Reset the map state and UI elements
                           setState(() {
+                            _cancelFetchingRoute = true; // Cancel the route-fetching process
                             _routePoints.clear();
                             destinationSelected = false;
                             selectedDestination = "";
@@ -377,13 +400,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                             _addressController.text = "";
                             _suggestions.clear();
                             setDestVis = true;
+                            _isFetchingRoute = false;
                           });
 
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -391,16 +415,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                       ),
                     ),
                   ),
-                  if(!_routePoints.isNotEmpty)
-                  TextField(
-                    controller: _addressController,
-                    decoration: const InputDecoration(
-                      labelText: "Enter Destination",
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                  ),
+                  // if(!_routePoints.isNotEmpty)    // Nao tem a route
+                  // TextField(
+                  //   controller: _addressController,
+                  //   decoration: const InputDecoration(
+                  //     labelText: "Enter Destination",
+                  //     filled: true,
+                  //     fillColor: Colors.white,
+                  //     prefixIcon: Icon(Icons.search),
+                  //   ),
+                  // ),
                   const SizedBox(height: 8.0),
                   if (_suggestions.isNotEmpty && !destinationSelected)
                     Container(
@@ -471,7 +495,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "${distance} km",
+                          distance,
                           style: const TextStyle(
                             fontSize: 22.0,
                             fontWeight: FontWeight.bold,
@@ -480,7 +504,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                         ),
                         const SizedBox(width: 30), // Add some spacing
                         Text(
-                          "${minutes} min",
+                          time,
                           style: const TextStyle(
                             fontSize: 22.0,
                             fontWeight: FontWeight.bold,
@@ -495,7 +519,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin  {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => NavigationPage(_routePoints),
+                            builder: (context) => NavigationPage(_routePoints, distance, time),
                           ),
                         );
                       },

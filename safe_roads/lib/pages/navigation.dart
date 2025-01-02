@@ -8,8 +8,10 @@ import 'package:http/http.dart' as http;
 
 class NavigationPage extends StatefulWidget {
   final List<LatLng> routeCoordinates;
+  final String distance;
+  final String time;
 
-  const NavigationPage(this.routeCoordinates, {super.key});
+  const NavigationPage(this.routeCoordinates, this.distance, this.time, {super.key});
 
   @override
   _NavigationPageState createState() => _NavigationPageState();
@@ -23,6 +25,7 @@ class _NavigationPageState extends State<NavigationPage> {
   StreamSubscription<LocationData>? locationSubscription;
   final MapController _mapController = MapController();
   bool isFirstLocationUpdate = true;
+  String estimatedArrivalTime = "??:??"; // To display the arrival time
 
   @override
   void initState() {
@@ -30,6 +33,10 @@ class _NavigationPageState extends State<NavigationPage> {
     location = Location();
 
     _initializeLocation();
+
+    // Calculate the estimated arrival time
+    _calculateArrivalTime(widget.time);
+
     // Start tracking location
     locationSubscription = location.onLocationChanged.listen((LocationData loc) {
       if (loc.latitude != null && loc.longitude != null) {
@@ -89,6 +96,30 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
+  void _calculateArrivalTime(String travelTimeInMinutes) {
+    try {
+      // Get the current time
+      DateTime now = DateTime.now();
+
+      // Parse the travel time from the provided string
+      int travelMinutes = int.tryParse(travelTimeInMinutes) ?? 0;
+
+      // Add travel minutes to the current time
+      DateTime arrivalTime = now.add(Duration(minutes: travelMinutes));
+
+      // Format the time in 24-hour format (e.g., 13:45)
+      String formattedTime = "${arrivalTime.hour.toString().padLeft(2, '0')}:${arrivalTime.minute.toString().padLeft(2, '0')}";
+
+      // Update the state
+      setState(() {
+        estimatedArrivalTime = formattedTime;
+      });
+    } catch (e) {
+      print("Error calculating arrival time: $e");
+    }
+  }
+
+
   Future<void> _sendPositionToServer(double lat, double lon) async {
     try {
       await http.post(
@@ -129,84 +160,96 @@ class _NavigationPageState extends State<NavigationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       // appBar: AppBar(title: const Text("Navigation")),
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: currentPosition ?? widget.routeCoordinates.first,
-              initialZoom: 19.0,
-              initialRotation: bearing, // Set initial rotation
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                subdomains: const ['a', 'b', 'c'],
+      body: SafeArea(
+        child: Stack(
+          children: [
+            if (currentPosition != null)
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: currentPosition ?? widget.routeCoordinates.first,
+                initialZoom: 20.0,
+                initialRotation: bearing, // Set initial rotation
               ),
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: widget.routeCoordinates,
-                    strokeWidth: 4.0,
-                    color: Colors.blue,
-                  ),
-                ],
-              ),
-              if (currentPosition != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: currentPosition!,
-                      child: const Icon(
-                        Icons.my_location, // Use a static icon
-                        color: Colors.blue,
-                        size: 40,
-                      ),
+              children: [
+                TileLayer(
+                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  subdomains: const ['a', 'b', 'c'],
+                ),
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: widget.routeCoordinates,
+                      strokeWidth: 8.0,
+                      color: Colors.blue,
                     ),
                   ],
                 ),
-            ],
-          ),
-          Positioned(
+                // if (currentPosition != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: currentPosition!,
+                        child: const Icon(
+                          Icons.my_location, // Use a static icon
+                          color: Colors.blue,
+                          size: 40,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            Positioned(
+              top: 20,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, size: 40),
+                onPressed: () {
+                  Navigator.pop(context); // Stop navigation and return to the previous page
+                },
+              )
+            ),
+            Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: Container(
-                height: 150,
+                height: 120,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.rectangle,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(30.0),
-                  ),
+                  // borderRadius: BorderRadius.vertical(
+                  //   top: Radius.circular(30.0),
+                  // ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      "??:??",
-                      style: TextStyle(
+                    Text(
+                      estimatedArrivalTime,
+                      style: const TextStyle(
                         fontSize: 30.0,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),
                     ),
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "y km",
-                          style: TextStyle(
+                          "${widget.distance} km",
+                          style: const TextStyle(
                             fontSize: 22.0,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
                         ),
-                        SizedBox(width: 30), // Add some spacing
+                        const SizedBox(width: 30), // Add some spacing
                         Text(
-                          "x min",
-                          style: TextStyle(
+                          "${widget.time} min",
+                          style: const TextStyle(
                             fontSize: 22.0,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
@@ -214,22 +257,23 @@ class _NavigationPageState extends State<NavigationPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20), // Add some spacing
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context); // Stop navigation and return to the previous page
-                      },
-                      child: const Text(
-                        "Stop",
-                        style: TextStyle(fontSize: 18.0),
-                      ),
-                    ),
+                    SizedBox(height: 20), // Add some spacing
+                    // ElevatedButton(
+                    //   onPressed: () {
+                    //     Navigator.pop(context); // Stop navigation and return to the previous page
+                    //   },
+                    //   child: const Text(
+                    //     "Stop",
+                    //     style: TextStyle(fontSize: 18.0),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
             ),
-        ],
-      ),
+          ],
+        ),
+      )
     );
   }
 }

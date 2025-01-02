@@ -215,17 +215,29 @@ app.post("/route", async (req, res) => {
       }
     });
 
-    // Convert total distance to kilometers
-    const totalDistanceKm = totalDistance / 1000;
+    // Format the distance
+    const formattedDistance =
+      totalDistance < 1000
+        ? `${totalDistance.toFixed(0)} meters`
+        : `${(totalDistance / 1000).toFixed(2)} km`;
 
-    console.log("totalDistanceKm:", totalDistanceKm)
-    console.log("totalTime:", totalTime)
+    console.log("formattedDistance,", formattedDistance);
+
+    // Format the time
+    const totalHours = Math.floor(totalTime);
+    const totalMinutes = Math.round((totalTime - totalHours) * 60);
+    const formattedTime =
+      totalHours > 0
+        ? `${totalHours}h ${totalMinutes}min`
+        : `${totalMinutes}min`;
+
+    console.log("formattedTime,", formattedTime);
 
 
     res.status(200).json({
       route: routePoints,
-      totalDistanceKm: totalDistanceKm.toFixed(2),
-      totalTimeMinutes: (totalTime * 60).toFixed(0), // Convert hours to minutes
+      distance: formattedDistance,
+      time: formattedTime,
     });
   } catch (err) {
     console.error(err);
