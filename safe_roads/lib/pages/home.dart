@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -19,7 +18,8 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin  {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
-  String? fcmToken;
+  // final Notifications _notifications = Notifications();
+  // String? fcmToken;
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
   List<LatLng> _routePoints = []; // Stores points for the polyline
@@ -66,45 +66,45 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           13.0,
         );
       }
     });
 
-    await _setupFirebaseMessaging();
+    // await _notifications.setupFirebaseMessaging();
   }
 
-  Future<void> _setupFirebaseMessaging() async {
-    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print("Notification permission granted");
-      fcmToken = await FirebaseMessaging.instance.getToken();
-      print("FCM Token: $fcmToken");
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print("Foreground message received: ${message.notification?.title}");
-        _showForegroundNotification(message);
-      });
-    } else {
-      print("Notification permission denied");
-    }
-  }
+  // Future<void> _setupFirebaseMessaging() async {
+  //   NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
+  //     alert: true,
+  //     badge: true,
+  //     sound: true,
+  //   );
+  //   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+  //     print("Notification permission granted");
+  //     fcmToken = await FirebaseMessaging.instance.getToken();
+  //     print("FCM Token: $fcmToken");
+  //     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  //       print("Foreground message received: ${message.notification?.title}");
+  //       _showForegroundNotification(message);
+  //     });
+  //   } else {
+  //     print("Notification permission denied");
+  //   }
+  // }
   
-  void _showForegroundNotification(RemoteMessage message) {
-      if (message.notification != null) {
-        scaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(
-            content: Text("${message.notification!.title}: ${message.notification!.body}"),
-          ),
-        );
-      }
-    }
+  // void _showForegroundNotification(RemoteMessage message) {
+  //     if (message.notification != null) {
+  //       scaffoldMessengerKey.currentState?.showSnackBar(
+  //         SnackBar(
+  //           content: Text("${message.notification!.title}: ${message.notification!.body}"),
+  //         ),
+  //       );
+  //     }
+  //   }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
     try {
@@ -174,9 +174,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         final lon = data['lon'];
         return LatLng(lat, lon);
       } else {
-        scaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(content: Text("Error: ${jsonDecode(response.body)['error']}")),
-        );
+        // scaffoldMessengerKey.currentState?.showSnackBar(
+        //   SnackBar(content: Text("Error: ${jsonDecode(response.body)['error']}")),
+        // );
+        print("Error: ${jsonDecode(response.body)['error']}");
       }
     } catch (e) {
       print("Error fetching coordinates: $e");
@@ -254,8 +255,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            // LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
+            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             destination,
           );
@@ -342,8 +343,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
@@ -410,7 +411,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               13.0, // Adjust zoom level as needed
                             );
@@ -429,7 +431,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         itemBuilder: (context, index) {
                           // Assuming _suggestions holds a list of maps with name, city, and country
                           final suggestion = _suggestions[index];
-                          print("dentro do if que so deve passar SE destinationSelected for falso: $destinationSelected");
                           return ListTile(
                             title: Text(
                               suggestion['name'], // Name of the place

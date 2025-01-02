@@ -101,29 +101,33 @@ app.use(express.json());
 app.use(cors({ origin: "*" }));
 
 app.post("/send", (req, res) => {
-  const receivedToken = req.body.fcmToken;
+  // Timeout de 5 segundos para testar
+  setTimeout( function () {
+    const receivedToken = req.body.fcmToken;
+    
+    const message = {
+      notification: {
+        title: "Started Navigation",
+        body: "You have began your journey!",
+      },
+      token: receivedToken,
+    };
 
-  const message = {
-    notification: {
-      title: "Destination Set",
-      body: "You have set a new destination!",
-    },
-    token: receivedToken,
-  };
-
-  getMessaging()
-    .send(message)
-    .then((response) => {
-      res.status(200).json({
-        message: "Successfully sent message",
-        token: receivedToken,
+    getMessaging()
+      .send(message)
+      .then((response) => {
+        res.status(200).json({
+          message: "Successfully sent message",
+          token: receivedToken,
+        });
+        console.log("Successfully sent message:", response);
+      })
+      .catch((error) => {
+        res.status(400).json({ error: error.message });
+        console.log("Error sending message:", error);
       });
-      console.log("Successfully sent message:", response);
-    })
-    .catch((error) => {
-      res.status(400).json({ error: error.message });
-      console.log("Error sending message:", error);
-    });
+    }, 5000
+  )
 });
 
 app.post("/route", async (req, res) => {
