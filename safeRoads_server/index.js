@@ -104,11 +104,13 @@ app.post("/send", (req, res) => {
   // Timeout de 5 segundos para testar
   setTimeout( function () {
     const receivedToken = req.body.fcmToken;
-    
+    const receivedtitle = req.body.title;
+    const receivedbody = req.body.body;
+
     const message = {
       notification: {
-        title: "Started Navigation",
-        body: "You have began your journey!",
+        title: receivedtitle,
+        body: receivedbody,
       },
       token: receivedToken,
     };
@@ -233,7 +235,7 @@ app.post("/route", async (req, res) => {
     const formattedTime =
       totalHours > 0
         ? `${totalHours}h ${totalMinutes}min`
-        : `${totalMinutes}min`;
+        : `${totalMinutes} min`;
 
     console.log("formattedTime,", formattedTime);
 

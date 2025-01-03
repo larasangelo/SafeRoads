@@ -147,6 +147,41 @@ class ProfileController {
     await FirebaseAuth.instance.currentUser!.updatePassword(newPassword);
   }
 
+  Future<void> deleteUserAccount({
+    required BuildContext context,
+    required String password,
+  }) async {
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      _showErrorDialog(context, "No user is currently signed in.");
+      return;
+    }
+
+    try {
+      // Re-authenticate the user
+      final cred = EmailAuthProvider.credential(email: user.email!, password: password);
+      await user.reauthenticateWithCredential(cred);
+
+      // Delete user data from Realtime Database
+      await _userProfileRepository.deleteUserProfile(user.uid);
+
+      // Delete the account
+      await user.delete();
+
+      // Navigate the user to the login screen
+      Navigator.pushReplacementNamed(context, '/login');
+
+      // Show success feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Account deleted successfully.")),
+      );
+    } catch (e) {
+      _showErrorDialog(context, e.toString());
+    }
+  }
+
+
   void _showErrorDialog(BuildContext context, String message) {
     showDialog(
       context: context,

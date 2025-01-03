@@ -23,4 +23,13 @@ class UserProfileRepository {
       throw Exception("Failed to update user profile: $e");
     }
   }
+
+  Future<void> deleteUserProfile(String uid) async {
+    try {
+      await _databaseRef.child('users/$uid').remove();
+    } catch (e) {
+      throw Exception("Failed to delete user profile: $e");
+    }
+  }
+
 }

@@ -103,6 +103,57 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _showDeleteAccountDialog() async {
+    final TextEditingController passwordController = TextEditingController();
+
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Account"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Please enter your password to confirm account deletion."),
+            const SizedBox(height: 16.0),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Password",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), // Cancel
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true), // Confirm
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      final password = passwordController.text;
+      if (password.isNotEmpty) {
+        await _profileController.deleteUserAccount(context: context, password: password);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Password is required to delete your account.")),
+        );
+      }
+    }
+  }
+
+
    Future<void> checkNotificationPermissions() async {
     // Check the current notification permission status
     PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
@@ -360,9 +411,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           Divider(),
           buildSettingsItem("Sign out", null, _showSignOutConfirmation, color: Colors.red),
           Divider(),
-          buildSettingsItem("Delete account", null, () {
-            // Add delete account logic
-          }, color: Colors.red),
+          buildSettingsItem("Delete account", null, () => _showDeleteAccountDialog(), color: Colors.red,)
         ],
       ),
     );

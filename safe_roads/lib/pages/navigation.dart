@@ -76,9 +76,7 @@ class _NavigationPageState extends State<NavigationPage> {
     bool serviceEnabled;
     PermissionStatus permissionGranted;
 
-
     // NOTIFICATIONS TEST
-    // Ensure setupFirebaseMessaging is called before using fcmToken
     await _notifications.setupFirebaseMessaging(); 
 
     if (_notifications.fcmToken!.isNotEmpty) {
@@ -91,6 +89,8 @@ class _NavigationPageState extends State<NavigationPage> {
           headers: {"Content-Type": "application/json"},
           body: jsonEncode({
             "fcmToken": _notifications.fcmToken,
+            "title": "Attention: Risk zone!",
+            "body": "High probability of encountering amphibians!",
           }),
         );
 
@@ -126,15 +126,12 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Get the initial location
     // final initialLocation = await location.getLocation();
-    final initialLocation = LatLng(38.902464, -9.163266); // Test with coordinates of Ribas de Baixo
-    if (initialLocation.latitude != null && initialLocation.longitude != null) {
-      setState(() {
-        // currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
-        currentPosition = LatLng(38.902464, -9.163266); // Test with coordinates of Ribas de Baixo
+    setState(() {
+      // currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
+      currentPosition = LatLng(38.902464, -9.163266); // Test with coordinates of Ribas de Baixo
 
-      });
+    });
     }
-  }
 
   void _calculateArrivalTime(String travelTimeInMinutes) {
     try {

@@ -26,7 +26,7 @@ class _LoginPageState extends State<LoginPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            Navigator.pop(context); // Navigate back to the Welcome Page
+            Navigator.pushNamed(context, '/welcome'); // Navigate to Welcome page
           },
         ),
       ),
