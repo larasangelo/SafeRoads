@@ -7,7 +7,7 @@ import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Profile extends StatefulWidget {
-  const Profile({Key? key}) : super(key: key);
+  const Profile({super.key});
 
   @override
   _ProfileState createState() => _ProfileState();
@@ -153,7 +153,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
-
    Future<void> checkNotificationPermissions() async {
     // Check the current notification permission status
     PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
@@ -167,7 +166,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
-
   Future<void> handleNotificationPermission() async {
     PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
 
@@ -175,7 +173,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       await NotificationPermissions.requestNotificationPermissions();
     } else if (status == PermissionStatus.granted) {
       if (Platform.isAndroid) {
-        final AndroidIntent intent = AndroidIntent(
+        const AndroidIntent intent = AndroidIntent(
           action: 'android.settings.APP_NOTIFICATION_SETTINGS',
           arguments: <String, dynamic>{
             'android.provider.extra.APP_PACKAGE': 'com.example.safe_roads', 
@@ -183,9 +181,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         );
         await intent.launch();
       } else if (Platform.isIOS) {
-        const url = 'app-settings:';
-        if (await canLaunch(url)) {
-          await launch(url);
+        var url = Uri.parse('app-settings:');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url);
         } else {
           throw 'Could not launch $url';
         }
@@ -332,20 +330,20 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             });
             updatePreference("re_route", newValue);
           }),
-          Divider(),
+          const Divider(),
           _buildSwitchTile("Allow notifications", notifications, (bool newValue) async {
             await handleNotificationPermission();
             await checkNotificationPermissions();
             updatePreference("notifications", notifications);
           }),
-          Divider(),
+          const Divider(),
           _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
             setState(() {
               tolls = newValue;
             });
             updatePreference("tolls", newValue);
           }),
-          Divider(),
+          const Divider(),
           buildMeasureDropdown(),
         ],
       ),
@@ -360,7 +358,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         title: const Text("Unit of measure"),
         trailing: DropdownButton<String>(
           value: measure,
-          items: [
+          items: const [
             DropdownMenuItem(value: "km", child: Text("km")),
             DropdownMenuItem(value: "mi", child: Text("mi")),
           ],
@@ -408,9 +406,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               fetchUserProfile();
             }
           }),
-          Divider(),
+          const Divider(),
           buildSettingsItem("Sign out", null, _showSignOutConfirmation, color: Colors.red),
-          Divider(),
+          const Divider(),
           buildSettingsItem("Delete account", null, () => _showDeleteAccountDialog(), color: Colors.red,)
         ],
       ),

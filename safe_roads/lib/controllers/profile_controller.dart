@@ -37,30 +37,7 @@ class ProfileController {
     }
   }
 
-  // Update user profile
-  // Future<void> updateUser({
-  //   required String username,
-  //   required String email,
-  //   required String country,
-  // }) async {
-  //   final User? user = _auth.currentUser;
-
-  //   if (user == null) {
-  //     throw Exception("No user is currently signed in.");
-  //   }
-
-  //   try {
-  //     await _userProfileRepository.updateUserProfile(user.uid, {
-  //       'username': username,
-  //       'email': email,
-  //       'location': country,
-  //     });
-  //   } catch (e) {
-  //     throw Exception("Failed to update user profile: $e");
-  //   }
-  // }
-
-    // Update a user's profile
+  // Update a user's profile
   Future<void> updateUser({
     required BuildContext context,
     required String username,
@@ -104,7 +81,6 @@ class ProfileController {
     }
   }
 
-
   Future<void> updateUserPreference({
     required BuildContext context,
     required String key,
@@ -120,7 +96,7 @@ class ProfileController {
     try {
       // Update the user's profile in the database
       await _userProfileRepository.updateUserProfile(user.uid, {
-        '$key': value,
+        key: value,
       });
 
       // Show success feedback
@@ -140,7 +116,6 @@ class ProfileController {
     );
     await user.reauthenticateWithCredential(cred);
   }
-
 
   Future<void> changePassword(String currentPassword, String newPassword) async {
     await reauthenticate(currentPassword);

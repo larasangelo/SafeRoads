@@ -67,44 +67,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       if (_currentLocation != null) {
         _mapController.move(
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           13.0,
         );
       }
     });
-
-    // await _notifications.setupFirebaseMessaging();
   }
-
-  // Future<void> _setupFirebaseMessaging() async {
-  //   NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-  //     alert: true,
-  //     badge: true,
-  //     sound: true,
-  //   );
-  //   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-  //     print("Notification permission granted");
-  //     fcmToken = await FirebaseMessaging.instance.getToken();
-  //     print("FCM Token: $fcmToken");
-  //     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-  //       print("Foreground message received: ${message.notification?.title}");
-  //       _showForegroundNotification(message);
-  //     });
-  //   } else {
-  //     print("Notification permission denied");
-  //   }
-  // }
-  
-  // void _showForegroundNotification(RemoteMessage message) {
-  //     if (message.notification != null) {
-  //       scaffoldMessengerKey.currentState?.showSnackBar(
-  //         SnackBar(
-  //           content: Text("${message.notification!.title}: ${message.notification!.body}"),
-  //         ),
-  //       );
-  //     }
-  //   }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
     try {
@@ -256,7 +225,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         if (_currentLocation != null) {
           await _fetchRoute(
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
+            const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             destination,
           );
@@ -340,13 +309,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   subdomains: const ['a', 'b', 'c'],
                 ),
                 if (_currentLocation != null)
-                  MarkerLayer(
+                  const MarkerLayer(
                     markers: [
                       Marker(
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
+                        child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
                   ),
@@ -412,7 +381,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           if (_currentLocation != null) {
                             _mapController.move(
                               // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                              const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               13.0, // Adjust zoom level as needed
                             );
@@ -454,7 +423,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         },
                       ),
                     ),
-                  if(!_routePoints.isNotEmpty && setDestVis)
+                  if(_routePoints.isEmpty && setDestVis)
                   ElevatedButton(
                     onPressed: () {
                       _setDestination();

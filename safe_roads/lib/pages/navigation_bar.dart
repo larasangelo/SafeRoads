@@ -4,7 +4,7 @@ import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/profile.dart';
 
 class NavigationBarExample extends StatefulWidget {
-  const NavigationBarExample({Key? key}) : super(key: key);
+  const NavigationBarExample({super.key});
 
   @override
   State<NavigationBarExample> createState() => NavigationBarExampleState();
@@ -43,7 +43,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
           const About(),
           PageStorage(
             bucket: _bucket,
-            child: MapPage(), // Use PageStorage to preserve MapPage state
+            child: const MapPage(), // Use PageStorage to preserve MapPage state
           ),
           const Profile(),
         ],

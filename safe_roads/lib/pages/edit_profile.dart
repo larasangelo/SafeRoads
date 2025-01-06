@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 
 class EditProfile extends StatefulWidget {
-  const EditProfile({Key? key}) : super(key: key);
+  const EditProfile({super.key});
 
   @override
   _EditProfileState createState() => _EditProfileState();
@@ -95,7 +95,7 @@ class _EditProfileState extends State<EditProfile> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40.0),
-                const Text("Username", style: const TextStyle(fontSize: 18.0),),
+                const Text("Username", style: TextStyle(fontSize: 18.0),),
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
@@ -108,7 +108,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Email", style: const TextStyle(fontSize: 18.0),),
+                const Text("Email", style: TextStyle(fontSize: 18.0),),
                 TextFormField(
                   enabled: false,
                   decoration: InputDecoration(
@@ -121,7 +121,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Country", style: const TextStyle(fontSize: 18.0),),
+                const Text("Country", style: TextStyle(fontSize: 18.0),),
                 TextFormField(
                   controller: _countryController,
                   decoration: InputDecoration(
@@ -134,7 +134,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Current Password", style: const TextStyle(fontSize: 18.0),),
+                const Text("Current Password", style: TextStyle(fontSize: 18.0),),
                 TextFormField(
                   controller: _currentPasswordController,
                   obscureText: true,
@@ -148,7 +148,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("New Password", style: const TextStyle(fontSize: 18.0),),
+                const Text("New Password", style: TextStyle(fontSize: 18.0),),
                 TextFormField(
                   controller: _newPasswordController,
                   obscureText: true,

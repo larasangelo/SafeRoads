@@ -128,7 +128,7 @@ class _NavigationPageState extends State<NavigationPage> {
     // final initialLocation = await location.getLocation();
     setState(() {
       // currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
-      currentPosition = LatLng(38.902464, -9.163266); // Test with coordinates of Ribas de Baixo
+      currentPosition = const LatLng(38.902464, -9.163266); // Test with coordinates of Ribas de Baixo
 
     });
     }

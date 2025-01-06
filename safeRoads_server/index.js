@@ -108,11 +108,23 @@ app.post("/send", (req, res) => {
     const receivedbody = req.body.body;
 
     const message = {
-      notification: {
-        title: receivedtitle,
-        body: receivedbody,
-      },
       token: receivedToken,
+      notification: {
+        body: receivedbody,
+        title: receivedtitle,
+      },
+      android: {
+        notification: {
+          sound: "default"
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default"
+          }
+        }
+      }
     };
 
     getMessaging()

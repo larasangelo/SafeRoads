@@ -1,33 +1,71 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class Notifications {
-
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   String? fcmToken;
-  
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
   Future<void> setupFirebaseMessaging() async {
-    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    // Request permissions
+    NotificationSettings settings = await FirebaseMessaging.instance
+        .requestPermission(alert: true, badge: true, sound: true);
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print("Notification permission granted");
       fcmToken = await FirebaseMessaging.instance.getToken();
       print("FCM Token: $fcmToken");
+      // Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         print("Foreground message received: ${message.notification?.title}");
         showForegroundNotification(message);
-        print("After showForegroundNotification was called");
       });
     } else {
       print("Notification permission denied");
     }
   }
+
+  Future<void> setupNotificationChannels() async {
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'high_importance_channel', // id
+      'High Importance Notifications', // name
+      description: 'Channel for default notifications',
+      importance: Importance.high,
+      playSound: true,
+      // sound: RawResourceAndroidNotificationSound('notification'), // Ensure this matches a file in res/raw
+    );
+
+    // Firebase local notification plugin
+    await flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    //Firebase messaging
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+  }
   
   void showForegroundNotification(RemoteMessage message) {
     if (message.notification != null) {
+      flutterLocalNotificationsPlugin.show(
+        0,
+        message.notification!.title,
+        message.notification!.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'default_channel_id', // Must match the channel ID
+            'Default Notifications',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            // sound: RawResourceAndroidNotificationSound('notification'), // Ensure this matches your file in res/raw
+          ),
+        ),
+      );
       // Create the overlay entry
       OverlayEntry overlayEntry = OverlayEntry(
         builder: (context) => Positioned(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:safe_roads/firebase_options.dart';
+import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/edit_profile.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/loading.dart';
@@ -24,12 +25,14 @@ void main() async {
   );
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  
+  await _notifications.setupNotificationChannels();
 
   runApp(MaterialApp(
     // initialRoute: '/welcome',  //THIS IS THE RIGHT ONE
     initialRoute: '/navigation', // FOR TESTING THE NAVIGATION
     routes: {
-      '/': (context) => Loading(),
+      '/': (context) => const Loading(),
       '/home': (context) => const MapPage(),
       '/welcome': (context) => const WelcomePage(),
       '/login': (context) => const LoginPage(),
@@ -41,3 +44,4 @@ void main() async {
 }
 
 GlobalKey<NavigationBarExampleState> navigationBarKey = GlobalKey<NavigationBarExampleState>();
+final Notifications _notifications = Notifications();

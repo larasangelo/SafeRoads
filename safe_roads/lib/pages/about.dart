@@ -31,7 +31,7 @@ class About extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Center(
+                  child: const Center(
                     // child: Image.network(
                     //   'https://upload.wikimedia.org/wikipedia/commons/e/e4/Tree_frog_%28Pacific%29_edit.jpg',
                     //   fit: BoxFit.contain,
@@ -58,7 +58,7 @@ class About extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Center(
+                  child: const Center(
                     // child: Image.network(
                     //   'https://upload.wikimedia.org/wikipedia/commons/8/8b/Salamandra_salamandra_MHNT.jpg',
                     //   fit: BoxFit.contain,
@@ -85,7 +85,7 @@ class About extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Center(
+                  child: const Center(
                     // child: Image.network(
                     //   'https://upload.wikimedia.org/wikipedia/commons/3/3f/Frog_on_rock.jpg',
                     //   fit: BoxFit.contain,
