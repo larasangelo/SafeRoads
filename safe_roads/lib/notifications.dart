@@ -28,7 +28,7 @@ class Notifications {
 
   Future<void> setupNotificationChannels() async {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'high_importance_channel', // id
+      'channel_id_1', // id
       'High Importance Notifications', // name
       description: 'Channel for default notifications',
       importance: Importance.high,
@@ -58,7 +58,7 @@ class Notifications {
         message.notification!.body,
         const NotificationDetails(
           android: AndroidNotificationDetails(
-            'default_channel_id', // Must match the channel ID
+            'channel_id_1', // Must match the channel ID
             'Default Notifications',
             importance: Importance.high,
             priority: Priority.high,
