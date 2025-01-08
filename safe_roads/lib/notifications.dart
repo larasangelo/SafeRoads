@@ -6,6 +6,7 @@ class Notifications {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   String? fcmToken;
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final AndroidInitializationSettings androidInitializationSettings = const AndroidInitializationSettings('@mipmap/ic_launcher');
 
   Future<void> setupFirebaseMessaging() async {
     // Request permissions
@@ -62,6 +63,7 @@ class Notifications {
             importance: Importance.high,
             priority: Priority.high,
             playSound: true,
+            icon: '@mipmap/ic_launcher',
             // sound: RawResourceAndroidNotificationSound('notification'), // Ensure this matches your file in res/raw
           ),
         ),

@@ -100,6 +100,9 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
+// Serve static files from the 'tiles' directory
+app.use('/tiles', express.static(path.join(__dirname, 'tiles')));
+
 app.post("/send", (req, res) => {
   // Timeout de 5 segundos para testar
   setTimeout( function () {
@@ -338,8 +341,6 @@ app.post("/update-position", async (req, res) => {
   // Optionally, store or process the position
   res.status(200).json({ message: "Position updated successfully" });
 });
-
-
 
 
 // Shutdown handler to ensure clean exit

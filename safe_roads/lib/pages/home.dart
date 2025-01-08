@@ -249,8 +249,22 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       if (point.longitude > maxLng) maxLng = point.longitude;
     }
 
-    return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
+    // Calculate the approximate distance in degrees
+    double latRange = maxLat - minLat;
+    double lngRange = maxLng - minLng;
+    
+    // Determine buffer based on the route's size
+    double dynamicBuffer = (latRange + lngRange) * 0.1; // Adjust multiplier as needed
+    
+    // Add a larger buffer to the bottom for the overlay
+    double bottomBuffer = dynamicBuffer * 2; // Double the buffer for the bottom if needed
+
+    return LatLngBounds(
+      LatLng(minLat - bottomBuffer, minLng - dynamicBuffer),
+      LatLng(maxLat + dynamicBuffer, maxLng + dynamicBuffer),
+    );
   }
+
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     final latTween = Tween<double>(
@@ -297,7 +311,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
               mapController: _mapController,
               options: MapOptions(
               initialCenter: const LatLng(0, 0),
-              initialZoom: 13.0,
+              initialZoom: 12.0,
               onPositionChanged: (position, hasGesture) {
                 _currentCenter = position.center;
                 _currentZoom = position.zoom;
@@ -308,6 +322,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                   subdomains: const ['a', 'b', 'c'],
                 ),
+                // TileLayer(
+                //   urlTemplate: "http://192.168.1.82:3000/tiles/{z}/{x}/{y}.png",
+                //   subdomains: const ['a', 'b', 'c'],
+                //   // opacity: 0.6, // Adjust transparency
+                // ),
                 if (_currentLocation != null)
                   const MarkerLayer(
                     markers: [
@@ -400,13 +419,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         itemBuilder: (context, index) {
                           // Assuming _suggestions holds a list of maps with name, city, and country
                           final suggestion = _suggestions[index];
-                          return ListTile(
+                          return 
+                          ListTile(
                             title: Text(
                               suggestion['name'], // Name of the place
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text(
-                              '${suggestion['city']}, ${suggestion['country']}', // City and country
+                              suggestion['city'] != null && suggestion['city']!.isNotEmpty
+                                  ? '${suggestion['city']}, ${suggestion['country']}' // City and country
+                                  : '${suggestion['country']}', // Only country
                               style: const TextStyle(fontSize: 12), // Smaller font size
                             ),
                             onTap: () {
