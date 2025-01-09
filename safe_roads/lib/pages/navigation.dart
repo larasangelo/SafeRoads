@@ -38,6 +38,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     _initializeLocation();
 
+    print("widget.time, ${widget.time}");
     // Calculate the estimated arrival time
     _calculateArrivalTime(widget.time);
 
@@ -133,21 +134,36 @@ class _NavigationPageState extends State<NavigationPage> {
     });
     }
 
-  void _calculateArrivalTime(String travelTimeInMinutes) {
+  void _calculateArrivalTime(String travelTime) {
     try {
-      // Get the current time
       DateTime now = DateTime.now();
+      int totalMinutes = 0;
 
-      // Parse the travel time from the provided string
-      int travelMinutes = int.tryParse(travelTimeInMinutes) ?? 0;
+      // Define regex to capture time units like "4 min" or "1h 30min"
+      final regex = RegExp(r'(\d+)\s*(h|min)');
+      final matches = regex.allMatches(travelTime);
 
-      // Add travel minutes to the current time
-      DateTime arrivalTime = now.add(Duration(minutes: travelMinutes));
+      for (final match in matches) {
+        int value = int.tryParse(match.group(1)!) ?? 0; 
+        String unit = match.group(2)!.toLowerCase(); 
+
+        if (unit == 'h') {
+          totalMinutes += value * 60; 
+        } else if (unit == 'min') {
+          totalMinutes += value; 
+        }
+      }
+
+      if (totalMinutes == 0) {
+        print("Invalid travel time format.");
+        return;
+      }
+
+      DateTime arrivalTime = now.add(Duration(minutes: totalMinutes));
 
       // Format the time in 24-hour format (e.g., 13:45)
       String formattedTime = "${arrivalTime.hour.toString().padLeft(2, '0')}:${arrivalTime.minute.toString().padLeft(2, '0')}";
 
-      // Update the state
       setState(() {
         estimatedArrivalTime = formattedTime;
       });
@@ -155,7 +171,6 @@ class _NavigationPageState extends State<NavigationPage> {
       print("Error calculating arrival time: $e");
     }
   }
-
 
   Future<void> _sendPositionToServer(double lat, double lon) async {
     try {
