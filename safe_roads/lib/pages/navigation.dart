@@ -20,7 +20,6 @@ class NavigationPage extends StatefulWidget {
 }
 
 class _NavigationPageState extends State<NavigationPage> {
-  // final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final Notifications _notifications = Notifications();
   late Location location;
   LatLng? currentPosition;
@@ -30,6 +29,7 @@ class _NavigationPageState extends State<NavigationPage> {
   final MapController _mapController = MapController();
   bool isFirstLocationUpdate = true;
   String estimatedArrivalTime = "??:??"; // To display the arrival time
+  bool isAnimating = false; // To prevent overlapping animations
 
   @override
   void initState() {
@@ -39,33 +39,24 @@ class _NavigationPageState extends State<NavigationPage> {
     _initializeLocation();
 
     print("widget.time, ${widget.time}");
-    // Calculate the estimated arrival time
     _calculateArrivalTime(widget.time);
 
-    // Start tracking location
     locationSubscription = location.onLocationChanged.listen((LocationData loc) {
       if (loc.latitude != null && loc.longitude != null) {
         LatLng newPosition = LatLng(loc.latitude!, loc.longitude!);
 
-        setState(() {
-          if (previousPosition != null) {
-            // Calculate bearing between previous and current position
-            // bearing = _calculateBearing(previousPosition!, newPosition);
-          }
-          previousPosition = currentPosition;
-          currentPosition = newPosition;
-
-          // print("previousPosition: $previousPosition");
-          // print("newPosition: $newPosition");
-        });
-
-        if (isFirstLocationUpdate) {
-          // Center the map on the initial position and set rotation
-          _mapController.moveAndRotate(currentPosition!, 19.0, bearing);
-          isFirstLocationUpdate = false;
+        if (previousPosition != null && !isAnimating) {
+          _animateMarker(previousPosition!, newPosition);
         } else {
-          // Smoothly pan to the updated position with rotation
-          _mapController.moveAndRotate(currentPosition!, 19.0, bearing);
+          setState(() {
+            previousPosition = currentPosition;
+            currentPosition = newPosition;
+          });
+
+          if (isFirstLocationUpdate) {
+            _mapController.moveAndRotate(currentPosition!, 19.0, bearing);
+            isFirstLocationUpdate = false;
+          }
         }
 
         _sendPositionToServer(loc.latitude!, loc.longitude!);
@@ -126,11 +117,9 @@ class _NavigationPageState extends State<NavigationPage> {
     }
 
     // Get the initial location
-    // final initialLocation = await location.getLocation();
+    final initialLocation = await location.getLocation();
     setState(() {
-      // currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
-      currentPosition = const LatLng(38.902464, -9.163266); // Test with coordinates of Ribas de Baixo
-
+      currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
     });
     }
 
@@ -186,11 +175,42 @@ class _NavigationPageState extends State<NavigationPage> {
       print("Error sending position: $e");
     }
   }
+  
+  void _animateMarker(LatLng start, LatLng end) async {
+    const int steps = 20; // Number of steps for smooth animation
+    const duration = Duration(milliseconds: 50); // Time per step
 
-  @override
-  void dispose() {
-    locationSubscription?.cancel();
-    super.dispose();
+    double deltaLat = (end.latitude - start.latitude) / steps;
+    double deltaLon = (end.longitude - start.longitude) / steps;
+
+    setState(() {
+      isAnimating = true;
+    });
+
+    for (int i = 1; i <= steps; i++) {
+      await Future.delayed(duration);
+
+      LatLng intermediatePosition = LatLng(
+        start.latitude + (deltaLat * i),
+        start.longitude + (deltaLon * i),
+      );
+
+      setState(() {
+        previousPosition = currentPosition;
+        currentPosition = intermediatePosition;
+
+        if (previousPosition != null) {
+          bearing = _calculateBearing(previousPosition!, currentPosition!);
+        }
+      });
+
+      _mapController.moveAndRotate(intermediatePosition, 19.0, bearing);
+    }
+
+    setState(() {
+      isAnimating = false;
+      previousPosition = end; // Ensure the final position is set
+    });
   }
 
   // Calculate the bearing between two LatLng points
@@ -213,7 +233,6 @@ class _NavigationPageState extends State<NavigationPage> {
     return MaterialApp(
       scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
       home: Scaffold(
-        // appBar: AppBar(title: const Text("Navigation")),
         body: SafeArea(
           child: Stack(
             children: [
@@ -222,7 +241,7 @@ class _NavigationPageState extends State<NavigationPage> {
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: currentPosition ?? widget.routeCoordinates.first,
-                  initialZoom: 20.0,
+                  initialZoom: 19.0,
                   initialRotation: bearing, // Set initial rotation
                 ),
                 children: [
@@ -239,19 +258,19 @@ class _NavigationPageState extends State<NavigationPage> {
                       ),
                     ],
                   ),
-                  // if (currentPosition != null)
-                    MarkerLayer(
-                      markers: [
+                  MarkerLayer(
+                    markers: [
+                      if (currentPosition != null)
                         Marker(
                           point: currentPosition!,
                           child: const Icon(
                             Icons.my_location, // Use a static icon
-                            color: Colors.blue,
+                            color: Colors.red,
                             size: 40,
                           ),
                         ),
-                      ],
-                    ),
+                    ],
+                  ),
                 ],
               ),
               Positioned(
@@ -274,9 +293,6 @@ class _NavigationPageState extends State<NavigationPage> {
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.rectangle,
-                    // borderRadius: BorderRadius.vertical(
-                    //   top: Radius.circular(30.0),
-                    // ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -312,15 +328,6 @@ class _NavigationPageState extends State<NavigationPage> {
                         ],
                       ),
                       const SizedBox(height: 20), // Add some spacing
-                      // ElevatedButton(
-                      //   onPressed: () {
-                      //     Navigator.pop(context); // Stop navigation and return to the previous page
-                      //   },
-                      //   child: const Text(
-                      //     "Stop",
-                      //     style: TextStyle(fontSize: 18.0),
-                      //   ),
-                      // ),
                     ],
                   ),
                 ),
