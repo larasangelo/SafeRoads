@@ -26,6 +26,14 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+const pool2 = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME2,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+});
+
 // Gracefully handle database connection pool termination
 const closeDatabaseConnection = async () => {
   try {
@@ -34,6 +42,24 @@ const closeDatabaseConnection = async () => {
     console.log("Database connection closed.");
   } catch (err) {
     console.error("Error closing database connection:", err);
+  }
+};
+
+const getRasterValue = async (start) => {
+  try{
+    const rasterValue = await pool2.query(`
+      SELECT ST_VALUE(rast,1,ST_Transform(ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326), 3763)) AS raster_value
+      FROM public.teste
+      WHERE ST_Intersects(rast,ST_Transform(ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326), 3763));
+    `)
+    // 41.84083,-7.89093 // Test with an higher value
+    const result = rasterValue;
+    console.log(result); 
+    const value = rasterValue.rows[0]?.st_value;
+    console.log(value); 
+    return value;
+  } catch (err){
+    console.error(err);
   }
 };
 
@@ -265,6 +291,19 @@ app.post("/route", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
+app.post("/raster", async (req, res) => {
+  const {point} = req.body;
+
+  try {
+    const response = await getRasterValue(point);
+    res.status(200).json(response);
+  } catch (err) {
+    console.error("Error fetching search results:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+})
 
 
 

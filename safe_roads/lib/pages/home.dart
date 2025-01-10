@@ -91,6 +91,22 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         }),
       );
 
+      final raster = await http.post(
+        Uri.parse('http://192.168.1.82:3000/raster'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "point": {"lat": start.latitude, "lon": start.longitude},
+        }),
+      );
+
+      if (raster.statusCode == 200) {
+        final rasterData = jsonDecode(response.body);
+        print("data, $rasterData");
+
+      } else {
+        print("Error fetching suggestions: ${response.reasonPhrase}");
+      }
+
       if (_cancelFetchingRoute) return; // Exit if route-fetching is canceled
 
       if (response.statusCode == 200) {
