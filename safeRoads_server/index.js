@@ -55,7 +55,7 @@ const getRasterValue = async (start) => {
     // 41.84083,-7.89093 // Test with an higher value
     const result = rasterValue;
     console.log(result); 
-    const value = rasterValue.rows[0]?.st_value;
+    const value = rasterValue.rows[0]?.raster_value;
     console.log(value); 
     return value;
   } catch (err){

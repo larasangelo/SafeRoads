@@ -30,6 +30,7 @@ class _NavigationPageState extends State<NavigationPage> {
   bool isFirstLocationUpdate = true;
   String estimatedArrivalTime = "??:??"; // To display the arrival time
   bool isAnimating = false; // To prevent overlapping animations
+  bool _destinationReached = false;
 
   @override
   void initState() {
@@ -58,7 +59,12 @@ class _NavigationPageState extends State<NavigationPage> {
             isFirstLocationUpdate = false;
           }
         }
-
+        if ((currentPosition!.latitude - widget.routeCoordinates.last.latitude).abs() < 0.0001 &&
+            (currentPosition!.longitude - widget.routeCoordinates.last.longitude).abs() < 0.0001) {
+          setState(() {
+            _destinationReached = true;
+          });
+        }
         _sendPositionToServer(loc.latitude!, loc.longitude!);
       }
     });
@@ -121,7 +127,7 @@ class _NavigationPageState extends State<NavigationPage> {
     setState(() {
       currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
     });
-    }
+  }
 
   void _calculateArrivalTime(String travelTime) {
     try {
@@ -283,6 +289,7 @@ class _NavigationPageState extends State<NavigationPage> {
                   },
                 )
               ),
+              if(!_destinationReached)
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -328,6 +335,34 @@ class _NavigationPageState extends State<NavigationPage> {
                         ],
                       ),
                       const SizedBox(height: 20), // Add some spacing
+                    ],
+                  ),
+                ),
+              ),
+              if(_destinationReached)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 120,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.rectangle,
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Destination Reached!",
+                        style: TextStyle(
+                          fontSize: 30.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 20), // Add some spacing
                     ],
                   ),
                 ),

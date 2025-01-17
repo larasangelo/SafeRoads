@@ -19,7 +19,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensures proper binding
+  WidgetsFlutterBinding.ensureInitialized(); 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -37,7 +37,7 @@ void main() async {
       '/welcome': (context) => const WelcomePage(),
       '/login': (context) => const LoginPage(),
       '/register': (context) => const RegisterPage(),
-      '/navigation': (context) => NavigationBarExample(key: navigationBarKey), // Use the key here
+      '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
       '/editProfile': (context) => const EditProfile()
     },
   ));
