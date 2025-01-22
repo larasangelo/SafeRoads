@@ -49,7 +49,7 @@ const getRasterValue = async (start) => {
   try{
     const rasterValue = await pool2.query(`
       SELECT ST_VALUE(rast,1,ST_Transform(ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326), 3763)) AS raster_value
-      FROM public.teste
+      FROM public.test
       WHERE ST_Intersects(rast,ST_Transform(ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326), 3763));
     `)
     // 41.84083,-7.89093 // Test with an higher value
@@ -88,18 +88,78 @@ const getRoute = async (start, end) => {
     // 1696467
     console.log("endNode: ", endNode);
 
+    // const route = await pool.query(`
+    //   SELECT *,
+    //   ST_AsGeoJSON(the_geom) AS geojson,
+    //   maxspeed_forward,
+    //   maxspeed_backward
+    //   FROM pgr_dijkstra(
+    //     'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM ways',
+    //     ${startNode.rows[0].id}, ${endNode.rows[0].id},
+    //     directed := true
+    //   ) AS route
+    //   JOIN ways ON route.edge = ways.gid;
+    // `);
     const route = await pool.query(`
-      SELECT *,
-      ST_AsGeoJSON(the_geom) AS geojson,
-      maxspeed_forward,
-      maxspeed_backward
-      FROM pgr_dijkstra(
-        'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM ways',
-        ${startNode.rows[0].id}, ${endNode.rows[0].id},
-        directed := true
-      ) AS route
-      JOIN ways ON route.edge = ways.gid;
-    `);
+     SELECT *,
+       ST_AsGeoJSON(the_geom) AS geojson,
+       maxspeed_forward,
+       maxspeed_backward
+    FROM pgr_dijkstra(
+      'SELECT gid AS id, source, target, 
+              cost * raster_penalty AS cost, 
+              reverse_cost * raster_penalty AS reverse_cost, 
+              maxspeed_forward, maxspeed_backward 
+      FROM (
+        SELECT inner_ways.gid, 
+                inner_ways.source, 
+                inner_ways.target, 
+                inner_ways.cost, 
+                inner_ways.reverse_cost,
+                inner_ways.maxspeed_forward, 
+                inner_ways.maxspeed_backward,
+                raster_value,
+                CASE
+                  WHEN raster_value IS NULL THEN 1
+                  WHEN raster_value = 1 THEN 1.1
+                  WHEN raster_value = 2 THEN 1.2
+                  WHEN raster_value = 3 THEN 1.5
+                  WHEN raster_value = 4 THEN 2
+                  WHEN raster_value = 5 THEN 3
+                  WHEN raster_value = 6 THEN 5
+                  ELSE 1
+                END AS raster_penalty
+        FROM (
+          SELECT w.gid, 
+                  w.source, 
+                  w.target, 
+                  w.cost, 
+                  w.reverse_cost,
+                  w.maxspeed_forward, 
+                  w.maxspeed_backward,
+                  COALESCE(
+                    (SELECT ST_Value(
+                              rast,
+                              1, -- Band number
+                              ST_Transform(ST_Centroid(w.the_geom), 3763)
+                    )
+                    FROM raster_table r
+                    WHERE ST_Intersects(
+                      r.rast,
+                      ST_Transform(w.the_geom, 3763)
+                    )
+                    ), 1) AS raster_value
+          FROM ways AS w
+        ) AS inner_ways
+      ) AS cost_subquery', 
+      ${startNode.rows[0].id}, ${endNode.rows[0].id},
+      directed := true
+    ) AS route
+    JOIN ways ON route.edge = ways.gid;
+    `);    
+        
+    // To improve performance, a spatial index was created in the raster table:
+    // CREATE INDEX raster_spatial_idx ON raster_table USING GIST (ST_ConvexHull(rast));
     
     console.log(route.rows)
     return route.rows;
@@ -107,6 +167,8 @@ const getRoute = async (start, end) => {
     console.error(err);
   }
 };
+//  São Bento de Sexta Freita
+// 30095, 951623,
 
 // Firebase Admin initialization
 admin.initializeApp({

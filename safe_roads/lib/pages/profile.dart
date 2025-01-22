@@ -29,6 +29,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   int targetDistance = 200;
   int totalKm = 0;
   int places = 0;
+  String avatar = 'assets/profile_images/avatar_1.jpg';
 
   @override
   void initState() {
@@ -70,6 +71,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           targetDistance = userProfile['targetDistance'] as int;
           totalKm = userProfile['totalKm'] as int;
           places = userProfile['places'] as int;
+          avatar = userProfile['avatar'] ?? "assets/profile_images/avatar_1.jpg";
         });
       }
     } catch (e) {
@@ -217,9 +219,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             children: [
               Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 60,
-                    backgroundImage: AssetImage('assets/avatar_placeholder.png'),
+                    backgroundImage: AssetImage(avatar),
                   ),
                   const SizedBox(width: 16.0),
                   Column(

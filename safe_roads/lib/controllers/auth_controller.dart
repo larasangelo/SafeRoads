@@ -39,6 +39,7 @@ class AuthController {
           'tolls': true,
           're_route': true,
           'measure': 'km',
+          'avatar': 'assets/profile_images/avatar_1.jpg'
         });
       }
       Navigator.pushNamed(context, '/login');

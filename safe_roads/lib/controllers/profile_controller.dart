@@ -31,6 +31,7 @@ class ProfileController {
         'targetDistance': data['targetDistance'] ?? 200,
         'totalKm': data['totalKm'] ?? 0,
         'places': data['places'] ?? 0,
+        'avatar': data['avatar'] ?? "assets/profile_images/avatar_1.jpg"
       };
     } catch (e) {
       throw Exception("Failed to fetch user profile: $e");
@@ -42,14 +43,15 @@ class ProfileController {
     required BuildContext context,
     required String username,
     required String email,
-    required String country,
+    required String country, 
+    required String avatar,
   }) async {
     final User? user = FirebaseAuth.instance.currentUser;
 
     print("username: $username");
     print("email: $email");
     print("country: $country");
-
+    print("avatar: $avatar");
 
     if (user == null) {
      _showErrorDialog(context, "No user is currently signed in.");
@@ -70,6 +72,7 @@ class ProfileController {
         'username': username,
         'email': email,
         'location': country,
+        'avatar': avatar
       });
 
       // Show success feedback

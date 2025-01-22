@@ -67,8 +67,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       if (_currentLocation != null) {
         _mapController.move(
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+          const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
           13.0,
         );
       }
@@ -241,8 +242,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         if (_currentLocation != null) {
           await _fetchRoute(
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
+            // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+            const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
             destination,
           );
 
@@ -348,8 +350,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     markers: [
                       Marker(
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                        point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
                         child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -416,8 +419,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           if (_currentLocation != null) {
                             _mapController.move(
                               // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                              // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                              const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
                               13.0, // Adjust zoom level as needed
                             );
                           }

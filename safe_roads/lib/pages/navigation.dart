@@ -65,7 +65,7 @@ class _NavigationPageState extends State<NavigationPage> {
             _destinationReached = true;
           });
         }
-        _sendPositionToServer(loc.latitude!, loc.longitude!);
+        // _sendPositionToServer(loc.latitude!, loc.longitude!);
       }
     });
   }

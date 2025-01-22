@@ -12,6 +12,7 @@ class _EditProfileState extends State<EditProfile> {
   String username = "Loading...";
   String email = "Loading...";
   String country = "Loading...";
+  String selectedImage = 'assets/profile_images/avatar_1.jpg';
 
   final ProfileController _profileController = ProfileController();
   final TextEditingController _usernameController = TextEditingController();
@@ -19,6 +20,14 @@ class _EditProfileState extends State<EditProfile> {
   final TextEditingController _currentPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final List<String> availableImages = [
+    'assets/profile_images/avatar_1.jpg',
+    'assets/profile_images/avatar_2.jpg',
+    'assets/profile_images/avatar_3.jpg',
+    'assets/profile_images/avatar_4.jpg',
+    'assets/profile_images/avatar_5.jpg',
+    'assets/profile_images/avatar_6.jpg',
+  ];
 
   @override
   void initState() {
@@ -29,10 +38,12 @@ class _EditProfileState extends State<EditProfile> {
   Future<void> fetchUserProfile() async {
     try {
       final profileData = await _profileController.fetchUserProfile();
+      print(profileData);
       setState(() {
         username = profileData['username']!;
         email = profileData['email']!;
         country = profileData['country']!;
+        selectedImage = profileData['avatar']!;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -48,10 +59,11 @@ class _EditProfileState extends State<EditProfile> {
         username: _usernameController.text.trim().isNotEmpty
             ? _usernameController.text.trim()
             : username,
-        email: email, // Uneditable in current implementation
+        email: email,
         country: _countryController.text.trim().isNotEmpty
             ? _countryController.text.trim()
             : country,
+        avatar: selectedImage
       );
 
       // Change password if both fields are filled
@@ -61,9 +73,10 @@ class _EditProfileState extends State<EditProfile> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Password updated successfully!")),
         );
-      } else {ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully!")),
-      );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile updated successfully!")),
+        );
       }
 
       Navigator.pop(context, true);
@@ -73,6 +86,62 @@ class _EditProfileState extends State<EditProfile> {
       );
     }
   }
+
+  void _showImagePicker() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Select Profile Image',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemCount: availableImages.length,
+                  itemBuilder: (context, index) {
+                    final isSelected = availableImages[index] == selectedImage;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedImage = availableImages[index];
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: isSelected
+                              ? Border.all(color: Colors.green, width: 3.0)
+                              : null,
+                          borderRadius: BorderRadius.circular(60),
+                        ),
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundImage: AssetImage(availableImages[index]),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -92,8 +161,37 @@ class _EditProfileState extends State<EditProfile> {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                const SizedBox(height: 20.0),
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundImage: AssetImage(selectedImage), 
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: _showImagePicker,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(8.0),
+                            child: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 40.0),
                 const Text("Username", style: TextStyle(fontSize: 18.0),),
                 TextFormField(
