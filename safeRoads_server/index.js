@@ -47,16 +47,16 @@ const closeDatabaseConnection = async () => {
 
 const getRasterValue = async (start) => {
   try{
-    const rasterValue = await pool2.query(`
-      SELECT ST_VALUE(rast,1,ST_Transform(ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326), 3763)) AS raster_value
-      FROM public.test
-      WHERE ST_Intersects(rast,ST_Transform(ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326), 3763));
+    const rasterValue = await pool.query(`
+      SELECT ST_VALUE(rast,1,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326)) AS raster_value
+      FROM public.raster_table
+      WHERE ST_Intersects(rast,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326));
     `)
     // 41.84083,-7.89093 // Test with an higher value
     const result = rasterValue;
-    console.log(result); 
+    // console.log(result); 
     const value = rasterValue.rows[0]?.raster_value;
-    console.log(value); 
+    // console.log(value); 
     return value;
   } catch (err){
     console.error(err);
@@ -66,29 +66,87 @@ const getRasterValue = async (start) => {
 // Route computation function
 const getRoute = async (start, end) => {
   try {
-    // console.log("inside the getRoute");
-    const startNode = await pool.query(`
+    // Get start and end nodes
+    const startNodeQuery = `
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${start.lon}, ${start.lat}), 4326)::geography) AS dist
       FROM ways_vertices_pgr
       ORDER BY dist ASC
       LIMIT 1;
-    `);
-    // 38.902464, -9.163266
-    // 1596063
+    `;
+    const startNode = await pool.query(startNodeQuery);
     console.log("startNode: ", startNode);
 
-    const endNode = await pool.query(`
+    const endNodeQuery = `
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)::geography) AS dist
       FROM ways_vertices_pgr
       ORDER BY dist ASC
       LIMIT 1;
-    `);
-
-    // 38.902290, -9.177862
-    // 1696467
+    `;
+    const endNode = await pool.query(endNodeQuery);
     console.log("endNode: ", endNode);
 
-    // const route = await pool.query(`
+    // Calculate bounding box
+    const bufferDistance = 0.05; // ~5km buffer
+    const minLat = Math.min(start.lat, end.lat) - bufferDistance;
+    const maxLat = Math.max(start.lat, end.lat) + bufferDistance;
+    const minLon = Math.min(start.lon, end.lon) - bufferDistance;
+    const maxLon = Math.max(start.lon, end.lon) + bufferDistance;
+
+    // Step 1: Create a temporary table with geometries within the bounding box
+    const createTempTableQuery = `
+      CREATE TEMP TABLE temp_ways (
+        gid INTEGER,
+        source INTEGER,
+        target INTEGER,
+        cost DOUBLE PRECISION,
+        reverse_cost DOUBLE PRECISION,
+        the_geom GEOMETRY,
+        length_m DOUBLE PRECISION,
+        maxspeed_forward DOUBLE PRECISION,
+        maxspeed_backward DOUBLE PRECISION,
+        raster_value DOUBLE PRECISION DEFAULT NULL
+      );
+
+      INSERT INTO temp_ways (gid, source, target, cost, reverse_cost, the_geom, length_m, maxspeed_forward, maxspeed_backward)
+      SELECT w.gid, w.source, w.target, w.cost, w.reverse_cost, w.the_geom, w.length_m,
+             w.maxspeed_forward, w.maxspeed_backward
+      FROM ways w
+      WHERE ST_Intersects(
+        w.the_geom,
+        ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
+      );
+    `;
+    await pool.query(createTempTableQuery);
+    console.log("Temporary table created with bounding box.");
+
+    // Step 2: Add raster values to the temp table
+    const updateTempTableWithRasterQuery = `
+      UPDATE temp_ways
+      SET raster_value = subquery.raster_value
+      FROM (
+        SELECT w_inner.gid,
+              AVG(COALESCE(ST_Value(
+                r.rast, 
+                1, 
+                ST_SetSRID(ST_MakePoint(
+                  ST_X(ST_Centroid(w_inner.the_geom)), 
+                  ST_Y(ST_Centroid(w_inner.the_geom))
+                ), 4326)
+              ), 1)) AS raster_value
+        FROM temp_ways w_inner
+        LEFT JOIN raster_table r 
+          ON ST_Intersects(
+              r.rast, 
+              w_inner.the_geom -- Geometry from temp_ways
+            )
+        GROUP BY w_inner.gid
+      ) AS subquery
+      WHERE temp_ways.gid = subquery.gid;
+    `;
+    await pool.query(updateTempTableWithRasterQuery);
+    console.log("Raster values added to the temporary table.");
+
+    // const routeBefore = `
     //   SELECT *,
     //   ST_AsGeoJSON(the_geom) AS geojson,
     //   maxspeed_forward,
@@ -99,69 +157,53 @@ const getRoute = async (start, end) => {
     //     directed := true
     //   ) AS route
     //   JOIN ways ON route.edge = ways.gid;
-    // `);
-    const route = await pool.query(`
-     SELECT *,
-       ST_AsGeoJSON(the_geom) AS geojson,
-       maxspeed_forward,
-       maxspeed_backward
-    FROM pgr_dijkstra(
-      'SELECT gid AS id, source, target, 
-              cost * raster_penalty AS cost, 
-              reverse_cost * raster_penalty AS reverse_cost, 
-              maxspeed_forward, maxspeed_backward 
-      FROM (
-        SELECT inner_ways.gid, 
-                inner_ways.source, 
-                inner_ways.target, 
-                inner_ways.cost, 
-                inner_ways.reverse_cost,
-                inner_ways.maxspeed_forward, 
-                inner_ways.maxspeed_backward,
-                raster_value,
-                CASE
-                  WHEN raster_value IS NULL THEN 1
-                  WHEN raster_value = 1 THEN 1.1
-                  WHEN raster_value = 2 THEN 1.2
-                  WHEN raster_value = 3 THEN 1.5
-                  WHEN raster_value = 4 THEN 2
-                  WHEN raster_value = 5 THEN 3
-                  WHEN raster_value = 6 THEN 5
-                  ELSE 1
-                END AS raster_penalty
-        FROM (
-          SELECT w.gid, 
-                  w.source, 
-                  w.target, 
-                  w.cost, 
-                  w.reverse_cost,
-                  w.maxspeed_forward, 
-                  w.maxspeed_backward,
-                  COALESCE(
-                    (SELECT ST_Value(
-                              rast,
-                              1, -- Band number
-                              ST_Transform(ST_Centroid(w.the_geom), 3763)
-                    )
-                    FROM raster_table r
-                    WHERE ST_Intersects(
-                      r.rast,
-                      ST_Transform(w.the_geom, 3763)
-                    )
-                    ), 1) AS raster_value
-          FROM ways AS w
-        ) AS inner_ways
-      ) AS cost_subquery', 
-      ${startNode.rows[0].id}, ${endNode.rows[0].id},
-      directed := true
-    ) AS route
-    JOIN ways ON route.edge = ways.gid;
-    `);    
-        
-    // To improve performance, a spatial index was created in the raster table:
-    // CREATE INDEX raster_spatial_idx ON raster_table USING GIST (ST_ConvexHull(rast));
-    
-    console.log(route.rows)
+    //   `;
+
+    // Step 3: Run the pgr_dijkstra query on the temp table
+    const routeQuery = `
+      SELECT *,
+             ST_AsGeoJSON(the_geom) AS geojson,
+             maxspeed_forward,
+             maxspeed_backward
+      FROM pgr_dijkstra(
+        'SELECT gid AS id, 
+                source, 
+                target,
+                cost * 
+                  CASE
+                    WHEN raster_value = 1 THEN 1.1
+                    WHEN raster_value = 2 THEN 1.2
+                    WHEN raster_value = 3 THEN 1.5
+                    WHEN raster_value = 4 THEN 2
+                    WHEN raster_value = 5 THEN 3
+                    WHEN raster_value = 6 THEN 5
+                    ELSE 1
+                  END AS cost,
+                reverse_cost * 
+                  CASE
+                    WHEN raster_value = 1 THEN 1.1
+                    WHEN raster_value = 2 THEN 1.2
+                    WHEN raster_value = 3 THEN 1.5
+                    WHEN raster_value = 4 THEN 2
+                    WHEN raster_value = 5 THEN 3
+                    WHEN raster_value = 6 THEN 5
+                    ELSE 1
+                  END AS reverse_cost
+         FROM temp_ways',
+        ${startNode.rows[0].id}, 
+        ${endNode.rows[0].id},
+        directed := true
+      ) AS route
+      JOIN temp_ways ON route.edge = temp_ways.gid
+      ORDER BY route.seq; -- Ensure the results are ordered by seq
+    `;
+    const route = await pool.query(routeQuery);
+    console.log(route.rows);
+
+    // Step 4: Clean up the temporary table
+    await pool.query("DROP TABLE IF EXISTS temp_ways;");
+    console.log("Temporary table dropped.");
+
     return route.rows;
   } catch (err) {
     console.error(err);
