@@ -333,10 +333,10 @@ app.post("/route", async (req, res) => {
 
           if (startDistanceToLast < startDistanceToFirst) {
             routePoints.push(
-              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon }))
+              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value }))
             );
           } else {
-            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon })));
+            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value })));
           }
         } else {
           // For subsequent sets of coordinates
@@ -357,10 +357,10 @@ app.post("/route", async (req, res) => {
 
           if (distanceToLast < distanceToFirst) {
             routePoints.push(
-              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon }))
+              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value }))
             );
           } else {
-            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon })));
+            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value })));
           }
         }
       }

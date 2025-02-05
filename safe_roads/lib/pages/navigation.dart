@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:safe_roads/notifications.dart';
 
 class NavigationPage extends StatefulWidget {
-  final List<LatLng> routeCoordinates;
+  final List<Map<String, dynamic>> routeCoordinates;
   final String distance;
   final String time;
 
@@ -31,6 +31,11 @@ class _NavigationPageState extends State<NavigationPage> {
   String estimatedArrivalTime = "??:??"; // To display the arrival time
   bool isAnimating = false; // To prevent overlapping animations
   bool _destinationReached = false;
+
+  // Extract LatLng safely
+  LatLng _getLatLngFromMap(Map<String, dynamic> map) {
+    return LatLng(map['latlng'].latitude, map['latlng'].longitude);
+  }
 
   @override
   void initState() {
@@ -59,13 +64,16 @@ class _NavigationPageState extends State<NavigationPage> {
             isFirstLocationUpdate = false;
           }
         }
-        if ((currentPosition!.latitude - widget.routeCoordinates.last.latitude).abs() < 0.0001 &&
-            (currentPosition!.longitude - widget.routeCoordinates.last.longitude).abs() < 0.0001) {
+
+        // Extract last coordinate safely
+        LatLng lastPoint = _getLatLngFromMap(widget.routeCoordinates.last);
+        
+        if ((currentPosition!.latitude - lastPoint.latitude).abs() < 0.0001 &&
+            (currentPosition!.longitude - lastPoint.longitude).abs() < 0.0001) {
           setState(() {
             _destinationReached = true;
           });
         }
-        // _sendPositionToServer(loc.latitude!, loc.longitude!);
       }
     });
   }
@@ -246,7 +254,7 @@ class _NavigationPageState extends State<NavigationPage> {
               FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: currentPosition ?? widget.routeCoordinates.first,
+                  initialCenter: currentPosition ?? _getLatLngFromMap(widget.routeCoordinates.first), 
                   initialZoom: 19.0,
                   initialRotation: bearing, // Set initial rotation
                 ),
@@ -256,13 +264,16 @@ class _NavigationPageState extends State<NavigationPage> {
                     subdomains: const ['a', 'b', 'c'],
                   ),
                   PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: widget.routeCoordinates,
+                    polylines: List.generate(widget.routeCoordinates.length - 1, (index) {
+                      final current = widget.routeCoordinates[index];
+                      final next = widget.routeCoordinates[index + 1];
+                      Color lineColor = (current['raster_value'] > 2) ? Colors.red : Colors.blue; // Superior a 2 só para verificar se aparece na rota
+                      return Polyline(
+                        points: [current['latlng'], next['latlng']],
                         strokeWidth: 8.0,
-                        color: Colors.blue,
-                      ),
-                    ],
+                        color: lineColor,
+                      );
+                    }),
                   ),
                   MarkerLayer(
                     markers: [
@@ -270,7 +281,7 @@ class _NavigationPageState extends State<NavigationPage> {
                         Marker(
                           point: currentPosition!,
                           child: const Icon(
-                            Icons.my_location, // Use a static icon
+                            Icons.my_location, 
                             color: Colors.red,
                             size: 40,
                           ),

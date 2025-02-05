@@ -22,7 +22,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   // String? fcmToken;
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
-  List<LatLng> _routePoints = []; // Stores points for the polyline
+  List<Map<String, dynamic>> _routePoints = []; // Stores points for the polyline
   final TextEditingController _addressController = TextEditingController();
   List<Map<String, dynamic>> _suggestions = []; // Stores autocomplete suggestions
   Timer? _debounce; // To avoid over calling the API
@@ -92,29 +92,34 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         }),
       );
 
-      final raster = await http.post(
-        Uri.parse('http://192.168.1.82:3000/raster'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "point": {"lat": start.latitude, "lon": start.longitude},
-        }),
-      );
+      // final raster = await http.post(
+      //   Uri.parse('http://192.168.1.82:3000/raster'),
+      //   headers: {"Content-Type": "application/json"},
+      //   body: jsonEncode({
+      //     "point": {"lat": start.latitude, "lon": start.longitude},
+      //   }),
+      // );
 
-      if (raster.statusCode == 200) {
-        final rasterData = jsonDecode(response.body);
-        print("data, $rasterData");
+      // if (raster.statusCode == 200) {
+      //   final rasterData = jsonDecode(response.body);
+      //   print("data, $rasterData");
 
-      } else {
-        print("Error fetching suggestions: ${response.reasonPhrase}");
-      }
+      // } else {
+      //   print("Error fetching suggestions: ${response.reasonPhrase}");
+      // }
 
       if (_cancelFetchingRoute) return; // Exit if route-fetching is canceled
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List<LatLng> points = (data['route'] as List).map((point) {
-          return LatLng(point['lat'], point['lon']);
+        print("data, $data");
+        List<Map<String, dynamic>> pointsWithRaster = (data['route'] as List).map((point) {
+          return {
+            'latlng': LatLng(point['lat'], point['lon']),
+            'raster_value': point['raster_value']
+          };
         }).toList();
+        print("pointsWithRaster, $pointsWithRaster");
         String totalDistanceKm = data['distance'];
         String totalTimeMinutes = data['time'];
 
@@ -122,15 +127,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         navigationBarKey.currentState?.toggleNavigationBar(false);
 
         setState(() {
-          _routePoints = points;
+          _routePoints = pointsWithRaster;
           distance = totalDistanceKm;
           time = totalTimeMinutes;
           _isFetchingRoute = false; // Hide the progress bar
         });
 
-        if (points.isNotEmpty) {
+        if (pointsWithRaster.isNotEmpty) {
           // Calculate bounds and adjust map view
-          LatLngBounds bounds = _calculateBounds(points);
+          LatLngBounds bounds = _calculateBounds(pointsWithRaster);
           _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(20)));
         }
       } else {
@@ -254,34 +259,39 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   // Function to re-adjust the zoom when a route is set
-  LatLngBounds _calculateBounds(List<LatLng> points) {
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (LatLng point in points) {
-      if (point.latitude < minLat) minLat = point.latitude;
-      if (point.latitude > maxLat) maxLat = point.latitude;
-      if (point.longitude < minLng) minLng = point.longitude;
-      if (point.longitude > maxLng) maxLng = point.longitude;
-    }
-
-    // Calculate the approximate distance in degrees
-    double latRange = maxLat - minLat;
-    double lngRange = maxLng - minLng;
-    
-    // Determine buffer based on the route's size
-    double dynamicBuffer = (latRange + lngRange) * 0.1; // Adjust multiplier as needed
-    
-    // Add a larger buffer to the bottom for the overlay
-    double bottomBuffer = dynamicBuffer * 2; // Double the buffer for the bottom if needed
-
-    return LatLngBounds(
-      LatLng(minLat - bottomBuffer, minLng - dynamicBuffer),
-      LatLng(maxLat + dynamicBuffer, maxLng + dynamicBuffer),
-    );
+LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
+  if (pointsWithRaster.isEmpty) {
+    throw Exception("Cannot calculate bounds for an empty route.");
   }
+
+  // Extract LatLng values
+  List<LatLng> points = pointsWithRaster.map((e) => e['latlng'] as LatLng).toList();
+
+  double minLat = points.first.latitude;
+  double maxLat = points.first.latitude;
+  double minLng = points.first.longitude;
+  double maxLng = points.first.longitude;
+
+  for (LatLng point in points) {
+    if (point.latitude < minLat) minLat = point.latitude;
+    if (point.latitude > maxLat) maxLat = point.latitude;
+    if (point.longitude < minLng) minLng = point.longitude;
+    if (point.longitude > maxLng) maxLng = point.longitude;
+  }
+
+  // Calculate the approximate range
+  double latRange = maxLat - minLat;
+  double lngRange = maxLng - minLng;
+  
+  // Determine buffer dynamically based on the route's size
+  double buffer = (latRange + lngRange) * 0.1; // 10% of total span
+  double bottomBuffer = buffer * 2; // Extra buffer at the bottom
+
+  return LatLngBounds(
+    LatLng(minLat - bottomBuffer, minLng - buffer), // Bottom-left corner
+    LatLng(maxLat + buffer, maxLng + buffer), // Top-right corner
+  );
+}
 
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
@@ -368,13 +378,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   ),
                 if (_routePoints.isNotEmpty)
                   PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: _routePoints,
+                    polylines: List.generate(_routePoints.length - 1, (index) {
+                      final current = _routePoints[index];
+                      final next = _routePoints[index + 1];
+                      Color lineColor = (current['raster_value'] > 2) ? Colors.red : Colors.blue; // Superior a 2 só para verificar se aparece na rota
+                      return Polyline(
+                        points: [current['latlng'], next['latlng']],
                         strokeWidth: 4.0,
-                        color: Colors.blue,
-                      ),
-                    ],
+                        color: lineColor,
+                      );
+                    }),
                   ),
               ],
             ),
