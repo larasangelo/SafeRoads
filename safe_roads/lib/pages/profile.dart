@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:notification_permissions/notification_permissions.dart';
 import 'package:safe_roads/controllers/auth_controller.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -79,6 +81,11 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
+    // Update the preference globally using Provider
+  Future<void> updateReRoute(bool newValue) async {
+    // Use Provider to update the re_route value
+    context.read<UserPreferences>().updateReRoute(newValue);
+  }
 
   Future<void> _showSignOutConfirmation() async {
     final bool? shouldSignOut = await showDialog<bool>(
@@ -327,6 +334,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       child: Column(
         children: [
           _buildSwitchTile("Allow re-routing", re_route, (bool newValue) {
+            updateReRoute(newValue);
             setState(() {
               re_route = newValue;
             });

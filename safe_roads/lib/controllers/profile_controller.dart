@@ -18,7 +18,7 @@ class ProfileController {
 
     try {
       final data = await _userProfileRepository.fetchUserProfile(user.uid);
-      print(data);
+      // print(data);
       return {
         're_route': data['re_route'] ?? true,
         'tolls': data['tolls'] ?? false,
@@ -48,10 +48,10 @@ class ProfileController {
   }) async {
     final User? user = FirebaseAuth.instance.currentUser;
 
-    print("username: $username");
-    print("email: $email");
-    print("country: $country");
-    print("avatar: $avatar");
+    // print("username: $username");
+    // print("email: $email");
+    // print("country: $country");
+    // print("avatar: $avatar");
 
     if (user == null) {
      _showErrorDialog(context, "No user is currently signed in.");

@@ -26,14 +26,6 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-const pool2 = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME2,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-});
-
 // Gracefully handle database connection pool termination
 const closeDatabaseConnection = async () => {
   try {
@@ -45,6 +37,7 @@ const closeDatabaseConnection = async () => {
   }
 };
 
+//Function to test if we can get raster values for a single point
 const getRasterValue = async (start) => {
   try{
     const rasterValue = await pool.query(`
@@ -53,8 +46,6 @@ const getRasterValue = async (start) => {
       WHERE ST_Intersects(rast,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326));
     `)
     // 41.84083,-7.89093 // Test with an higher value
-    const result = rasterValue;
-    // console.log(result); 
     const value = rasterValue.rows[0]?.raster_value;
     // console.log(value); 
     return value;
@@ -64,7 +55,7 @@ const getRasterValue = async (start) => {
 };
 
 // Route computation function
-const getRoute = async (start, end) => {
+const getRoute = async (start, end, re_route) => {
   try {
     // Get start and end nodes
     const startNodeQuery = `
@@ -146,19 +137,6 @@ const getRoute = async (start, end) => {
     await pool.query(updateTempTableWithRasterQuery);
     console.log("Raster values added to the temporary table.");
 
-    // const routeBefore = `
-    //   SELECT *,
-    //   ST_AsGeoJSON(the_geom) AS geojson,
-    //   maxspeed_forward,
-    //   maxspeed_backward
-    //   FROM pgr_dijkstra(
-    //     'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM ways',
-    //     ${startNode.rows[0].id}, ${endNode.rows[0].id},
-    //     directed := true
-    //   ) AS route
-    //   JOIN ways ON route.edge = ways.gid;
-    //   `;
-
     // Step 3: Run the pgr_dijkstra query on the temp table
     const routeQuery = `
       SELECT *,
@@ -198,13 +176,37 @@ const getRoute = async (start, end) => {
       ORDER BY route.seq; -- Ensure the results are ordered by seq
     `;
     const route = await pool.query(routeQuery);
-    console.log(route.rows);
+    // console.log(route.rows);
 
-    // Step 4: Clean up the temporary table
-    await pool.query("DROP TABLE IF EXISTS temp_ways;");
-    console.log("Temporary table dropped.");
+    // Step 4: If the user doesn't allow re_routes return the default route
+    if (!re_route){
+      console.log("Entrei no !re_route.")
+      const routeDefault = `
+        SELECT *,
+        ST_AsGeoJSON(the_geom) AS geojson,
+        maxspeed_forward,
+        maxspeed_backward
+        FROM pgr_dijkstra(
+          'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM ways',
+          ${startNode.rows[0].id}, ${endNode.rows[0].id},
+          directed := true
+        ) AS route
+        JOIN temp_ways ON route.edge = temp_ways.gid
+        ORDER BY route.seq; -- Ensure the results are ordered by seq
+        `;
 
-    return route.rows;
+      const routeUnware = await pool.query(routeDefault);
+      console.log("routeUnware,", routeUnware.rows);
+
+      // Step 5: Clean up the temporary table
+      await pool.query("DROP TABLE IF EXISTS temp_ways;");
+      console.log("Temporary table dropped.");
+    
+      // Send the two routes (even if the user doesn't allow re-routes) to give them the option nonetheless
+      return { adjustedRoute: route.rows, defaultRoute: routeUnware.rows };
+    }else{
+      return { adjustedRoute: route.rows };
+    }    
   } catch (err) {
     console.error(err);
   }
@@ -231,8 +233,9 @@ app.use(express.json());
 app.use(cors({ origin: "*" }));
 
 // Serve static files from the 'tiles' directory
-app.use('/tiles', express.static(path.join(__dirname, 'tiles')));
+// app.use('/tiles', express.static(path.join(__dirname, 'tiles')));
 
+// Calls Firebase Cloud Messaging for Notifications
 app.post("/send", (req, res) => {
   // Timeout de 5 segundos para testar
   setTimeout( function () {
@@ -277,119 +280,146 @@ app.post("/send", (req, res) => {
   )
 });
 
+//Calls the getRoute function to get the routes (optimal and default or just optimal)
 app.post("/route", async (req, res) => {
   try {
-    const { start, end } = req.body;
-    const route = await getRoute(start, end);
+    const { start, end, re_route } = req.body;
+    const routes = await getRoute(start, end, re_route);
 
-    if (!route || route.length === 0) {
-      return res.status(404).json({ error: "Route not found" });
-    }
+    let responseData = {};
 
-    let routePoints = [];
-    let totalDistance = 0; // in meters
-    let totalTime = 0; // in hours
-
-    route.forEach((row, index) => {
-      const geojson = JSON.parse(row.geojson); // Parse the GeoJSON
-      const segmentDistance = parseFloat(row.length_m); // Distance in meters
-
-      // Determine the speed to use based on direction
-      const speed =
-        row.reverse_cost === -1
-          ? row.maxspeed_forward // If reverse_cost is -1, use forward speed
-          : row.maxspeed_backward;
-
-      if (!speed || speed <= 0) {
-        console.warn("Invalid speed value for segment, skipping:", row);
-        return; // Skip segments with invalid speed
+    for (const [key, route] of Object.entries(routes)) {
+      if (!route || route.length === 0) {
+        return res.status(404).json({ error: "Route not found" });
       }
 
-      // Convert speed to m/s and calculate time for this segment
-      const speedMps = (speed * 1000) / 3600; // Convert km/h to m/s
-      const segmentTime = segmentDistance / speedMps; // Time in seconds
-      totalTime += segmentTime / 3600; // Convert to hours and accumulate
-      totalDistance += segmentDistance; // Accumulate distance
+      let routePoints = [];
+      let totalDistance = 0; // in meters
+      let totalTime = 0; // in hours
 
-      if (geojson.type === "LineString") {
-        const coordinates = geojson.coordinates;
-        const firstCoord = coordinates[0];
-        const lastCoord = coordinates[coordinates.length - 1];
+      route.forEach((row, index) => {
+        const geojson = JSON.parse(row.geojson); // Parse the GeoJSON
+        const segmentDistance = parseFloat(row.length_m); // Distance in meters
 
-        if (index === 0) {
-          // First set of coordinates, determine the best orientation
-          const startDistanceToFirst = calculateDistance(
-            start.lat,
-            start.lon,
-            firstCoord[1],
-            firstCoord[0]
-          );
-          const startDistanceToLast = calculateDistance(
-            start.lat,
-            start.lon,
-            lastCoord[1],
-            lastCoord[0]
-          );
+        // Determine the speed to use based on direction
+        const speed =
+          row.reverse_cost === -1
+            ? row.maxspeed_forward // If reverse_cost is -1, use forward speed
+            : row.maxspeed_backward;
 
-          if (startDistanceToLast < startDistanceToFirst) {
-            routePoints.push(
-              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value }))
+        if (!speed || speed <= 0) {
+          console.warn("Invalid speed value for segment, skipping:", row);
+          return; // Skip segments with invalid speed
+        }
+
+        // Convert speed to m/s and calculate time for this segment
+        const speedMps = (speed * 1000) / 3600; // Convert km/h to m/s
+        const segmentTime = segmentDistance / speedMps; // Time in seconds
+        totalTime += segmentTime / 3600; // Convert to hours and accumulate
+        totalDistance += segmentDistance; // Accumulate distance
+
+        if (geojson.type === "LineString") {
+          const coordinates = geojson.coordinates;
+          const firstCoord = coordinates[0];
+          const lastCoord = coordinates[coordinates.length - 1];
+
+          if (index === 0) {
+            // First set of coordinates, determine the best orientation
+            const startDistanceToFirst = calculateDistance(
+              start.lat,
+              start.lon,
+              firstCoord[1],
+              firstCoord[0]
             );
-          } else {
-            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value })));
-          }
-        } else {
-          // For subsequent sets of coordinates
-          const lastPointInRoute = routePoints[routePoints.length - 1];
-
-          const distanceToFirst = calculateDistance(
-            lastPointInRoute.lat,
-            lastPointInRoute.lon,
-            firstCoord[1],
-            firstCoord[0]
-          );
-          const distanceToLast = calculateDistance(
-            lastPointInRoute.lat,
-            lastPointInRoute.lon,
-            lastCoord[1],
-            lastCoord[0]
-          );
-
-          if (distanceToLast < distanceToFirst) {
-            routePoints.push(
-              ...coordinates.reverse().map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value }))
+            const startDistanceToLast = calculateDistance(
+              start.lat,
+              start.lon,
+              lastCoord[1],
+              lastCoord[0]
             );
+
+            if (startDistanceToLast < startDistanceToFirst) {
+              routePoints.push(
+                ...coordinates.reverse().map(([lon, lat]) => ({
+                  lat,
+                  lon,
+                  raster_value: row.raster_value,
+                }))
+              );
+            } else {
+              routePoints.push(
+                ...coordinates.map(([lon, lat]) => ({
+                  lat,
+                  lon,
+                  raster_value: row.raster_value,
+                }))
+              );
+            }
           } else {
-            routePoints.push(...coordinates.map(([lon, lat]) => ({ lat, lon, raster_value: row.raster_value })));
+            // For subsequent sets of coordinates
+            const lastPointInRoute = routePoints[routePoints.length - 1];
+
+            const distanceToFirst = calculateDistance(
+              lastPointInRoute.lat,
+              lastPointInRoute.lon,
+              firstCoord[1],
+              firstCoord[0]
+            );
+            const distanceToLast = calculateDistance(
+              lastPointInRoute.lat,
+              lastPointInRoute.lon,
+              lastCoord[1],
+              lastCoord[0]
+            );
+
+            if (distanceToLast < distanceToFirst) {
+              routePoints.push(
+                ...coordinates.reverse().map(([lon, lat]) => ({
+                  lat,
+                  lon,
+                  raster_value: row.raster_value,
+                }))
+              );
+            } else {
+              routePoints.push(
+                ...coordinates.map(([lon, lat]) => ({
+                  lat,
+                  lon,
+                  raster_value: row.raster_value,
+                }))
+              );
+            }
           }
         }
-      }
-    });
+      });
 
-    // Format the distance
-    const formattedDistance =
-      totalDistance < 1000
-        ? `${totalDistance.toFixed(0)} meters`
-        : `${(totalDistance / 1000).toFixed(2)} km`;
+      // Format the distance
+      const formattedDistance =
+        totalDistance < 1000
+          ? `${totalDistance.toFixed(0)} meters`
+          : `${(totalDistance / 1000).toFixed(2)} km`;
 
-    console.log("formattedDistance,", formattedDistance);
+      console.log("formattedDistance,", formattedDistance);
 
-    // Format the time
-    const totalHours = Math.floor(totalTime);
-    const totalMinutes = Math.round((totalTime - totalHours) * 60);
-    const formattedTime =
-      totalHours > 0
-        ? `${totalHours}h ${totalMinutes}min`
-        : `${totalMinutes} min`;
+      // Format the time
+      const totalHours = Math.floor(totalTime);
+      const totalMinutes = Math.round((totalTime - totalHours) * 60);
+      const formattedTime =
+        totalHours > 0
+          ? `${totalHours}h ${totalMinutes}min`
+          : `${totalMinutes} min`;
 
-    console.log("formattedTime,", formattedTime);
+      console.log("formattedTime,", formattedTime);
 
+      // Store results in responseData
+      responseData[key] = {
+        route: routePoints,
+        distance: formattedDistance,
+        time: formattedTime,
+      };
+    }
 
-    res.status(200).json({
-      route: routePoints,
-      distance: formattedDistance,
-      time: formattedTime,
-    });
+    res.status(200).json(responseData);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
@@ -397,6 +427,7 @@ app.post("/route", async (req, res) => {
 });
 
 
+// Test if we can get the raster_values for a single point
 app.post("/raster", async (req, res) => {
   const {point} = req.body;
 
@@ -408,7 +439,6 @@ app.post("/raster", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 })
-
 
 
 // Helper function to calculate distance between two coordinates
@@ -428,7 +458,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c; // Distance in meters
 }
 
-
+//Calls the Photon Geocoder API, that transforms the inputed address in coordinates
 app.post("/geocode", async (req, res) => {
   const { address } = req.body;
   console.log("address", address);
@@ -458,6 +488,8 @@ app.post("/geocode", async (req, res) => {
   }
 });
 
+
+//Calls the Photon Geocoder API that gets the various options for the sugestion box
 app.get("/search", async (req, res) => {
   const { query, limit = 5, lang = 'en' } = req.query;
   console.log("query:", query)

@@ -5,8 +5,11 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
+import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/main.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/navigation.dart';
+import 'package:provider/provider.dart'; // Import the Provider package
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -22,7 +25,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   // String? fcmToken;
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
-  List<Map<String, dynamic>> _routePoints = []; // Stores points for the polyline
+  // List<Map<String, dynamic>> _routePoints = []; // Stores points for the polyline
+  Map<String, List<Map<String, dynamic>>> _routesWithPoints = {};
   final TextEditingController _addressController = TextEditingController();
   List<Map<String, dynamic>> _suggestions = []; // Stores autocomplete suggestions
   Timer? _debounce; // To avoid over calling the API
@@ -30,12 +34,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   double _currentZoom = 13.0;
   bool destinationSelected = false;
   String? selectedDestination;
-  String distance = "0";
-  String time = "0";
+  // String distance = "0";
+  // String time = "0";
+  Map<String, String> _distances = {};
+  Map<String, String> _times = {};
   bool setDestVis = true;
   bool _isFetchingRoute = false;
   bool _cancelFetchingRoute = false;
-
+  final ProfileController _profileController = ProfileController();
+  Map<String, dynamic> userPreferences = {};
+  String _selectedRouteKey = ""; // Default value, updated when routes are fetched
 
   @override
   bool get wantKeepAlive => true;
@@ -45,6 +53,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     super.initState();
     _requestLocationPermission();
     _setupAutocompleteListener();
+    fetchUserPreferences();
   }
 
   Future<void> _requestLocationPermission() async {
@@ -83,59 +92,62 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         _cancelFetchingRoute = false; // Reset the cancellation flag
       });
 
+      // Access the updated value of 'reRoute' from the UserPreferences provider
+      final userPreferences = Provider.of<UserPreferences>(context, listen: false);
+      bool reRoute = userPreferences.reRoute; // This gives you the updated value
+      print("reRoute: $reRoute");
+
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
           "end": {"lat": end.latitude, "lon": end.longitude},
+          "re_route": reRoute, // Use the updated value of reRoute
+          // "re_route": userPreferences["re_route"], // Use the updated value of reRoute
         }),
       );
-
-      // final raster = await http.post(
-      //   Uri.parse('http://192.168.1.82:3000/raster'),
-      //   headers: {"Content-Type": "application/json"},
-      //   body: jsonEncode({
-      //     "point": {"lat": start.latitude, "lon": start.longitude},
-      //   }),
-      // );
-
-      // if (raster.statusCode == 200) {
-      //   final rasterData = jsonDecode(response.body);
-      //   print("data, $rasterData");
-
-      // } else {
-      //   print("Error fetching suggestions: ${response.reasonPhrase}");
-      // }
 
       if (_cancelFetchingRoute) return; // Exit if route-fetching is canceled
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("data, $data");
-        List<Map<String, dynamic>> pointsWithRaster = (data['route'] as List).map((point) {
-          return {
-            'latlng': LatLng(point['lat'], point['lon']),
-            'raster_value': point['raster_value']
-          };
-        }).toList();
-        print("pointsWithRaster, $pointsWithRaster");
-        String totalDistanceKm = data['distance'];
-        String totalTimeMinutes = data['time'];
+
+        // Iterate through returned routes (defaultRoute and/or adjustedRoute)
+        Map<String, List<Map<String, dynamic>>> routesWithPoints = {};
+        Map<String, String> distances = {};
+        Map<String, String> times = {};
+
+        data.forEach((key, routeData) {
+          List<Map<String, dynamic>> pointsWithRaster = (routeData['route'] as List).map((point) {
+            return {
+              'latlng': LatLng(point['lat'], point['lon']),
+              'raster_value': point['raster_value']
+            };
+          }).toList();
+
+          routesWithPoints[key] = pointsWithRaster;
+          distances[key] = routeData['distance'];
+          times[key] = routeData['time'];
+        });
+
+        print(routesWithPoints['defaultRoute']);
 
         // Hide the navigation bar when the user gets the route
         navigationBarKey.currentState?.toggleNavigationBar(false);
 
         setState(() {
-          _routePoints = pointsWithRaster;
-          distance = totalDistanceKm;
-          time = totalTimeMinutes;
+          _routesWithPoints = routesWithPoints;
+          _distances = distances;
+          _times = times;
           _isFetchingRoute = false; // Hide the progress bar
+          _selectedRouteKey = _routesWithPoints.keys.first;
         });
 
-        if (pointsWithRaster.isNotEmpty) {
-          // Calculate bounds and adjust map view
-          LatLngBounds bounds = _calculateBounds(pointsWithRaster);
+        // Adjust map view to fit all routes
+        if (routesWithPoints.isNotEmpty) {
+          List<LatLng> allPoints = routesWithPoints.values.expand((list) => list.map((p) => p['latlng'] as LatLng)).toList();
+          LatLngBounds bounds = _calculateBounds(allPoints);
           _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(20)));
         }
       } else {
@@ -202,8 +214,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     });
   }
 
-
-
   Future<void> _fetchSearchSuggestions(String query) async {
     try {
       final response = await http.get(
@@ -232,7 +242,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     }
   }
 
-
   Future<void> _setDestination() async {
     if (_addressController.text.isNotEmpty) {
       final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
@@ -259,39 +268,36 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   // Function to re-adjust the zoom when a route is set
-LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
-  if (pointsWithRaster.isEmpty) {
-    throw Exception("Cannot calculate bounds for an empty route.");
+  LatLngBounds _calculateBounds(List<LatLng> points) {
+    if (points.isEmpty) {
+      throw Exception("Cannot calculate bounds for an empty route.");
+    }
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (LatLng point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    // Calculate the approximate range
+    double latRange = maxLat - minLat;
+    double lngRange = maxLng - minLng;
+
+    // Determine buffer dynamically based on the route's size
+    double buffer = (latRange + lngRange) * 0.1; // 10% of total span
+    double bottomBuffer = buffer * 2; // Extra buffer at the bottom
+
+    return LatLngBounds(
+      LatLng(minLat - bottomBuffer, minLng - buffer), // Bottom-left corner
+      LatLng(maxLat + buffer, maxLng + buffer), // Top-right corner
+    );
   }
-
-  // Extract LatLng values
-  List<LatLng> points = pointsWithRaster.map((e) => e['latlng'] as LatLng).toList();
-
-  double minLat = points.first.latitude;
-  double maxLat = points.first.latitude;
-  double minLng = points.first.longitude;
-  double maxLng = points.first.longitude;
-
-  for (LatLng point in points) {
-    if (point.latitude < minLat) minLat = point.latitude;
-    if (point.latitude > maxLat) maxLat = point.latitude;
-    if (point.longitude < minLng) minLng = point.longitude;
-    if (point.longitude > maxLng) maxLng = point.longitude;
-  }
-
-  // Calculate the approximate range
-  double latRange = maxLat - minLat;
-  double lngRange = maxLng - minLng;
-  
-  // Determine buffer dynamically based on the route's size
-  double buffer = (latRange + lngRange) * 0.1; // 10% of total span
-  double bottomBuffer = buffer * 2; // Extra buffer at the bottom
-
-  return LatLngBounds(
-    LatLng(minLat - bottomBuffer, minLng - buffer), // Bottom-left corner
-    LatLng(maxLat + buffer, maxLng + buffer), // Top-right corner
-  );
-}
 
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
@@ -323,8 +329,20 @@ LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
         controller.dispose();
       }
     });
-
     controller.forward();
+  }
+
+  Future<void> fetchUserPreferences() async {
+    try {
+      final preferences = await _profileController.fetchUserProfile();
+      if (mounted) {
+        setState(() {
+          userPreferences = preferences;
+        });
+      }
+    } catch (e) {
+      print("Error fetching preferences: $e");
+    }
   }
 
   @override
@@ -350,11 +368,6 @@ LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                   subdomains: const ['a', 'b', 'c'],
                 ),
-                // TileLayer(
-                //   urlTemplate: "http://192.168.1.82:3000/tiles/{z}/{x}/{y}.png",
-                //   subdomains: const ['a', 'b', 'c'],
-                //   // opacity: 0.6, // Adjust transparency
-                // ),
                 if (_currentLocation != null)
                   const MarkerLayer(
                     markers: [
@@ -376,21 +389,37 @@ LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
                       ),
                     ],
                   ),
-                if (_routePoints.isNotEmpty)
+                  //Problema está aqui
+                if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
-                    polylines: List.generate(_routePoints.length - 1, (index) {
-                      final current = _routePoints[index];
-                      final next = _routePoints[index + 1];
-                      Color lineColor = (current['raster_value'] > 2) ? Colors.red : Colors.blue; // Superior a 2 só para verificar se aparece na rota
-                      return Polyline(
-                        points: [current['latlng'], next['latlng']],
-                        strokeWidth: 4.0,
-                        color: lineColor,
-                      );
-                    }),
+                    polylines: _routesWithPoints.entries
+                        .expand<Polyline>((entry) {
+                      final List<Map<String, dynamic>> routePoints = entry.value;
+                      if (routePoints.length < 2) return [];
+
+                      // Determine if this is the adjustedRoute or defaultRoute
+                      bool isAdjustedRoute = entry.key == "adjustedRoute"; // Modify this check as per your logic
+                      Color startColor = isAdjustedRoute ? Colors.green : Colors.blue;
+                      Color endColor = Colors.red; // Both routes will have a red end color
+
+                      return List.generate(routePoints.length - 1, (index) {
+                        final current = routePoints[index];
+                        final next = routePoints[index + 1];
+
+                        // Ensure type safety and valid LatLng extraction
+                        if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+
+                        // Set polyline color based on route type
+                        Color lineColor = (current['raster_value'] > 2) ? endColor : startColor;
+
+                        return Polyline(
+                          points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                          strokeWidth: 4.0,
+                          color: lineColor,
+                        );
+                      }).whereType<Polyline>(); // Filter out null values
+                    }).toList(),
                   ),
-              ],
-            ),
             Positioned(
               top: 40.0,
               left: 10.0,
@@ -418,7 +447,7 @@ LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
                           // Reset the map state and UI elements
                           setState(() {
                             _cancelFetchingRoute = true; // Cancel the route-fetching process
-                            _routePoints.clear();
+                            _routesWithPoints.clear();
                             destinationSelected = false;
                             selectedDestination = "";
                             _destinationLocation = null;
@@ -427,7 +456,6 @@ LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
                             setDestVis = true;
                             _isFetchingRoute = false;
                           });
-
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
@@ -478,7 +506,7 @@ LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
                         },
                       ),
                     ),
-                  if(_routePoints.isEmpty && setDestVis)
+                  if(_routesWithPoints.isEmpty && setDestVis)
                   ElevatedButton(
                     onPressed: () {
                       _setDestination();
@@ -492,65 +520,98 @@ LatLngBounds _calculateBounds(List<Map<String, dynamic>> pointsWithRaster) {
               ),
             ),
             //button when 
-            if (_routePoints.isNotEmpty)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 150,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.rectangle,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(30.0),
+            if (_routesWithPoints.isNotEmpty)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 180, // Increased height to accommodate selection UI
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.rectangle,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(30.0),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Dropdown for selecting a route
+                      DropdownButton<String>(
+                        value: _selectedRouteKey, // Stores the selected route key
+                        onChanged: (String? newKey) {
+                          if (newKey != null) {
+                            setState(() {
+                              _selectedRouteKey = newKey;
+                            });
+                          }
+                        },
+                        items: _routesWithPoints.keys.map((String key) {
+                          return DropdownMenuItem<String>(
+                            value: key,
+                            child: Text("Route $key"), // Adjust naming as needed
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Distance and Time display for the selected route
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _distances[_selectedRouteKey] ?? "Unknown",
+                            style: const TextStyle(
+                              fontSize: 22.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(width: 30),
+                          Text(
+                            _times[_selectedRouteKey] ?? "Unknown",
+                            style: const TextStyle(
+                              fontSize: 22.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      ElevatedButton(
+                        onPressed: () {
+                          if (_routesWithPoints.containsKey(_selectedRouteKey)) {
+                            List<Map<String, dynamic>> selectedRoute =
+                                _routesWithPoints[_selectedRouteKey] ?? [];
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => NavigationPage(
+                                  selectedRoute,
+                                  _distances[_selectedRouteKey] ?? "Unknown",
+                                  _times[_selectedRouteKey] ?? "Unknown",
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text(
+                          "Start",
+                          style: TextStyle(fontSize: 18.0),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          distance,
-                          style: const TextStyle(
-                            fontSize: 22.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(width: 30), // Add some spacing
-                        Text(
-                          time,
-                          style: const TextStyle(
-                            fontSize: 22.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20), // Add some spacing
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NavigationPage(_routePoints, distance, time),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        "Start",
-                        style: TextStyle(fontSize: 18.0),
-                      ),
-                    ),
-                  ],
-                ),
               ),
-            ),
+            ]),
           ],
         ),
       ),

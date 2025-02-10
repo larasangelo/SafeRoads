@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:provider/provider.dart';
 import 'package:safe_roads/firebase_options.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/edit_profile.dart';
 import 'package:safe_roads/pages/home.dart';
@@ -28,19 +30,23 @@ void main() async {
   
   await _notifications.setupNotificationChannels();
 
-  runApp(MaterialApp(
-    // initialRoute: '/welcome',  //THIS IS THE RIGHT ONE
-    initialRoute: '/navigation', // FOR TESTING THE NAVIGATION
-    routes: {
-      '/': (context) => const Loading(),
-      '/home': (context) => const MapPage(),
-      '/welcome': (context) => const WelcomePage(),
-      '/login': (context) => const LoginPage(),
-      '/register': (context) => const RegisterPage(),
-      '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
-      '/editProfile': (context) => const EditProfile()
-    },
-  ));
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => UserPreferences(), // Provide the UserPreferences model
+      child: MaterialApp(
+        initialRoute: '/navigation', // Change to '/home' if you want to start at the Home page
+        routes: {
+          '/': (context) => const Loading(),
+          '/home': (context) => const MapPage(),
+          '/welcome': (context) => const WelcomePage(),
+          '/login': (context) => const LoginPage(),
+          '/register': (context) => const RegisterPage(),
+          '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
+          '/editProfile': (context) => const EditProfile()
+        },
+      ),
+    ),
+  );
 }
 
 GlobalKey<NavigationBarExampleState> navigationBarKey = GlobalKey<NavigationBarExampleState>();
