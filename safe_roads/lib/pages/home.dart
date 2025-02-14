@@ -529,7 +529,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 180, // Adjust height for new button layout
+                  height: 220, // Adjusted height for messages
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
                     color: Colors.white,
@@ -541,76 +541,114 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Distance and Time display for the selected route
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _distances[_selectedRouteKey] ?? "Unknown",
-                            style: const TextStyle(
-                              fontSize: 22.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const SizedBox(width: 30),
-                          Text(
-                            _times[_selectedRouteKey] ?? "Unknown",
-                            style: const TextStyle(
-                              fontSize: 22.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
+                      // Display risk message if applicable
+                      if (_routesWithPoints[_selectedRouteKey] != null)
+                        ...() {
+                          bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
+                              .any((point) => point['raster_value'] > 3);
+                          bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
+                              .any((point) => point['raster_value'] > 2 && point['raster_value'] <= 3);
 
-                      const SizedBox(height: 20),
+                          if (hasHighRisk) {
+                            return [
+                              _buildRiskMessage("High probability of encountering amphibians", Colors.red),
+                              const SizedBox(height: 20),
+                            ];
+                          } else if (hasMediumRisk) {
+                            return [
+                              _buildRiskMessage("Medium probability of encountering amphibians", Colors.orange),
+                              const SizedBox(height: 20),
+                            ];
+                          }
+                          return [];
+                        }(),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                final keys = _routesWithPoints.keys.toList();
-                                int currentIndex = keys.indexOf(_selectedRouteKey);
-                                _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                              });
-                              print(" key: $_selectedRouteKey");
-                            },
-                            child: const Text(
-                              "Switch Route",
-                              style: TextStyle(fontSize: 18.0),
-                            ),
-                          ),
-
-                          const SizedBox(width: 20),
-                          
-                          ElevatedButton(
-                            onPressed: () {
-                              if (_routesWithPoints.containsKey(_selectedRouteKey)) {
-                                List<Map<String, dynamic>> selectedRoute =
-                                    _routesWithPoints[_selectedRouteKey] ?? [];
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => NavigationPage(
-                                      selectedRoute,
-                                      _distances[_selectedRouteKey] ?? "Unknown",
-                                      _times[_selectedRouteKey] ?? "Unknown",
-                                    ),
+                      // Distance, Time & Buttons - Aligned in Table Format
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Column for Distance + Switch Route
+                            Column(
+                              children: [
+                                Text(
+                                  _distances[_selectedRouteKey] ?? "Unknown",
+                                  style: const TextStyle(
+                                    fontSize: 25.0,
+                                    // fontWeight: FontWeight.bold,
+                                    color: Colors.black,
                                   ),
-                                );
-                              }
-                            },
-                            child: const Text(
-                              "Start",
-                              style: TextStyle(fontSize: 18.0),
+                                ),
+                                const SizedBox(height: 10), // Spacing between text and button
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      final keys = _routesWithPoints.keys.toList();
+                                      int currentIndex = keys.indexOf(_selectedRouteKey);
+                                      _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                    });
+                                    print(" key: $_selectedRouteKey");
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    // backgroundColor: Colors.white,
+                                    // foregroundColor: Colors.purple,
+                                    // shadowColor: Colors.transparent,
+                                  ),
+                                  child: const Text(
+                                    "Switch Route",
+                                    style: TextStyle(fontSize: 18.0),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+
+                            // Column for Time + Start Button
+                            Column(
+                              children: [
+                                Text(
+                                  _times[_selectedRouteKey] ?? "Unknown",
+                                  style: const TextStyle(
+                                    fontSize: 25.0,
+                                    // fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 10), // Spacing between text and button
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (_routesWithPoints.containsKey(_selectedRouteKey)) {
+                                      List<Map<String, dynamic>> selectedRoute =
+                                          _routesWithPoints[_selectedRouteKey] ?? [];
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => NavigationPage(
+                                            selectedRoute,
+                                            _distances[_selectedRouteKey] ?? "Unknown",
+                                            _times[_selectedRouteKey] ?? "Unknown",
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                                    // backgroundColor: Colors.white,
+                                    // foregroundColor: Colors.purple,
+                                    // shadowColor: Colors.transparent,
+                                  ),
+                                  child: const Text(
+                                    "Start",
+                                    style: TextStyle(fontSize: 18.0),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -623,3 +661,33 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     );
   }
 }
+
+Widget _buildRiskMessage(String text, Color color) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center, // Centers content horizontally
+      crossAxisAlignment: CrossAxisAlignment.center, // Aligns items properly
+      children: [
+        Icon(Icons.warning, color: color, size: 40),
+        const SizedBox(width: 30),
+        Expanded( // Ensures text wraps properly
+          child: Text(
+            text,
+            textAlign: TextAlign.left, // Centers text
+            softWrap: true, // Allows text to wrap instead of overflowing
+            overflow: TextOverflow.visible, // Ensures visibility
+            style: TextStyle(
+              fontSize: 22.0,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+
