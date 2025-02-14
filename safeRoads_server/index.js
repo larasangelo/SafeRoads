@@ -58,13 +58,18 @@ const getRasterValue = async (start) => {
 const getRoute = async (start, end, re_route) => {
   try {
     // Get start and end nodes
+    // console.log("start: ", start);
+    // console.log("end: ", end);
+    // start:  { lat: 41.7013562, lon: -8.1685668 } 30095
+    // end:  { lat: 41.7319093, lon: -7.9765555 } 951623
+
     const startNodeQuery = `
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${start.lon}, ${start.lat}), 4326)::geography) AS dist
       FROM ways_vertices_pgr
       ORDER BY dist ASC
       LIMIT 1;
     `;
-    const startNode = await pool.query(startNodeQuery);
+    const startNode = await pool.query(startNodeQuery); 
     console.log("startNode: ", startNode);
 
     const endNodeQuery = `
@@ -73,7 +78,7 @@ const getRoute = async (start, end, re_route) => {
       ORDER BY dist ASC
       LIMIT 1;
     `;
-    const endNode = await pool.query(endNodeQuery);
+    const endNode = await pool.query(endNodeQuery); 
     console.log("endNode: ", endNode);
 
     // Calculate bounding box
@@ -115,22 +120,12 @@ const getRoute = async (start, end, re_route) => {
       UPDATE temp_ways
       SET raster_value = subquery.raster_value
       FROM (
-        SELECT w_inner.gid,
-              AVG(COALESCE(ST_Value(
-                r.rast, 
-                1, 
-                ST_SetSRID(ST_MakePoint(
-                  ST_X(ST_Centroid(w_inner.the_geom)), 
-                  ST_Y(ST_Centroid(w_inner.the_geom))
-                ), 4326)
-              ), 1)) AS raster_value
-        FROM temp_ways w_inner
-        LEFT JOIN raster_table r 
-          ON ST_Intersects(
-              r.rast, 
-              w_inner.the_geom -- Geometry from temp_ways
-            )
-        GROUP BY w_inner.gid
+          SELECT w_inner.gid,
+                AVG(COALESCE(ST_Value(r.rast, 1, ST_Centroid(w_inner.the_geom)), 1)) AS raster_value
+          FROM temp_ways w_inner
+          LEFT JOIN raster_table r 
+              ON ST_Intersects(r.rast, w_inner.the_geom)
+          GROUP BY w_inner.gid
       ) AS subquery
       WHERE temp_ways.gid = subquery.gid;
     `;

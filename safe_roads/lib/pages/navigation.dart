@@ -267,13 +267,29 @@ class _NavigationPageState extends State<NavigationPage> {
                     polylines: List.generate(widget.routeCoordinates.length - 1, (index) {
                       final current = widget.routeCoordinates[index];
                       final next = widget.routeCoordinates[index + 1];
-                      Color lineColor = (current['raster_value'] > 2) ? Colors.red : Colors.blue; // Superior a 2 só para verificar se aparece na rota
+
+                      if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+
+                      // Determine color based on raster value
+                      Color lineColor;
+                      if (current['raster_value'] != null) {
+                        if (current['raster_value'] > 3) {
+                          lineColor = Colors.red; // High risk
+                        } else if (current['raster_value'] > 2) {
+                          lineColor = Colors.orange; // Medium risk
+                        } else {
+                          lineColor = Colors.purple; // Default color
+                        }
+                      } else {
+                        lineColor = Colors.purple; // Fallback color if raster_value is missing
+                      }
+
                       return Polyline(
-                        points: [current['latlng'], next['latlng']],
+                        points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
                         strokeWidth: 8.0,
                         color: lineColor,
                       );
-                    }),
+                    }).whereType<Polyline>().toList(), // Filters out null values
                   ),
                   MarkerLayer(
                     markers: [

@@ -392,25 +392,28 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   //Problema está aqui
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
-                    polylines: _routesWithPoints.entries
-                        .expand<Polyline>((entry) {
+                    polylines: _routesWithPoints.entries.expand<Polyline>((entry) {
                       final List<Map<String, dynamic>> routePoints = entry.value;
                       if (routePoints.length < 2) return [];
 
-                      // Determine if this is the adjustedRoute or defaultRoute
-                      bool isAdjustedRoute = entry.key == "adjustedRoute"; // Modify this check as per your logic
-                      Color startColor = isAdjustedRoute ? Colors.green : Colors.blue;
-                      Color endColor = Colors.red; // Both routes will have a red end color
+                      bool isSelectedRoute = entry.key == _selectedRouteKey;
+                      double opacity = isSelectedRoute ? 1.0 : 0.1; // Lower opacity for unselected routes
 
                       return List.generate(routePoints.length - 1, (index) {
                         final current = routePoints[index];
                         final next = routePoints[index + 1];
 
-                        // Ensure type safety and valid LatLng extraction
                         if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
 
-                        // Set polyline color based on route type
-                        Color lineColor = (current['raster_value'] > 2) ? endColor : startColor;
+                        // Have different colors for different Raster Values
+                        Color lineColor;
+                        if (current['raster_value'] > 3) {
+                          lineColor = Colors.red.withOpacity(opacity);
+                        } else if (current['raster_value'] > 2) {
+                          lineColor = Colors.orange.withOpacity(opacity);
+                        } else {
+                          lineColor = Colors.purple.withOpacity(opacity);
+                        }
 
                         return Polyline(
                           points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
@@ -526,7 +529,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 180, // Increased height to accommodate selection UI
+                  height: 180, // Adjust height for new button layout
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
                     color: Colors.white,
@@ -538,26 +541,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Dropdown for selecting a route
-                      DropdownButton<String>(
-                        value: _selectedRouteKey, // Stores the selected route key
-                        onChanged: (String? newKey) {
-                          if (newKey != null) {
-                            setState(() {
-                              _selectedRouteKey = newKey;
-                            });
-                          }
-                        },
-                        items: _routesWithPoints.keys.map((String key) {
-                          return DropdownMenuItem<String>(
-                            value: key,
-                            child: Text("Route $key"), // Adjust naming as needed
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 10),
-
                       // Distance and Time display for the selected route
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -584,28 +567,50 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
                       const SizedBox(height: 20),
 
-                      ElevatedButton(
-                        onPressed: () {
-                          if (_routesWithPoints.containsKey(_selectedRouteKey)) {
-                            List<Map<String, dynamic>> selectedRoute =
-                                _routesWithPoints[_selectedRouteKey] ?? [];
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                final keys = _routesWithPoints.keys.toList();
+                                int currentIndex = keys.indexOf(_selectedRouteKey);
+                                _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                              });
+                              print(" key: $_selectedRouteKey");
+                            },
+                            child: const Text(
+                              "Switch Route",
+                              style: TextStyle(fontSize: 18.0),
+                            ),
+                          ),
 
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => NavigationPage(
-                                  selectedRoute,
-                                  _distances[_selectedRouteKey] ?? "Unknown",
-                                  _times[_selectedRouteKey] ?? "Unknown",
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text(
-                          "Start",
-                          style: TextStyle(fontSize: 18.0),
-                        ),
+                          const SizedBox(width: 20),
+                          
+                          ElevatedButton(
+                            onPressed: () {
+                              if (_routesWithPoints.containsKey(_selectedRouteKey)) {
+                                List<Map<String, dynamic>> selectedRoute =
+                                    _routesWithPoints[_selectedRouteKey] ?? [];
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => NavigationPage(
+                                      selectedRoute,
+                                      _distances[_selectedRouteKey] ?? "Unknown",
+                                      _times[_selectedRouteKey] ?? "Unknown",
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text(
+                              "Start",
+                              style: TextStyle(fontSize: 18.0),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
