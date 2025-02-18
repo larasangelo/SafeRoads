@@ -233,7 +233,7 @@ app.use(cors({ origin: "*" }));
 // Calls Firebase Cloud Messaging for Notifications
 app.post("/send", (req, res) => {
   // Timeout de 5 segundos para testar
-  setTimeout( function () {
+  // setTimeout( function () {
     const receivedToken = req.body.fcmToken;
     const receivedtitle = req.body.title;
     const receivedbody = req.body.body;
@@ -271,8 +271,8 @@ app.post("/send", (req, res) => {
         res.status(400).json({ error: error.message });
         console.log("Error sending message:", error);
       });
-    }, 5000
-  )
+  //   }, 5000
+  // )
 });
 
 //Calls the getRoute function to get the routes (optimal and default or just optimal)
@@ -282,6 +282,7 @@ app.post("/route", async (req, res) => {
     const routes = await getRoute(start, end, re_route);
 
     let responseData = {};
+    let allRoutes = {}; // Store routes for comparison
 
     for (const [key, route] of Object.entries(routes)) {
       if (!route || route.length === 0) {
@@ -291,27 +292,24 @@ app.post("/route", async (req, res) => {
       let routePoints = [];
       let totalDistance = 0; // in meters
       let totalTime = 0; // in hours
+      let hasRisk = false; // Flag for risk detection
 
       route.forEach((row, index) => {
-        const geojson = JSON.parse(row.geojson); // Parse the GeoJSON
-        const segmentDistance = parseFloat(row.length_m); // Distance in meters
+        const geojson = JSON.parse(row.geojson);
+        const segmentDistance = parseFloat(row.length_m);
 
-        // Determine the speed to use based on direction
         const speed =
-          row.reverse_cost === -1
-            ? row.maxspeed_forward // If reverse_cost is -1, use forward speed
-            : row.maxspeed_backward;
+          row.reverse_cost === -1 ? row.maxspeed_forward : row.maxspeed_backward;
 
         if (!speed || speed <= 0) {
           console.warn("Invalid speed value for segment, skipping:", row);
-          return; // Skip segments with invalid speed
+          return;
         }
 
-        // Convert speed to m/s and calculate time for this segment
-        const speedMps = (speed * 1000) / 3600; // Convert km/h to m/s
-        const segmentTime = segmentDistance / speedMps; // Time in seconds
-        totalTime += segmentTime / 3600; // Convert to hours and accumulate
-        totalDistance += segmentDistance; // Accumulate distance
+        const speedMps = (speed * 1000) / 3600;
+        const segmentTime = segmentDistance / speedMps;
+        totalTime += segmentTime / 3600;
+        totalDistance += segmentDistance;
 
         if (geojson.type === "LineString") {
           const coordinates = geojson.coordinates;
@@ -319,7 +317,6 @@ app.post("/route", async (req, res) => {
           const lastCoord = coordinates[coordinates.length - 1];
 
           if (index === 0) {
-            // First set of coordinates, determine the best orientation
             const startDistanceToFirst = calculateDistance(
               start.lat,
               start.lon,
@@ -335,23 +332,20 @@ app.post("/route", async (req, res) => {
 
             if (startDistanceToLast < startDistanceToFirst) {
               routePoints.push(
-                ...coordinates.reverse().map(([lon, lat]) => ({
-                  lat,
-                  lon,
-                  raster_value: row.raster_value,
-                }))
+                ...coordinates.reverse().map(([lon, lat]) => {
+                  if (row.raster_value > 2) hasRisk = true;
+                  return { lat, lon, raster_value: row.raster_value };
+                })
               );
             } else {
               routePoints.push(
-                ...coordinates.map(([lon, lat]) => ({
-                  lat,
-                  lon,
-                  raster_value: row.raster_value,
-                }))
+                ...coordinates.map(([lon, lat]) => {
+                  if (row.raster_value > 2) hasRisk = true;
+                  return { lat, lon, raster_value: row.raster_value };
+                })
               );
             }
           } else {
-            // For subsequent sets of coordinates
             const lastPointInRoute = routePoints[routePoints.length - 1];
 
             const distanceToFirst = calculateDistance(
@@ -369,19 +363,17 @@ app.post("/route", async (req, res) => {
 
             if (distanceToLast < distanceToFirst) {
               routePoints.push(
-                ...coordinates.reverse().map(([lon, lat]) => ({
-                  lat,
-                  lon,
-                  raster_value: row.raster_value,
-                }))
+                ...coordinates.reverse().map(([lon, lat]) => {
+                  if (row.raster_value > 2) hasRisk = true;
+                  return { lat, lon, raster_value: row.raster_value };
+                })
               );
             } else {
               routePoints.push(
-                ...coordinates.map(([lon, lat]) => ({
-                  lat,
-                  lon,
-                  raster_value: row.raster_value,
-                }))
+                ...coordinates.map(([lon, lat]) => {
+                  if (row.raster_value > 2) hasRisk = true;
+                  return { lat, lon, raster_value: row.raster_value };
+                })
               );
             }
           }
@@ -406,12 +398,26 @@ app.post("/route", async (req, res) => {
 
       console.log("formattedTime,", formattedTime);
 
-      // Store results in responseData
+      // Store route data for comparison
+      allRoutes[key] = routePoints;
+
+      // Store results in responseData, including hasRisk
       responseData[key] = {
         route: routePoints,
         distance: formattedDistance,
         time: formattedTime,
+        hasRisk, // Added risk flag
       };
+    }
+
+    // Check if all routes are identical
+    const routeKeys = Object.keys(allRoutes);
+    if (
+      routeKeys.length > 1 &&
+      JSON.stringify(allRoutes[routeKeys[0]]) === JSON.stringify(allRoutes[routeKeys[1]])
+    ) {
+      console.log("Duplicate routes detected, returning only the default route.");
+      responseData = { default: responseData[routeKeys[0]] }; // Keep only the first route
     }
 
     res.status(200).json(responseData);
@@ -420,6 +426,7 @@ app.post("/route", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 // Test if we can get the raster_values for a single point

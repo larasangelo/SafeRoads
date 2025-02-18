@@ -38,12 +38,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   // String time = "0";
   Map<String, String> _distances = {};
   Map<String, String> _times = {};
+  Map<String, bool> _hasRisk = {}; 
   bool setDestVis = true;
   bool _isFetchingRoute = false;
   bool _cancelFetchingRoute = false;
   final ProfileController _profileController = ProfileController();
   Map<String, dynamic> userPreferences = {};
   String _selectedRouteKey = ""; // Default value, updated when routes are fetched
+  double _boxHeight = 200;
 
   @override
   bool get wantKeepAlive => true;
@@ -98,7 +100,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       print("reRoute: $reRoute");
 
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/route'),
+        // Uri.parse('http://192.168.1.82:3000/route'),
+        Uri.parse('http://192.168.56.1:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -117,6 +120,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         Map<String, List<Map<String, dynamic>>> routesWithPoints = {};
         Map<String, String> distances = {};
         Map<String, String> times = {};
+        Map<String, bool> hasRisk = {}; 
 
         data.forEach((key, routeData) {
           List<Map<String, dynamic>> pointsWithRaster = (routeData['route'] as List).map((point) {
@@ -129,6 +133,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           routesWithPoints[key] = pointsWithRaster;
           distances[key] = routeData['distance'];
           times[key] = routeData['time'];
+          hasRisk[key] = routeData['hasRisk'];
         });
 
         print(routesWithPoints['defaultRoute']);
@@ -142,7 +147,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _times = times;
           _isFetchingRoute = false; // Hide the progress bar
           _selectedRouteKey = _routesWithPoints.keys.first;
+          _hasRisk = hasRisk;
+          _boxHeight = _hasRisk[_selectedRouteKey] == true ? 220 : 180;
         });
+
+        print("_boxHeight, $_boxHeight");
 
         // Adjust map view to fit all routes
         if (routesWithPoints.isNotEmpty) {
@@ -166,7 +175,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Future<LatLng?> _getCoordinatesFromAddress(String address) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/geocode'),
+        // Uri.parse('http://192.168.1.82:3000/geocode'),
+        Uri.parse('http://10.101.121.100:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -217,7 +227,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Future<void> _fetchSearchSuggestions(String query) async {
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+        // Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+        Uri.parse('http://10.101.121.100:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+
       );
 
       if (response.statusCode == 200) {
@@ -375,7 +387,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
+                        point: LatLng(41.7013562, -8.1685668), // Current location for testing in the Nsorth 
                         child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -389,7 +401,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       ),
                     ],
                   ),
-                  //Problema está aqui
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
                     polylines: _routesWithPoints.entries.expand<Polyline>((entry) {
@@ -529,7 +540,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 220, // Adjusted height for messages
+                  height: _boxHeight, // Adjusted height for messages
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
                     color: Colors.white,
@@ -563,64 +574,112 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           return [];
                         }(),
 
-                      // Distance, Time & Buttons - Aligned in Table Format
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Column for Distance + Switch Route
-                            Column(
-                              children: [
-                                Text(
-                                  _distances[_selectedRouteKey] ?? "Unknown",
-                                  style: const TextStyle(
-                                    fontSize: 25.0,
-                                    // fontWeight: FontWeight.bold,
-                                    color: Colors.black,
+                      if (_routesWithPoints.length > 1) 
+                        // More than one route exists - Show switchable format
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                children: [
+                                  Text(
+                                    _distances[_selectedRouteKey] ?? "Unknown",
+                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                   ),
-                                ),
-                                const SizedBox(height: 10), // Spacing between text and button
-                                ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      final keys = _routesWithPoints.keys.toList();
-                                      int currentIndex = keys.indexOf(_selectedRouteKey);
-                                      _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                                    });
-                                    print(" key: $_selectedRouteKey");
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                    // backgroundColor: Colors.white,
-                                    // foregroundColor: Colors.purple,
-                                    // shadowColor: Colors.transparent,
+                                  const SizedBox(height: 10),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        final keys = _routesWithPoints.keys.toList();
+                                        int currentIndex = keys.indexOf(_selectedRouteKey);
+                                        _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                      });
+                                      print(" key: $_selectedRouteKey");
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    ),
+                                    child: const Text(
+                                      "Switch Route",
+                                      style: TextStyle(fontSize: 18.0),
+                                    ),
                                   ),
-                                  child: const Text(
-                                    "Switch Route",
-                                    style: TextStyle(fontSize: 18.0),
+                                ],
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    _times[_selectedRouteKey] ?? "Unknown",
+                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                   ),
-                                ),
-                              ],
-                            ),
+                                  const SizedBox(height: 10),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      if (_routesWithPoints.containsKey(_selectedRouteKey)) {
+                                        List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
 
-                            // Column for Time + Start Button
-                            Column(
-                              children: [
-                                Text(
-                                  _times[_selectedRouteKey] ?? "Unknown",
-                                  style: const TextStyle(
-                                    fontSize: 25.0,
-                                    // fontWeight: FontWeight.bold,
-                                    color: Colors.black,
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => NavigationPage(
+                                              selectedRoute,
+                                              _distances[_selectedRouteKey] ?? "Unknown",
+                                              _times[_selectedRouteKey] ?? "Unknown",
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                                    ),
+                                    child: const Text(
+                                      "Start",
+                                      style: TextStyle(fontSize: 18.0),
+                                    ),
                                   ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        )
+                      else 
+                        // Only one route exists - Show simple format
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 180,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.rectangle,
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(30.0)),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _distances[_selectedRouteKey] ?? "Unknown",
+                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    ),
+                                    const SizedBox(width: 50),
+                                    Text(
+                                      _times[_selectedRouteKey] ?? "Unknown",
+                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 10), // Spacing between text and button
+                                const SizedBox(height: 20),
                                 ElevatedButton(
                                   onPressed: () {
                                     if (_routesWithPoints.containsKey(_selectedRouteKey)) {
-                                      List<Map<String, dynamic>> selectedRoute =
-                                          _routesWithPoints[_selectedRouteKey] ?? [];
+                                      List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
 
                                       Navigator.push(
                                         context,
@@ -634,12 +693,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       );
                                     }
                                   },
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                                    // backgroundColor: Colors.white,
-                                    // foregroundColor: Colors.purple,
-                                    // shadowColor: Colors.transparent,
-                                  ),
                                   child: const Text(
                                     "Start",
                                     style: TextStyle(fontSize: 18.0),
@@ -647,9 +700,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),

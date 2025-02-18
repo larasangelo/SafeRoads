@@ -65,6 +65,8 @@ class _NavigationPageState extends State<NavigationPage> {
           }
         }
 
+        _checkRiskZone(); 
+
         // Extract last coordinate safely
         LatLng lastPoint = _getLatLngFromMap(widget.routeCoordinates.last);
         
@@ -84,33 +86,6 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // NOTIFICATIONS TEST
     await _notifications.setupFirebaseMessaging(); 
-
-    if (_notifications.fcmToken!.isNotEmpty) {
-      print("fcmToken: ${_notifications.fcmToken}");
-
-      // Send the token to the server
-      try {
-        final response = await http.post(
-          Uri.parse('http://192.168.1.82:3000/send'),
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "fcmToken": _notifications.fcmToken,
-            "title": "Attention: Risk zone!",
-            "body": "High probability of encountering amphibians!",
-          }),
-        );
-
-        if (response.statusCode == 200) {
-          print("Token sent successfully");
-        } else {
-          print("Failed to send token: ${response.statusCode}");
-        }
-      } catch (e) {
-        print("Error sending token to server: $e");
-      }
-    } else {
-      print("FCM Token is not available");
-    }
 
     // Check if location services are enabled
     serviceEnabled = await location.serviceEnabled();
@@ -240,6 +215,85 @@ class _NavigationPageState extends State<NavigationPage> {
     double x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
 
     return (atan2(y, x) * 180 / pi + 360) % 360;
+  }
+
+  void _checkRiskZone() async {
+    if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
+    print("Dentro do _checkRiskZone, depois do primeiro IF");
+    print("currentPosition, $currentPosition");
+    print("_notifications.fcmToken, ${_notifications.fcmToken}");
+    print("_notifications.fcmToken!.isEmpty ${_notifications.fcmToken!.isEmpty}");
+    
+    const double alertDistanceThreshold = 50.0; // Adjust as needed
+    const Distance distance = Distance();
+
+    for (var segment in widget.routeCoordinates) {
+      if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
+      print("Dentro do for");
+      print("segment['latlng'], ${segment['latlng']}");
+      print("segment['raster_value'], ${segment['raster_value']}");
+
+      LatLng riskPoint = segment['latlng'];
+      double distanceToRisk = distance(currentPosition!, riskPoint); 
+
+      if (distanceToRisk < alertDistanceThreshold) {
+        print("Dentro do segundo if");
+        print("distanceToRisk, $distanceToRisk");
+        print("alertDistanceThreshold, $alertDistanceThreshold");
+        
+        String title;
+        String body;
+
+        if (segment['raster_value'] > 3) {
+          title = "High Amphibian Risk!";
+          body = "Consider an alternate route!";
+        } else if (segment['raster_value'] > 2) {
+          title = "Caution";
+          body = "Amphibian presence ahead.";
+        } else {
+          continue;
+        }
+
+        // Send notification via Firebase
+        try {
+          print("Dentro do try");
+          final response = await http.post(
+            Uri.parse('http://192.168.1.82:3000/send'),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "fcmToken": _notifications.fcmToken,
+              "title": title,
+              "body": body,
+            }),
+          );
+
+          if (response.statusCode == 200) {
+            print("Risk alert sent successfully: $title");
+          } else {
+            print("Failed to send risk alert: ${response.statusCode}");
+          }
+        } catch (e) {
+          print("Error sending risk alert to server: $e");
+        }
+
+        break; // Stop checking after the first detected risk zone
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // Cancel location updates
+    locationSubscription?.cancel();
+    
+    // Optional: Reset current position to null if needed
+    setState(() {
+      currentPosition = null;
+    });
+
+    print("NavigationPage disposed. Stopping location updates and clearing resources.");
+    
+    super.dispose();
   }
 
   @override
