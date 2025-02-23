@@ -33,6 +33,7 @@ class _NavigationPageState extends State<NavigationPage> {
   bool _destinationReached = false;
   Set<LatLng> notifiedZones = {}; // Track notified risk zones
   bool _inRiskZone = false;
+  DateTime? lastWarningTime; // Move this outside the function to persist the value
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -229,11 +230,9 @@ class _NavigationPageState extends State<NavigationPage> {
     const Distance distance = Distance();
 
     bool isOnRoute = false;
-    bool approachingRiskZone = false;
-    bool currentlyInRiskZone = false;
-    int highestRiskLevel = 0; // Track the highest risk level in the upcoming segment
+    int highestUpcomingRisk = 0; // Highest upcoming risk level
+    int currentRiskLevel = 0; // Current risk level user is in
     LatLng? riskPoint; // Store the point where risk is detected
-    List<LatLng> upcomingRiskZone = [];
 
     for (var segment in widget.routeCoordinates) {
       if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
@@ -247,35 +246,34 @@ class _NavigationPageState extends State<NavigationPage> {
         isOnRoute = true;
       }
 
-      // Check if the current position is within a risk zone
-      if (distanceToPoint < routeDeviationThreshold && riskValue > 2) {
-        currentlyInRiskZone = true;
-        print("currentlyInRiskZone: $currentlyInRiskZone, riskValue: $riskValue");
+      // Determine the current risk level based on proximity
+      if (distanceToPoint < routeDeviationThreshold && riskValue > currentRiskLevel) {
+        currentRiskLevel = riskValue;
       }
 
-      // Check for upcoming risk zones
+      // Identify the highest risk in the upcoming path
       if (distanceToPoint < alertDistanceThreshold && riskValue > 2) {
-        approachingRiskZone = true;
-        upcomingRiskZone.add(point);
-
-        // Track the highest risk level and the corresponding point
-        if (riskValue > highestRiskLevel) {
-          highestRiskLevel = riskValue;
+        if (riskValue > highestUpcomingRisk) {
+          highestUpcomingRisk = riskValue;
           riskPoint = point;
         }
       }
     }
 
-    // Send a risk warning only if entering a risk zone from a safe area
-    if (approachingRiskZone && !_inRiskZone && upcomingRiskZone.isNotEmpty && riskPoint != null) {
-      _sendRiskWarning(upcomingRiskZone.first, highestRiskLevel);
+    // Check if we need to send a risk notification:
+    // - If moving from Safe (<=2) → Medium (3) OR High (=>4) → Notify
+    // - If moving from Medium (3) → High (=>4) → Notify
+    // - If already in High Risk (=>4), don't notify again
+    if (highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel && riskPoint != null) {
+      _sendRiskWarning(riskPoint, highestUpcomingRisk);
       _inRiskZone = true; // Mark user as inside a risk zone
-    } 
-    
-    // Update _inRiskZone based on actual location
-    _inRiskZone = currentlyInRiskZone;
+    }
 
-    print("_inRiskZone: $_inRiskZone");
+    // Update _inRiskZone only if in Medium or High risk zones
+    _inRiskZone = currentRiskLevel > 2;
+
+    print("_inRiskZone: $_inRiskZone, currentRiskLevel: $currentRiskLevel, highestUpcomingRisk: $highestUpcomingRisk");
+    print("isOnRoute: $isOnRoute");
 
     // Send off-route warning
     if (!isOnRoute) {
@@ -318,22 +316,22 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
-
   void _sendOffRouteWarning() async {
-    DateTime? lastWarningTime;
-    if (DateTime.now().difference(lastWarningTime!) < Duration(seconds: 30)) return;
+    if (lastWarningTime == null) {
+        lastWarningTime = DateTime.now(); // Initialize for the first time
+    } else if (DateTime.now().difference(lastWarningTime!) < Duration(seconds: 30)) {
+        return; // Skip if it's been less than 30 seconds
+    }
 
-    lastWarningTime = DateTime.now();
-    
+    lastWarningTime = DateTime.now(); // Update timestamp after sending the warning
+
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.132:3000/send'),   // Para testar na uni
-
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
-          "title": "Wrong Route!",
+          "title": "🔃 Wrong Route!",
           "body": "You are off the planned route.",
         }),
       );

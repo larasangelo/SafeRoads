@@ -32,9 +32,10 @@ void main() async {
 
   runApp(
     ChangeNotifierProvider(
-      create: (_) => UserPreferences(), // Provide the UserPreferences model
+      create: (_) => UserPreferences(), 
       child: MaterialApp(
-        initialRoute: '/navigation', // Change to '/home' if you want to start at the Home page
+        scaffoldMessengerKey: _notifications.scaffoldMessengerKey, // 🔥 Assign key here
+        initialRoute: '/navigation',
         routes: {
           '/': (context) => const Loading(),
           '/home': (context) => const MapPage(),

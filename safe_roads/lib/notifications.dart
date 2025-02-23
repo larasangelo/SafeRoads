@@ -64,16 +64,22 @@ class Notifications {
             priority: Priority.high,
             playSound: true,
             icon: '@mipmap/ic_launcher',
-            // sound: RawResourceAndroidNotificationSound('notification'), // Ensure this matches your file in res/raw
           ),
         ),
       );
+
+      // Check if context is available before inserting an overlay
+      if (scaffoldMessengerKey.currentContext == null) {
+        print("⚠️ Warning: No valid context available for overlay.");
+        return;
+      }
+
       // Create the overlay entry
       OverlayEntry overlayEntry = OverlayEntry(
         builder: (context) => Positioned(
-          top: MediaQuery.of(context).size.height * 0.4, // Centered vertically
-          left: MediaQuery.of(context).size.width * 0.1, // Add some margin
-          right: MediaQuery.of(context).size.width * 0.1, // Add some margin
+          top: MediaQuery.of(context).size.height * 0.4, 
+          left: MediaQuery.of(context).size.width * 0.1,
+          right: MediaQuery.of(context).size.width * 0.1,
           child: Material(
             color: Colors.transparent,
             child: Container(
@@ -115,20 +121,18 @@ class Notifications {
         ),
       );
 
-      // Access the Overlay using the current context
+      // Get the overlay context
       final overlay = Overlay.of(scaffoldMessengerKey.currentContext!);
 
-      // Insert the overlay entry into the overlay
-      overlay.insert(overlayEntry);
-
-      // Remove the overlay entry after 5 seconds
-      Future.delayed(const Duration(seconds: 5), () {
-        overlayEntry.remove();
-      });
-        }
+      if (overlay != null) {
+        overlay.insert(overlayEntry);
+        Future.delayed(const Duration(seconds: 5), () {
+          overlayEntry.remove();
+        });
+      } else {
+        print("⚠️ Warning: Overlay is null, skipping notification display.");
+      }
+    }
   }
-
-
-
 }
 
