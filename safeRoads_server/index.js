@@ -121,7 +121,7 @@ const getRoute = async (start, end, re_route) => {
       SET raster_value = subquery.raster_value
       FROM (
           SELECT w_inner.gid,
-                AVG(COALESCE(ST_Value(r.rast, 1, ST_Centroid(w_inner.the_geom)), 1)) AS raster_value
+                ROUND(AVG(COALESCE(ST_Value(r.rast, 1, ST_Centroid(w_inner.the_geom)), 1))) AS raster_value
           FROM temp_ways w_inner
           LEFT JOIN raster_table r 
               ON ST_Intersects(r.rast, w_inner.the_geom)
@@ -265,12 +265,14 @@ app.post("/send", (req, res) => {
           message: "Successfully sent message",
           token: receivedToken,
         });
-        console.log("Successfully sent message:", response);
+        // messageCounter++; // Increment counter
+        console.log(`Successfully sent message: ${response}`);
       })
       .catch((error) => {
         res.status(400).json({ error: error.message });
         console.log("Error sending message:", error);
       });
+
   //   }, 5000
   // )
 });

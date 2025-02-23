@@ -31,6 +31,8 @@ class _NavigationPageState extends State<NavigationPage> {
   String estimatedArrivalTime = "??:??"; // To display the arrival time
   bool isAnimating = false; // To prevent overlapping animations
   bool _destinationReached = false;
+  Set<LatLng> notifiedZones = {}; // Track notified risk zones
+  bool _inRiskZone = false;
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -154,6 +156,8 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/update-position'),
+        // Uri.parse('http://10.101.121.132:3000/update-position'),    // Para testar na uni
+
         body: {
           // 'userId': '123', // Example user ID
           'lat': lat.toString(),
@@ -219,65 +223,122 @@ class _NavigationPageState extends State<NavigationPage> {
 
   void _checkRiskZone() async {
     if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
-    print("Dentro do _checkRiskZone, depois do primeiro IF");
-    print("currentPosition, $currentPosition");
-    print("_notifications.fcmToken, ${_notifications.fcmToken}");
-    print("_notifications.fcmToken!.isEmpty ${_notifications.fcmToken!.isEmpty}");
-    
-    const double alertDistanceThreshold = 50.0; // Adjust as needed
+
+    const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
+    const double routeDeviationThreshold = 50.0;  // Detect wrong route
     const Distance distance = Distance();
+
+    bool isOnRoute = false;
+    bool approachingRiskZone = false;
+    bool currentlyInRiskZone = false;
+    int highestRiskLevel = 0; // Track the highest risk level in the upcoming segment
+    LatLng? riskPoint; // Store the point where risk is detected
+    List<LatLng> upcomingRiskZone = [];
 
     for (var segment in widget.routeCoordinates) {
       if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
-      print("Dentro do for");
-      print("segment['latlng'], ${segment['latlng']}");
-      print("segment['raster_value'], ${segment['raster_value']}");
 
-      LatLng riskPoint = segment['latlng'];
-      double distanceToRisk = distance(currentPosition!, riskPoint); 
+      LatLng point = segment['latlng'];
+      double distanceToPoint = distance(currentPosition!, point);
+      int riskValue = segment['raster_value'];
 
-      if (distanceToRisk < alertDistanceThreshold) {
-        print("Dentro do segundo if");
-        print("distanceToRisk, $distanceToRisk");
-        print("alertDistanceThreshold, $alertDistanceThreshold");
-        
-        String title;
-        String body;
-
-        if (segment['raster_value'] > 3) {
-          title = "High Amphibian Risk!";
-          body = "Consider an alternate route!";
-        } else if (segment['raster_value'] > 2) {
-          title = "Caution";
-          body = "Amphibian presence ahead.";
-        } else {
-          continue;
-        }
-
-        // Send notification via Firebase
-        try {
-          print("Dentro do try");
-          final response = await http.post(
-            Uri.parse('http://192.168.1.82:3000/send'),
-            headers: {"Content-Type": "application/json"},
-            body: jsonEncode({
-              "fcmToken": _notifications.fcmToken,
-              "title": title,
-              "body": body,
-            }),
-          );
-
-          if (response.statusCode == 200) {
-            print("Risk alert sent successfully: $title");
-          } else {
-            print("Failed to send risk alert: ${response.statusCode}");
-          }
-        } catch (e) {
-          print("Error sending risk alert to server: $e");
-        }
-
-        break; // Stop checking after the first detected risk zone
+      // Check if user is on the route
+      if (distanceToPoint < routeDeviationThreshold) {
+        isOnRoute = true;
       }
+
+      // Check if the current position is within a risk zone
+      if (distanceToPoint < routeDeviationThreshold && riskValue > 2) {
+        currentlyInRiskZone = true;
+        print("currentlyInRiskZone: $currentlyInRiskZone, riskValue: $riskValue");
+      }
+
+      // Check for upcoming risk zones
+      if (distanceToPoint < alertDistanceThreshold && riskValue > 2) {
+        approachingRiskZone = true;
+        upcomingRiskZone.add(point);
+
+        // Track the highest risk level and the corresponding point
+        if (riskValue > highestRiskLevel) {
+          highestRiskLevel = riskValue;
+          riskPoint = point;
+        }
+      }
+    }
+
+    // Send a risk warning only if entering a risk zone from a safe area
+    if (approachingRiskZone && !_inRiskZone && upcomingRiskZone.isNotEmpty && riskPoint != null) {
+      _sendRiskWarning(upcomingRiskZone.first, highestRiskLevel);
+      _inRiskZone = true; // Mark user as inside a risk zone
+    } 
+    
+    // Update _inRiskZone based on actual location
+    _inRiskZone = currentlyInRiskZone;
+
+    print("_inRiskZone: $_inRiskZone");
+
+    // Send off-route warning
+    if (!isOnRoute) {
+      _sendOffRouteWarning();
+    }
+  }
+
+  void _sendRiskWarning(LatLng riskPoint, int riskValue) async {
+    if (notifiedZones.contains(riskPoint)) return;
+    notifiedZones.add(riskPoint);
+
+    String title;
+    String body;
+
+    // Define notification message based on risk level
+    if (riskValue > 3) {
+      title = "🚨 High Amphibian Risk!";
+      body = "Slow down! High risk of amphibians ahead.";
+    } else {
+      title = "⚠️ Caution: Amphibian Presence";
+      body = "Be careful! Medium risk of amphibians nearby.";
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.1.82:3000/send'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "fcmToken": _notifications.fcmToken,
+          "title": title,
+          "body": body,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print("Risk alert sent successfully: $title");
+      }
+    } catch (e) {
+      print("Error sending risk alert: $e");
+    }
+  }
+
+
+  void _sendOffRouteWarning() async {
+    DateTime? lastWarningTime;
+    if (DateTime.now().difference(lastWarningTime!) < Duration(seconds: 30)) return;
+
+    lastWarningTime = DateTime.now();
+    
+    try {
+      await http.post(
+        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.132:3000/send'),   // Para testar na uni
+
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "fcmToken": _notifications.fcmToken,
+          "title": "Wrong Route!",
+          "body": "You are off the planned route.",
+        }),
+      );
+    } catch (e) {
+      print("Error sending off-route warning: $e");
     }
   }
 
