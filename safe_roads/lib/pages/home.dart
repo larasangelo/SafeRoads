@@ -56,6 +56,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     _requestLocationPermission();
     _setupAutocompleteListener();
     fetchUserPreferences();
+    _mapController.mapEventStream.listen((event) {
+        setState(() {}); // Update UI dynamically when the map moves
+      });
   }
 
   Future<void> _requestLocationPermission() async {
@@ -357,6 +360,24 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     }
   }
 
+  double _calculateScreenX(LatLng latLng, {double offsetXFactor = 0.05}) {
+    final bounds = _mapController.camera.visibleBounds;
+    final width = MediaQuery.of(context).size.width;
+    double zoomFactor = 1 / _mapController.camera.zoom.clamp(1.0, 20.0); // Normalize zoom
+
+    double x = ((latLng.longitude - bounds.west) / (bounds.east - bounds.west)) * width;
+    return x + (width * offsetXFactor * zoomFactor); // Adjust offset dynamically
+  }
+
+  double _calculateScreenY(LatLng latLng, {double offsetYFactor = -0.05}) {
+    final bounds = _mapController.camera.visibleBounds;
+    final height = MediaQuery.of(context).size.height;
+    double zoomFactor = 1 / _mapController.camera.zoom.clamp(1.0, 20.0); // Normalize zoom
+
+    double y = ((bounds.north - latLng.latitude) / (bounds.north - bounds.south)) * height;
+    return y + (height * offsetYFactor * zoomFactor); // Adjust offset dynamically
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
@@ -433,6 +454,30 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         );
                       }).whereType<Polyline>(); // Filter out null values
                     }).toList(),
+                  ),
+                  Stack(
+                    children: [
+                      // Add Info Boxes on Routes
+                      for (var entry in _routesWithPoints.entries) 
+                        if (entry.value.isNotEmpty)
+                          Positioned(
+                            left: _calculateScreenX(entry.value[entry.value.length ~/ 2]['latlng']),
+                            top: _calculateScreenY(entry.value[entry.value.length ~/ 2]['latlng']),
+                            child: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                              ),
+                              child: Column(
+                                children: [
+                                  Text("${_times[entry.key]}", style: TextStyle(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ),
+                    ],
                   ),
             Positioned(
               top: 40.0,

@@ -264,7 +264,7 @@ class _NavigationPageState extends State<NavigationPage> {
     // - If moving from Safe (<=2) → Medium (3) OR High (=>4) → Notify
     // - If moving from Medium (3) → High (=>4) → Notify
     // - If already in High Risk (=>4), don't notify again
-    if (highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel && riskPoint != null) {
+    if (highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel && riskPoint != null && isOnRoute) {
       _sendRiskWarning(riskPoint, highestUpcomingRisk);
       _inRiskZone = true; // Mark user as inside a risk zone
     }
