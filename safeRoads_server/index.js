@@ -237,12 +237,16 @@ app.post("/send", (req, res) => {
     const receivedToken = req.body.fcmToken;
     const receivedtitle = req.body.title;
     const receivedbody = req.body.body;
+    const receivedButton = req.body.button;
 
     const message = {
       token: receivedToken,
       notification: {
         body: receivedbody,
         title: receivedtitle,
+      },
+      data: {
+        button: receivedButton,  
       },
       android: {
         notification: {

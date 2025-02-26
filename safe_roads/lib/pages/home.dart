@@ -21,11 +21,8 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin  {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
-  // final Notifications _notifications = Notifications();
-  // String? fcmToken;
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
-  // List<Map<String, dynamic>> _routePoints = []; // Stores points for the polyline
   Map<String, List<Map<String, dynamic>>> _routesWithPoints = {};
   final TextEditingController _addressController = TextEditingController();
   List<Map<String, dynamic>> _suggestions = []; // Stores autocomplete suggestions
@@ -34,8 +31,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   double _currentZoom = 13.0;
   bool destinationSelected = false;
   String? selectedDestination;
-  // String distance = "0";
-  // String time = "0";
   Map<String, String> _distances = {};
   Map<String, String> _times = {};
   Map<String, bool> _hasRisk = {}; 
@@ -104,7 +99,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://192.168.56.1:3000/route'), // Para testar na uni
+        // Uri.parse('http://10.101.121.132:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -232,7 +227,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       final response = await http.get(
         Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
         // Uri.parse('http://10.101.121.132:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
-
       );
 
       if (response.statusCode == 200) {
@@ -464,15 +458,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             left: _calculateScreenX(entry.value[entry.value.length ~/ 2]['latlng']),
                             top: _calculateScreenY(entry.value[entry.value.length ~/ 2]['latlng']),
                             child: Container(
-                              padding: EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
-                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
                               ),
                               child: Column(
                                 children: [
-                                  Text("${_times[entry.key]}", style: TextStyle(fontWeight: FontWeight.bold)),
+                                  Text("${_times[entry.key]}", style: const TextStyle(fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
@@ -668,9 +662,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) => NavigationPage(
+                                              _routesWithPoints,
+                                              _selectedRouteKey,
                                               selectedRoute,
-                                              _distances[_selectedRouteKey] ?? "Unknown",
-                                              _times[_selectedRouteKey] ?? "Unknown",
+                                              _distances,
+                                              _times,
                                             ),
                                           ),
                                         );
@@ -730,9 +726,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => NavigationPage(
+                                            _routesWithPoints,
+                                            _selectedRouteKey,
                                             selectedRoute,
-                                            _distances[_selectedRouteKey] ?? "Unknown",
-                                            _times[_selectedRouteKey] ?? "Unknown",
+                                            _distances,
+                                            _times,
                                           ),
                                         ),
                                       );

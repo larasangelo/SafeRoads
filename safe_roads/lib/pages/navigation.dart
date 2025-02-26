@@ -9,17 +9,21 @@ import 'package:http/http.dart' as http;
 import 'package:safe_roads/notifications.dart';
 
 class NavigationPage extends StatefulWidget {
+  final Map<String, List<Map<String, dynamic>>> routesWithPoints;
+  final String selectedRouteKey; // Default value, updated when routes are fetched
   final List<Map<String, dynamic>> routeCoordinates;
-  final String distance;
-  final String time;
+  final Map<String, String> distances;
+  final Map<String, String> times;
 
-  const NavigationPage(this.routeCoordinates, this.distance, this.time, {super.key});
+  const NavigationPage(this.routesWithPoints, this.selectedRouteKey, this.routeCoordinates, this.distances, this.times, {super.key});
 
   @override
   _NavigationPageState createState() => _NavigationPageState();
 }
 
 class _NavigationPageState extends State<NavigationPage> {
+  late String selectedRouteKey;
+  late List<Map<String, dynamic>> routeCoordinates;
   final Notifications _notifications = Notifications();
   late Location location;
   LatLng? currentPosition;
@@ -43,12 +47,17 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   void initState() {
     super.initState();
+    selectedRouteKey = widget.selectedRouteKey; // Set initial route from Home.dart
+    routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
     location = Location();
+
+    // Assign the callback to handle rerouting
+    _notifications.onSwitchRoute = switchToAdjustedRoute;
 
     _initializeLocation();
 
-    print("widget.time, ${widget.time}");
-    _calculateArrivalTime(widget.time);
+    print("widget.time, ${widget.times[selectedRouteKey]}");
+    _calculateArrivalTime(widget.times[selectedRouteKey] ?? "0 min");
 
     locationSubscription = location.onLocationChanged.listen((LocationData loc) {
       if (loc.latitude != null && loc.longitude != null) {
@@ -68,10 +77,13 @@ class _NavigationPageState extends State<NavigationPage> {
           }
         }
 
+        if(selectedRouteKey == "defaultRoute"){
+          _checkReRoute();
+        }
         _checkRiskZone(); 
 
         // Extract last coordinate safely
-        LatLng lastPoint = _getLatLngFromMap(widget.routeCoordinates.last);
+        LatLng lastPoint = _getLatLngFromMap(routeCoordinates.last);
         
         if ((currentPosition!.latitude - lastPoint.latitude).abs() < 0.0001 &&
             (currentPosition!.longitude - lastPoint.longitude).abs() < 0.0001) {
@@ -87,7 +99,6 @@ class _NavigationPageState extends State<NavigationPage> {
     bool serviceEnabled;
     PermissionStatus permissionGranted;
 
-    // NOTIFICATIONS TEST
     await _notifications.setupFirebaseMessaging(); 
 
     // Check if location services are enabled
@@ -177,12 +188,17 @@ class _NavigationPageState extends State<NavigationPage> {
     double deltaLat = (end.latitude - start.latitude) / steps;
     double deltaLon = (end.longitude - start.longitude) / steps;
 
+    // Set animation flag to true before starting the animation
+    if (!mounted) return; // Early return if the widget is no longer in the tree
     setState(() {
       isAnimating = true;
     });
 
     for (int i = 1; i <= steps; i++) {
       await Future.delayed(duration);
+
+      // Check if the widget is still mounted before calling setState
+      if (!mounted) return; // Stop animation if widget is disposed
 
       LatLng intermediatePosition = LatLng(
         start.latitude + (deltaLat * i),
@@ -201,6 +217,8 @@ class _NavigationPageState extends State<NavigationPage> {
       _mapController.moveAndRotate(intermediatePosition, 19.0, bearing);
     }
 
+    // Final position and animation end state
+    if (!mounted) return; // Ensure widget is still mounted before finishing the animation
     setState(() {
       isAnimating = false;
       previousPosition = end; // Ensure the final position is set
@@ -234,7 +252,7 @@ class _NavigationPageState extends State<NavigationPage> {
     int currentRiskLevel = 0; // Current risk level user is in
     LatLng? riskPoint; // Store the point where risk is detected
 
-    for (var segment in widget.routeCoordinates) {
+    for (var segment in routeCoordinates) {
       if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
 
       LatLng point = segment['latlng'];
@@ -300,11 +318,13 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.132:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
           "title": title,
           "body": body,
+          "button": "false",
         }),
       );
 
@@ -319,7 +339,7 @@ class _NavigationPageState extends State<NavigationPage> {
   void _sendOffRouteWarning() async {
     if (lastWarningTime == null) {
         lastWarningTime = DateTime.now(); // Initialize for the first time
-    } else if (DateTime.now().difference(lastWarningTime!) < Duration(seconds: 30)) {
+    } else if (DateTime.now().difference(lastWarningTime!) < const Duration(seconds: 30)) {
         return; // Skip if it's been less than 30 seconds
     }
 
@@ -328,11 +348,13 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.132:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
           "title": "🔃 Wrong Route!",
           "body": "You are off the planned route.",
+          "button": "false",
         }),
       );
     } catch (e) {
@@ -340,15 +362,78 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
+  void _checkReRoute() {
+    if (currentPosition == null || widget.routesWithPoints.isEmpty) return;
+
+    List<Map<String, dynamic>> defaultRoute = widget.routesWithPoints['defaultRoute'] ?? [];
+    List<Map<String, dynamic>> adjustedRoute = widget.routesWithPoints['adjustedRoute'] ?? [];
+
+    if (defaultRoute.isEmpty || adjustedRoute.isEmpty) return;
+
+    const double alertThreshold = 200.0; // Notify 200m before the decision point
+    const Distance distance = Distance();
+
+    for (int i = 0; i < min(defaultRoute.length, adjustedRoute.length); i++) {
+      LatLng defaultPoint = _getLatLngFromMap(defaultRoute[i]);
+      LatLng adjustedPoint = _getLatLngFromMap(adjustedRoute[i]);
+
+      double distanceToDefault = distance(currentPosition!, defaultPoint);
+      double distanceToAdjusted = distance(currentPosition!, adjustedPoint);
+
+      // If we are close to the decision point
+      if (distanceToDefault < alertThreshold && distanceToAdjusted < alertThreshold) {
+        // int defaultRisk = defaultRoute[i]['raster_value'] ?? 0;
+        // int adjustedRisk = adjustedRoute[i]['raster_value'] ?? 0;
+
+        // if (adjustedRisk < defaultRisk) {
+        _sendReRouteNotification();
+        break;
+        // }
+      }
+    }
+  }
+
+  void _sendReRouteNotification() async {
+    try {
+      await http.post(
+        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.132:3000/send'),    // Para testar na uni
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "fcmToken": _notifications.fcmToken,
+          "title": "🚧 Alternative Route Recommended!",
+          "body": "The alternative route has less risk. Consider changing the route.",
+          "button": "true"
+        }),
+      );
+    } catch (e) {
+      print("Erro ao enviar notificação de re-rota: $e");
+    }
+  }
+
+  void switchToAdjustedRoute() {
+    setState(() {
+      selectedRouteKey = "adjustedRoute";
+      routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
+    });
+
+    if (routeCoordinates.isNotEmpty) {
+      _mapController.move(_getLatLngFromMap(routeCoordinates.first), 19.0);
+    }
+
+    print("Switched to Adjusted Route!");
+  }
+
+
   @override
   void dispose() {
     // Cancel location updates
     locationSubscription?.cancel();
     
-    // Optional: Reset current position to null if needed
-    setState(() {
-      currentPosition = null;
-    });
+    //Reset current position to null if needed
+    // setState(() {
+    //   currentPosition = null;
+    // });
 
     print("NavigationPage disposed. Stopping location updates and clearing resources.");
     
@@ -367,7 +452,7 @@ class _NavigationPageState extends State<NavigationPage> {
               FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
-                  initialCenter: currentPosition ?? _getLatLngFromMap(widget.routeCoordinates.first), 
+                  initialCenter: currentPosition ?? _getLatLngFromMap(routeCoordinates.first), 
                   initialZoom: 19.0,
                   initialRotation: bearing, // Set initial rotation
                 ),
@@ -377,9 +462,9 @@ class _NavigationPageState extends State<NavigationPage> {
                     subdomains: const ['a', 'b', 'c'],
                   ),
                   PolylineLayer(
-                    polylines: List.generate(widget.routeCoordinates.length - 1, (index) {
-                      final current = widget.routeCoordinates[index];
-                      final next = widget.routeCoordinates[index + 1];
+                    polylines: List.generate(routeCoordinates.length - 1, (index) {
+                      final current = routeCoordinates[index];
+                      final next = routeCoordinates[index + 1];
 
                       if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
 
@@ -425,8 +510,8 @@ class _NavigationPageState extends State<NavigationPage> {
                 child: IconButton(
                   icon: const Icon(Icons.close, size: 40),
                   onPressed: () {
-                    Navigator.pop(context); // Stop navigation and return to the previous page
-                  },
+                    Navigator.of(context, rootNavigator: true).pop();
+                  }
                 )
               ),
               if(!_destinationReached)
@@ -456,16 +541,16 @@ class _NavigationPageState extends State<NavigationPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            widget.distance,
+                            widget.distances[selectedRouteKey]!,
                             style: const TextStyle(
                               fontSize: 22.0,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                             ),
                           ),
-                          const SizedBox(width: 30), // Add some spacing
+                          const SizedBox(width: 30),
                           Text(
-                            widget.time,
+                            widget.times[selectedRouteKey]!,
                             style: const TextStyle(
                               fontSize: 22.0,
                               fontWeight: FontWeight.bold,
@@ -474,7 +559,7 @@ class _NavigationPageState extends State<NavigationPage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20), // Add some spacing
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -502,7 +587,7 @@ class _NavigationPageState extends State<NavigationPage> {
                           color: Colors.black,
                         ),
                       ),
-                      SizedBox(height: 20), // Add some spacing
+                      SizedBox(height: 20),
                     ],
                   ),
                 ),

@@ -8,6 +8,9 @@ class Notifications {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final AndroidInitializationSettings androidInitializationSettings = const AndroidInitializationSettings('@mipmap/ic_launcher');
 
+  // Callback function for navigation
+  VoidCallback? onSwitchRoute;
+
   Future<void> setupFirebaseMessaging() async {
     // Request permissions
     NotificationSettings settings = await FirebaseMessaging.instance
@@ -68,6 +71,8 @@ class Notifications {
         ),
       );
 
+      bool showButton = message.data['button'] == 'true'; // Ensure it's parsed as boolean
+
       // Check if context is available before inserting an overlay
       if (scaffoldMessengerKey.currentContext == null) {
         print("⚠️ Warning: No valid context available for overlay.");
@@ -75,7 +80,9 @@ class Notifications {
       }
 
       // Create the overlay entry
-      OverlayEntry overlayEntry = OverlayEntry(
+      late OverlayEntry overlayEntry;
+
+      overlayEntry = OverlayEntry(
         builder: (context) => Positioned(
           top: MediaQuery.of(context).size.height * 0.4, 
           left: MediaQuery.of(context).size.width * 0.1,
@@ -114,6 +121,16 @@ class Notifications {
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  if(showButton)
+                    ElevatedButton(
+                      onPressed: () {
+                        if (onSwitchRoute != null) {
+                          onSwitchRoute!();  // Call the callback function
+                        }
+                        overlayEntry.remove();  // Remove overlay after button press
+                      },
+                      child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
+                    )
                 ],
               ),
             ),
