@@ -78,7 +78,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-          const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
+          // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
+          const LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller)
           13.0,
         );
       }
@@ -99,7 +100,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://10.101.121.132:3000/route'), // Para testar na uni
+        // Uri.parse('http://10.101.120.162:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -174,7 +175,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/geocode'),
-        // Uri.parse('http://10.101.121.132:3000/geocode'), // Para testar na uni
+        // Uri.parse('http://10.101.120.162:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -226,7 +227,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.get(
         Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://10.101.121.132:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+        // Uri.parse('http://10.101.120.162:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
       if (response.statusCode == 200) {
@@ -267,7 +268,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-            const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
+            // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
+            const LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller)
             destination,
           );
 
@@ -300,7 +302,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
     // Determine buffer dynamically based on the route's size
     double buffer = (latRange + lngRange) * 0.1; // 10% of total span
-    double bottomBuffer = buffer * 2; // Extra buffer at the bottom
+    double bottomBuffer = buffer * 3; // Extra buffer at the bottom
 
     return LatLngBounds(
       LatLng(minLat - bottomBuffer, minLng - buffer), // Bottom-left corner
@@ -402,7 +404,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        point: LatLng(41.7013562, -8.1685668), // Current location for testing in the Nsorth 
+                        // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North
+                        point: LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller) 
                         child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -423,7 +426,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       if (routePoints.length < 2) return [];
 
                       bool isSelectedRoute = entry.key == _selectedRouteKey;
-                      double opacity = isSelectedRoute ? 1.0 : 0.1; // Lower opacity for unselected routes
 
                       return List.generate(routePoints.length - 1, (index) {
                         final current = routePoints[index];
@@ -431,14 +433,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
                         if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
 
-                        // Have different colors for different Raster Values
+                        // If the route is NOT selected, make it gray
                         Color lineColor;
-                        if (current['raster_value'] > 3) {
-                          lineColor = Colors.red.withOpacity(opacity);
-                        } else if (current['raster_value'] > 2) {
-                          lineColor = Colors.orange.withOpacity(opacity);
+                        if (!isSelectedRoute) {
+                          lineColor = Colors.grey.withOpacity(0.7); // Non-selected routes will be gray
                         } else {
-                          lineColor = Colors.purple.withOpacity(opacity);
+                          // Use different colors for different raster values
+                          if (current['raster_value'] > 3) {
+                            lineColor = Colors.red;
+                          } else if (current['raster_value'] > 2) {
+                            lineColor = Colors.orange;
+                          } else {
+                            lineColor = Colors.purple;
+                          }
                         }
 
                         return Polyline(
@@ -448,6 +455,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         );
                       }).whereType<Polyline>(); // Filter out null values
                     }).toList(),
+
                   ),
                   Stack(
                     children: [
@@ -515,7 +523,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                              const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
+                              // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
+                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller)
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -536,14 +545,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           return 
                           ListTile(
                             title: Text(
-                              suggestion['name'], // Name of the place
+                              suggestion['name'] ?? 'Unknown Name', // Default value for null case
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text(
-                              suggestion['city'] != null && suggestion['city']!.isNotEmpty
+                              (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
                                   ? '${suggestion['city']}, ${suggestion['country']}' // City and country
-                                  : '${suggestion['country']}', // Only country
-                              style: const TextStyle(fontSize: 12), // Smaller font size
+                                  : (suggestion['country'] ?? 'Unknown Location'), //  Handle null country
+                              style: const TextStyle(fontSize: 12),
                             ),
                             onTap: () {
                               // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag

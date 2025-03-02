@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:async'; 
 
 class Notifications {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -10,6 +11,7 @@ class Notifications {
 
   // Callback function for navigation
   VoidCallback? onSwitchRoute;
+  VoidCallback? ignoreSwitchRoute;
 
   Future<void> setupFirebaseMessaging() async {
     // Request permissions
@@ -75,7 +77,7 @@ class Notifications {
 
       // Check if context is available before inserting an overlay
       if (scaffoldMessengerKey.currentContext == null) {
-        print("⚠️ Warning: No valid context available for overlay.");
+        print("Warning: No valid context available for overlay.");
         return;
       }
 
@@ -122,15 +124,29 @@ class Notifications {
                     textAlign: TextAlign.center,
                   ),
                   if(showButton)
-                    ElevatedButton(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          if (onSwitchRoute != null) {
+                            onSwitchRoute!();  // Call the callback function
+                          }
+                          overlayEntry.remove();  // Remove overlay after button press
+                        },
+                        child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
+                      ),
+                      ElevatedButton(
                       onPressed: () {
-                        if (onSwitchRoute != null) {
-                          onSwitchRoute!();  // Call the callback function
+                        if (ignoreSwitchRoute != null) {
+                          ignoreSwitchRoute!();  // Call the callback function
                         }
                         overlayEntry.remove();  // Remove overlay after button press
                       },
-                      child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
-                    )
+                      child: const Text("Ignore", style: TextStyle(fontSize: 18.0)),
+                      )
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -147,7 +163,7 @@ class Notifications {
           overlayEntry.remove();
         });
       } else {
-        print("⚠️ Warning: Overlay is null, skipping notification display.");
+        print("Warning: Overlay is null, skipping notification display.");
       }
     }
   }

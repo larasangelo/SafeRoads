@@ -38,6 +38,9 @@ class _NavigationPageState extends State<NavigationPage> {
   Set<LatLng> notifiedZones = {}; // Track notified risk zones
   bool _inRiskZone = false;
   DateTime? lastWarningTime; // Move this outside the function to persist the value
+  bool keepRoute = true;
+  Set<LatLng> passedSegments = {}; // Store segments already passed
+
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -53,6 +56,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Assign the callback to handle rerouting
     _notifications.onSwitchRoute = switchToAdjustedRoute;
+    _notifications.ignoreSwitchRoute = keepDefaultRoute;
 
     _initializeLocation();
 
@@ -168,7 +172,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.121.132:3000/update-position'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.162:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -248,9 +252,11 @@ class _NavigationPageState extends State<NavigationPage> {
     const Distance distance = Distance();
 
     bool isOnRoute = false;
-    int highestUpcomingRisk = 0; // Highest upcoming risk level
-    int currentRiskLevel = 0; // Current risk level user is in
-    LatLng? riskPoint; // Store the point where risk is detected
+    int highestUpcomingRisk = 0;
+    int currentRiskLevel = 0;
+    LatLng? riskPoint;
+
+    Set<LatLng> detectedRiskZone = {}; 
 
     for (var segment in routeCoordinates) {
       if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
@@ -259,43 +265,56 @@ class _NavigationPageState extends State<NavigationPage> {
       double distanceToPoint = distance(currentPosition!, point);
       int riskValue = segment['raster_value'];
 
+      // Skip segments already passed
+      if (passedSegments.contains(point)) continue;
+
       // Check if user is on the route
       if (distanceToPoint < routeDeviationThreshold) {
         isOnRoute = true;
       }
 
-      // Determine the current risk level based on proximity
+      // Update current risk level
       if (distanceToPoint < routeDeviationThreshold && riskValue > currentRiskLevel) {
         currentRiskLevel = riskValue;
       }
 
-      // Identify the highest risk in the upcoming path
+      // Detect new high-risk zone ahead
       if (distanceToPoint < alertDistanceThreshold && riskValue > 2) {
         if (riskValue > highestUpcomingRisk) {
           highestUpcomingRisk = riskValue;
           riskPoint = point;
         }
+        detectedRiskZone.add(point);
       }
     }
 
-    // Check if we need to send a risk notification:
-    // - If moving from Safe (<=2) → Medium (3) OR High (=>4) → Notify
-    // - If moving from Medium (3) → High (=>4) → Notify
-    // - If already in High Risk (=>4), don't notify again
-    if (highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel && riskPoint != null && isOnRoute) {
-      _sendRiskWarning(riskPoint, highestUpcomingRisk);
-      _inRiskZone = true; // Mark user as inside a risk zone
+    // Only Notify if Moving into a New High-Risk Zone
+    bool enteringNewRiskZone = highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel;
+
+    if (enteringNewRiskZone && riskPoint != null && isOnRoute) {
+      bool alreadyNotified = detectedRiskZone.any((p) => notifiedZones.contains(p));
+
+      if (!alreadyNotified) {
+        _sendRiskWarning(riskPoint, highestUpcomingRisk);
+        notifiedZones.addAll(detectedRiskZone); // Mark entire zone as notified
+      }
+
+      _inRiskZone = true;
+      print("_inRiskZone: $_inRiskZone, currentRiskLevel: $currentRiskLevel, highestUpcomingRisk: $highestUpcomingRisk");
     }
 
-    // Update _inRiskZone only if in Medium or High risk zones
-    _inRiskZone = currentRiskLevel > 2;
+    // Mark Passed Segments
+    if (currentRiskLevel > 2) {
+      passedSegments.addAll(detectedRiskZone);
+    }
 
-    print("_inRiskZone: $_inRiskZone, currentRiskLevel: $currentRiskLevel, highestUpcomingRisk: $highestUpcomingRisk");
+    // Update _inRiskZone
+    _inRiskZone = currentRiskLevel > 2;
     print("isOnRoute: $isOnRoute");
 
     // Send off-route warning
     if (!isOnRoute) {
-      _sendOffRouteWarning();
+      // _sendOffRouteWarning();
     }
   }
 
@@ -318,7 +337,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.132:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -348,7 +367,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.132:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -386,7 +405,7 @@ class _NavigationPageState extends State<NavigationPage> {
         // int adjustedRisk = adjustedRoute[i]['raster_value'] ?? 0;
 
         // if (adjustedRisk < defaultRisk) {
-        _sendReRouteNotification();
+        // _sendReRouteNotification();
         break;
         // }
       }
@@ -394,10 +413,18 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendReRouteNotification() async {
+    if (lastWarningTime == null) {
+        lastWarningTime = DateTime.now(); // Initialize for the first time
+    } else if (DateTime.now().difference(lastWarningTime!) < const Duration(seconds: 30)) {
+        return; // Skip if it's been less than 30 seconds
+    }
+
+    lastWarningTime = DateTime.now(); // Update timestamp after sending the warning
+
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.132:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -413,6 +440,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
   void switchToAdjustedRoute() {
     setState(() {
+      keepRoute = false;
       selectedRouteKey = "adjustedRoute";
       routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
     });
@@ -422,6 +450,13 @@ class _NavigationPageState extends State<NavigationPage> {
     }
 
     print("Switched to Adjusted Route!");
+  }
+
+  void keepDefaultRoute(){
+    setState(() {
+      keepRoute = true;      
+    });
+    print("Kept following Default Route!");
   }
 
 

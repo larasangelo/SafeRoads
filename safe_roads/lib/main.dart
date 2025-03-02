@@ -34,7 +34,7 @@ void main() async {
     ChangeNotifierProvider(
       create: (_) => UserPreferences(), 
       child: MaterialApp(
-        scaffoldMessengerKey: _notifications.scaffoldMessengerKey, // 🔥 Assign key here
+        scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
         initialRoute: '/navigation',
         routes: {
           '/': (context) => const Loading(),

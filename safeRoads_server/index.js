@@ -407,6 +407,8 @@ app.post("/route", async (req, res) => {
       // Store route data for comparison
       allRoutes[key] = routePoints;
 
+      console.log(routePoints)
+
       // Store results in responseData, including hasRisk
       responseData[key] = {
         route: routePoints,
