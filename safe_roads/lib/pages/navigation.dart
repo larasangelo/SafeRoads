@@ -247,6 +247,8 @@ class _NavigationPageState extends State<NavigationPage> {
     return (atan2(y, x) * 180 / pi + 360) % 360;
   }
 
+  bool _startRiskNotificationSent = false; // Track if the initial notification was sent
+
   void _checkRiskZone() async {
     if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
 
@@ -291,6 +293,11 @@ class _NavigationPageState extends State<NavigationPage> {
       }
     }
 
+    if (!_startRiskNotificationSent && currentRiskLevel > 2 && isOnRoute && riskPoint != null) {
+      _sendInitialRiskWarning(riskPoint, currentRiskLevel);
+      _startRiskNotificationSent = true; // Mark notification as sent
+    }
+
     // Prevent sudden flips between "on-route" and "off-route"
     if (isOnRoute) {
       consecutiveOffRouteCount = 0; // Reset counter if back on track
@@ -329,7 +336,6 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Update _inRiskZone
     _inRiskZone = currentRiskLevel > 2;
-    // print("isOnRoute: $isOnRoute | OffRouteCount: $consecutiveOffRouteCount | Confirmed Off-Route: $confirmedOffRoute");
   }
 
   void _sendRiskWarning(LatLng riskPoint, int riskValue) async {
@@ -346,6 +352,43 @@ class _NavigationPageState extends State<NavigationPage> {
     } else {
       title = "⚠️ Caution: Amphibian Presence";
       body = "Be careful! Medium risk of amphibians nearby.";
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "fcmToken": _notifications.fcmToken,
+          "title": title,
+          "body": body,
+          "button": "false",
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print("Risk alert sent successfully: $title");
+      }
+    } catch (e) {
+      print("Error sending risk alert: $e");
+    }
+  }
+
+  void _sendInitialRiskWarning(LatLng riskPoint, int riskValue) async {
+    if (notifiedZones.contains(riskPoint)) return;
+    notifiedZones.add(riskPoint);
+
+    String title;
+    String body;
+
+    // Define notification message based on risk level
+    if (riskValue > 3) {
+      title = "🚨 High Amphibian Risk!";
+      body = "Be careful! You are in a high risk of amphibians ahead.";
+    } else {
+      title = "⚠️ Caution: Amphibian Presence";
+      body = "Be careful! Medium risk of amphibians right here.";
     }
 
     try {
