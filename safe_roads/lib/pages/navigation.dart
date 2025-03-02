@@ -40,6 +40,9 @@ class _NavigationPageState extends State<NavigationPage> {
   DateTime? lastWarningTime; // Move this outside the function to persist the value
   bool keepRoute = true;
   Set<LatLng> passedSegments = {}; // Store segments already passed
+  int consecutiveOffRouteCount = 0; // Track how many times user is "off-route"
+  int offRouteThreshold = 7; // Require 7 consecutive off-route detections
+  bool lastOnRouteState = true; // Track last known on-route state
 
 
   // Extract LatLng safely
@@ -268,7 +271,7 @@ class _NavigationPageState extends State<NavigationPage> {
       // Skip segments already passed
       if (passedSegments.contains(point)) continue;
 
-      // Check if user is on the route
+      // Check if user is on the route (more stable check)
       if (distanceToPoint < routeDeviationThreshold) {
         isOnRoute = true;
       }
@@ -287,6 +290,22 @@ class _NavigationPageState extends State<NavigationPage> {
         detectedRiskZone.add(point);
       }
     }
+
+    // Prevent sudden flips between "on-route" and "off-route"
+    if (isOnRoute) {
+      consecutiveOffRouteCount = 0; // Reset counter if back on track
+    } else {
+      consecutiveOffRouteCount++; // Count how many times user is "off-route"
+    }
+
+    bool confirmedOffRoute = consecutiveOffRouteCount >= offRouteThreshold;
+
+    // Only send off-route warning if user was previously on route and now confirmed off-route
+    if (confirmedOffRoute && lastOnRouteState) {
+      _sendOffRouteWarning();
+    }
+
+    lastOnRouteState = !confirmedOffRoute; // Update last known state
 
     // Only Notify if Moving into a New High-Risk Zone
     bool enteringNewRiskZone = highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel;
@@ -310,12 +329,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Update _inRiskZone
     _inRiskZone = currentRiskLevel > 2;
-    print("isOnRoute: $isOnRoute");
-
-    // Send off-route warning
-    if (!isOnRoute) {
-      // _sendOffRouteWarning();
-    }
+    // print("isOnRoute: $isOnRoute | OffRouteCount: $consecutiveOffRouteCount | Confirmed Off-Route: $confirmedOffRoute");
   }
 
   void _sendRiskWarning(LatLng riskPoint, int riskValue) async {

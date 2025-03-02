@@ -13,16 +13,23 @@ class Notifications {
   VoidCallback? onSwitchRoute;
   VoidCallback? ignoreSwitchRoute;
 
+  StreamSubscription<RemoteMessage>? _messageSubscription;
+
   Future<void> setupFirebaseMessaging() async {
-    // Request permissions
-    NotificationSettings settings = await FirebaseMessaging.instance
-        .requestPermission(alert: true, badge: true, sound: true);
+    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print("Notification permission granted");
       fcmToken = await FirebaseMessaging.instance.getToken();
       print("FCM Token: $fcmToken");
-      // Handle foreground messages
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+
+      // Prevent multiple listeners
+      _messageSubscription?.cancel();
+      _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         print("Foreground message received: ${message.notification?.title}");
         showForegroundNotification(message);
       });

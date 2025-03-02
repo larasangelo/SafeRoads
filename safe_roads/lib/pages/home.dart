@@ -78,8 +78,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-          // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
-          const LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller)
+          const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -268,8 +268,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-            // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
-            const LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller)
+            const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
 
@@ -404,8 +404,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North
-                        point: LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller) 
+                        point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                        // point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                         child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -523,8 +523,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                              // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North 
-                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (smaller)
+                              const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
