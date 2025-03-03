@@ -410,10 +410,10 @@ class _NavigationPageState extends State<NavigationPage> {
     // Define notification message based on risk level
     if (riskValue > 3) {
       title = "🚨 High Amphibian Risk!";
-      body = "Be careful! You are in a high risk of amphibians ahead.";
+      body = "WARNING: You are currently in a high-risk zone for amphibians! Proceed with caution.";
     } else {
       title = "⚠️ Caution: Amphibian Presence";
-      body = "Be careful! Medium risk of amphibians right here.";
+      body = "You are now in an area with a medium risk of amphibians. Stay alert and drive carefully.";
     }
 
     try {

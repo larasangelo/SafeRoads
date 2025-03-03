@@ -421,24 +421,36 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   ),
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
-                    polylines: _routesWithPoints.entries.expand<Polyline>((entry) {
-                      final List<Map<String, dynamic>> routePoints = entry.value;
-                      if (routePoints.length < 2) return [];
+                    polylines: [
+                      // First, draw unselected routes (gray)
+                      ..._routesWithPoints.entries.expand<Polyline>((entry) {
+                        if (entry.key == _selectedRouteKey) return []; // Skip selected route for now
 
-                      bool isSelectedRoute = entry.key == _selectedRouteKey;
+                        final List<Map<String, dynamic>> routePoints = entry.value;
+                        if (routePoints.length < 2) return [];
 
-                      return List.generate(routePoints.length - 1, (index) {
-                        final current = routePoints[index];
-                        final next = routePoints[index + 1];
+                        return List.generate(routePoints.length - 1, (index) {
+                          final current = routePoints[index];
+                          final next = routePoints[index + 1];
 
-                        if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
 
-                        // If the route is NOT selected, make it gray
-                        Color lineColor;
-                        if (!isSelectedRoute) {
-                          lineColor = Colors.grey.withOpacity(0.7); // Non-selected routes will be gray
-                        } else {
-                          // Use different colors for different raster values
+                          return Polyline(
+                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                            strokeWidth: 4.0,
+                            color: Colors.grey.withOpacity(0.7), // Always gray for unselected routes
+                          );
+                        }).whereType<Polyline>(); // Remove null values
+                      }).toList(),
+
+                      // Now, draw the selected route last (so it's on top)
+                      if (_routesWithPoints.containsKey(_selectedRouteKey))
+                        ..._routesWithPoints[_selectedRouteKey]!.sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1).map((current) {
+                          final next = _routesWithPoints[_selectedRouteKey]![_routesWithPoints[_selectedRouteKey]!.indexOf(current) + 1];
+
+                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+
+                          Color lineColor;
                           if (current['raster_value'] > 3) {
                             lineColor = Colors.red;
                           } else if (current['raster_value'] > 2) {
@@ -446,41 +458,64 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           } else {
                             lineColor = Colors.purple;
                           }
-                        }
 
-                        return Polyline(
-                          points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                          strokeWidth: 4.0,
-                          color: lineColor,
-                        );
-                      }).whereType<Polyline>(); // Filter out null values
-                    }).toList(),
-
+                          return Polyline(
+                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                            strokeWidth: 4.0,
+                            color: lineColor, // Selected route is colored
+                          );
+                        }).whereType<Polyline>(),
+                    ],
                   ),
                   Stack(
                     children: [
                       // Add Info Boxes on Routes
-                      for (var entry in _routesWithPoints.entries) 
-                        if (entry.value.isNotEmpty)
-                          Positioned(
-                            left: _calculateScreenX(entry.value[entry.value.length ~/ 2]['latlng']),
-                            top: _calculateScreenY(entry.value[entry.value.length ~/ 2]['latlng']),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                              ),
-                              child: Column(
-                                children: [
-                                  Text("${_times[entry.key]}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
+                      for (var i = 0; i < _routesWithPoints.entries.length; i++) 
+                        if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
+                          Builder(
+                            builder: (context) {
+                              var entry = _routesWithPoints.entries.elementAt(i);
+                              var routePoints = entry.value;
+                              var midPointIndex = routePoints.length ~/ 2;
+
+                              // Get midpoint coordinates
+                              LatLng midPoint = routePoints[midPointIndex]['latlng'];
+
+                              // Compute dynamic offset to avoid overlap
+                              double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
+                              double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
+                              double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
+
+                              // Ensure selected route's box is more visible
+                              bool isSelectedRoute = entry.key == _selectedRouteKey;
+                              Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
+                              Color textColor = isSelectedRoute ? Colors.white : Colors.black;
+
+                              return Positioned(
+                                left: screenX,
+                                top: screenY,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: boxColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        "${_times[entry.key]}",
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                     ],
                   ),
+
             Positioned(
               top: 40.0,
               left: 10.0,
