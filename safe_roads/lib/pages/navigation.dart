@@ -43,6 +43,8 @@ class _NavigationPageState extends State<NavigationPage> {
   int consecutiveOffRouteCount = 0; // Track how many times user is "off-route"
   int offRouteThreshold = 7; // Require 7 consecutive off-route detections
   bool lastOnRouteState = true; // Track last known on-route state
+  bool _startRiskNotificationSent = false; // Track if the initial notification was sent
+  List<dynamic> notifiedDivergences = [];
 
 
   // Extract LatLng safely
@@ -247,7 +249,6 @@ class _NavigationPageState extends State<NavigationPage> {
     return (atan2(y, x) * 180 / pi + 360) % 360;
   }
 
-  bool _startRiskNotificationSent = false; // Track if the initial notification was sent
 
   void _checkRiskZone() async {
     if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
@@ -446,27 +447,44 @@ class _NavigationPageState extends State<NavigationPage> {
 
     if (defaultRoute.isEmpty || adjustedRoute.isEmpty) return;
 
-    const double alertThreshold = 200.0; // Notify 200m before the decision point
+    const double alertThreshold = 250.0; // Notify before divergence
     const Distance distance = Distance();
 
+    List<LatLng> divergencePoints = [];
+
+    // Identify all divergence points along the routes
+    bool previouslyDiverged = false;
     for (int i = 0; i < min(defaultRoute.length, adjustedRoute.length); i++) {
-      LatLng defaultPoint = _getLatLngFromMap(defaultRoute[i]);
-      LatLng adjustedPoint = _getLatLngFromMap(adjustedRoute[i]);
+        LatLng defaultPoint = _getLatLngFromMap(defaultRoute[i]);
+        LatLng adjustedPoint = _getLatLngFromMap(adjustedRoute[i]);
 
-      double distanceToDefault = distance(currentPosition!, defaultPoint);
-      double distanceToAdjusted = distance(currentPosition!, adjustedPoint);
-
-      // If we are close to the decision point
-      if (distanceToDefault < alertThreshold && distanceToAdjusted < alertThreshold) {
-        // int defaultRisk = defaultRoute[i]['raster_value'] ?? 0;
-        // int adjustedRisk = adjustedRoute[i]['raster_value'] ?? 0;
-
-        // if (adjustedRisk < defaultRisk) {
-        // _sendReRouteNotification();
-        break;
-        // }
-      }
+        if (!_arePointsClose(defaultPoint, adjustedPoint, threshold: 30.0)) {
+            if (!previouslyDiverged) {
+                divergencePoints.add(defaultPoint); // Save divergence point
+                previouslyDiverged = true; // Mark as diverged
+            }
+        } else {
+            previouslyDiverged = false; // Mark as converged
+        }
     }
+
+    if (divergencePoints.isEmpty) return; // No divergences found
+
+    // Find the next upcoming divergence
+    for (LatLng divergencePoint in divergencePoints) {
+        double distanceToDivergence = distance(currentPosition!, divergencePoint);
+
+        if (distanceToDivergence < alertThreshold && !notifiedDivergences.contains(divergencePoint)) {
+            _sendReRouteNotification();
+            notifiedDivergences.add(divergencePoint); // Mark this divergence as notified
+            break; // Stop after notifying the first upcoming divergence
+        }
+    }
+  }
+
+  bool _arePointsClose(LatLng p1, LatLng p2, {double threshold = 30.0}) {
+      const Distance distance = Distance();
+      return distance(p1, p2) < threshold; // Check if points are close enough
   }
 
   void _sendReRouteNotification() async {
