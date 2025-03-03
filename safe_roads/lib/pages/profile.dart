@@ -23,6 +23,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   bool notifications = true;
   bool tolls = false;
   String measure = "km";
+  String alertDistance = "100 m";
 
   String username = "Loading...";
   String country = "Loading...";
@@ -68,6 +69,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           country = userProfile['country'] ?? "Unknown";
           tolls = userProfile['tolls'] as bool;
           measure = userProfile['measure'] ?? "km";
+          alertDistance = userProfile['alertDistance'] ?? "100 m";
           level = userProfile['level'] as int;
           distance = userProfile['distance'] as int;
           targetDistance = userProfile['targetDistance'] as int;
@@ -81,10 +83,15 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
-    // Update the preference globally using Provider
+  // Update the preference globally using Provider
   Future<void> updateReRoute(bool newValue) async {
     // Use Provider to update the re_route value
     context.read<UserPreferences>().updateReRoute(newValue);
+  }
+
+  Future<void> updateAlertDistance(String newValue) async {
+    // Use Provider to update the re_route value
+    context.read<UserPreferences>().updateAlertDistance(newValue);
   }
 
   Future<void> _showSignOutConfirmation() async {
@@ -347,14 +354,16 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             updatePreference("notifications", notifications);
           }),
           const Divider(),
-          _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
-            setState(() {
-              tolls = newValue;
-            });
-            updatePreference("tolls", newValue);
-          }),
-          const Divider(),
-          buildMeasureDropdown(),
+          buildNotificationDropdown(),
+          // const Divider(),
+          // _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
+          //   setState(() {
+          //     tolls = newValue;
+          //   });
+          //   updatePreference("tolls", newValue);
+          // }),
+          // const Divider(),
+          // buildMeasureDropdown(),
         ],
       ),
     );
@@ -383,6 +392,59 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     );
   }
 
+  buildNotificationDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: ListTile(
+        title: Row(
+          children: [
+            const Text("Alert distance"),
+            const SizedBox(width: 5), // Small spacing between text and icon
+            IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.grey),
+              tooltip: "What is this?",
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text("Alert Distance Info"),
+                      content: const Text(
+                        "This setting determines the distance at which you will receive a notification "
+                        "about upcoming risk zones. Choose a smaller distance for precise alerts or "
+                        "a larger distance for early warnings.",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text("OK"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+        trailing: DropdownButton<String>(
+          value: alertDistance,
+          items: const [
+            DropdownMenuItem(value: "100 m", child: Text("100 m")),
+            DropdownMenuItem(value: "500 m", child: Text("500 m")),
+            DropdownMenuItem(value: "1 km", child: Text("1 km")),
+          ],
+          onChanged: (String? newValue) {
+            setState(() {
+              alertDistance = newValue!;
+            });
+            updateAlertDistance(newValue!);
+            updatePreference("alertDistance", alertDistance);
+          },
+        ),
+      ),
+    );
+  }
 
   Widget buildSettingsSection(BuildContext context) {
     return Column(

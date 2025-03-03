@@ -23,6 +23,7 @@ class ProfileController {
         're_route': data['re_route'] ?? true,
         'tolls': data['tolls'] ?? false,
         'measure': data['measure'] ?? "km",
+        'alertDistance': data['alertDistance'] ?? "100 m",
         'username': data['username'] ?? "Unknown",
         'country': data['location'] ?? "Unknown",
         'email': data['email'] ?? user.email ?? "Unknown",

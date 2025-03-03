@@ -6,6 +6,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart'; // For coordinates
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
 
 class NavigationPage extends StatefulWidget {
@@ -253,7 +255,14 @@ class _NavigationPageState extends State<NavigationPage> {
   void _checkRiskZone() async {
     if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
 
-    const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
+    final userPreferences = Provider.of<UserPreferences>(context, listen: false);
+    String alertDistance = userPreferences.alertDistance; // Get the user's preference
+
+    // Convert string to a double in meters
+    double alertDistanceThreshold = _convertAlertDistance(alertDistance);
+    print("alertDistanceThreshold $alertDistanceThreshold");
+
+    // const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
     const double routeDeviationThreshold = 50.0;  // Detect wrong route
     const Distance distance = Distance();
 
@@ -337,6 +346,21 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Update _inRiskZone
     _inRiskZone = currentRiskLevel > 2;
+  }
+
+  
+  // Function to map string values to double values
+  double _convertAlertDistance(String distance) {
+    switch (distance) {
+      case "100 m":
+        return 100.0;
+      case "500 m":
+        return 500.0;
+      case "1 km":
+        return 1000.0; // Convert km to meters
+      default:
+        return 200.0; // Default value if no match is found
+    }
   }
 
   void _sendRiskWarning(LatLng riskPoint, int riskValue) async {
