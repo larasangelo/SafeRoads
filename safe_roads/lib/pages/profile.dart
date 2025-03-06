@@ -23,7 +23,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   bool notifications = true;
   bool tolls = false;
   String measure = "km";
-  String alertDistance = "100 m";
+  String riskAlertDistance = "100 m";
+  String rerouteAlertDistance = "250 m";
 
   String username = "Loading...";
   String country = "Loading...";
@@ -69,7 +70,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           country = userProfile['country'] ?? "Unknown";
           tolls = userProfile['tolls'] as bool;
           measure = userProfile['measure'] ?? "km";
-          alertDistance = userProfile['alertDistance'] ?? "100 m";
+          riskAlertDistance = userProfile['riskAlertDistance'] ?? "100 m";
+          rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
           level = userProfile['level'] as int;
           distance = userProfile['distance'] as int;
           targetDistance = userProfile['targetDistance'] as int;
@@ -89,9 +91,14 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     context.read<UserPreferences>().updateReRoute(newValue);
   }
 
-  Future<void> updateAlertDistance(String newValue) async {
+  Future<void> updateRiskAlertDistance(String newValue) async {
     // Use Provider to update the re_route value
-    context.read<UserPreferences>().updateAlertDistance(newValue);
+    context.read<UserPreferences>().updateRiskAlertDistance(newValue);
+  }
+
+  Future<void> updateRerouteAlertDistance(String newValue) async {
+    // Use Provider to update the re_route value
+    context.read<UserPreferences>().updateRerouteAlertDistance(newValue);
   }
 
   Future<void> _showSignOutConfirmation() async {
@@ -340,7 +347,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       ),
       child: Column(
         children: [
-          _buildSwitchTile("Allow re-routing", re_route, (bool newValue) {
+          _buildSwitchTile("Allow notifications", notifications, (bool newValue) async {
+            await handleNotificationPermission();
+            await checkNotificationPermissions();
+            updatePreference("notifications", notifications);
+          }),
+          const Divider(),
+          _buildSwitchTile("Only low risk route", re_route, (bool newValue) {
             updateReRoute(newValue);
             setState(() {
               re_route = newValue;
@@ -348,13 +361,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             updatePreference("re_route", newValue);
           }),
           const Divider(),
-          _buildSwitchTile("Allow notifications", notifications, (bool newValue) async {
-            await handleNotificationPermission();
-            await checkNotificationPermissions();
-            updatePreference("notifications", notifications);
-          }),
-          const Divider(),
-          buildNotificationDropdown(),
+          buildRiskNotificationDropdown(),
+          buildRerouteNotificationDropdown()
           // const Divider(),
           // _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
           //   setState(() {
@@ -392,13 +400,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     );
   }
 
-  buildNotificationDropdown() {
+  buildRiskNotificationDropdown() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: ListTile(
         title: Row(
           children: [
-            const Text("Alert distance"),
+            const Text("Risk alert distance"),
             const SizedBox(width: 5), // Small spacing between text and icon
             IconButton(
               icon: const Icon(Icons.info_outline, color: Colors.grey),
@@ -408,7 +416,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
-                      title: const Text("Alert Distance Info"),
+                      title: const Text("Risk Alert Distance Info"),
                       content: const Text(
                         "This setting determines the distance at which you will receive a notification "
                         "about upcoming risk zones. Choose a smaller distance for precise alerts or "
@@ -428,7 +436,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           ],
         ),
         trailing: DropdownButton<String>(
-          value: alertDistance,
+          value: riskAlertDistance,
           items: const [
             DropdownMenuItem(value: "100 m", child: Text("100 m")),
             DropdownMenuItem(value: "500 m", child: Text("500 m")),
@@ -436,10 +444,64 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           ],
           onChanged: (String? newValue) {
             setState(() {
-              alertDistance = newValue!;
+              riskAlertDistance = newValue!;
             });
-            updateAlertDistance(newValue!);
-            updatePreference("alertDistance", alertDistance);
+            updateRiskAlertDistance(newValue!);
+            updatePreference("riskAlertDistance", riskAlertDistance);
+          },
+        ),
+      ),
+    );
+  }
+
+  buildRerouteNotificationDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: ListTile(
+        title: Row(
+          children: [
+            const Text("Re-route alert distance"),
+            const SizedBox(width: 5), // Small spacing between text and icon
+            IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.grey),
+              tooltip: "What is this?",
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text("Re-route Alert Distance Info"),
+                      content: const Text(
+                        "This setting determines the distance at which you will receive a notification "
+                        "about upcoming Re-route opportunities. Choose a smaller distance for precise alerts or "
+                        "a larger distance for early warnings.",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text("OK"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+        trailing: DropdownButton<String>(
+          value: rerouteAlertDistance,
+          items: const [
+            DropdownMenuItem(value: "250 m", child: Text("250 m")),
+            DropdownMenuItem(value: "500 m", child: Text("500 m")),
+            DropdownMenuItem(value: "1 km", child: Text("1 km")),
+          ],
+          onChanged: (String? newValue) {
+            setState(() {
+              rerouteAlertDistance = newValue!;
+            });
+            updateRerouteAlertDistance(newValue!);
+            updatePreference("rerouteAlertDistance", rerouteAlertDistance);
           },
         ),
       ),

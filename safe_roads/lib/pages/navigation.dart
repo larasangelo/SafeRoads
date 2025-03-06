@@ -178,8 +178,8 @@ class _NavigationPageState extends State<NavigationPage> {
   Future<void> _sendPositionToServer(double lat, double lon) async {
     try {
       await http.post(
-        Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.120.162:3000/update-position'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/update-position'),
+        Uri.parse('http://10.101.121.28:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -256,10 +256,10 @@ class _NavigationPageState extends State<NavigationPage> {
     if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
 
     final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-    String alertDistance = userPreferences.alertDistance; // Get the user's preference
+    String riskAlertDistance = userPreferences.riskAlertDistance; // Get the user's preference
 
     // Convert string to a double in meters
-    double alertDistanceThreshold = _convertAlertDistance(alertDistance);
+    double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
     print("alertDistanceThreshold $alertDistanceThreshold");
 
     // const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
@@ -354,6 +354,8 @@ class _NavigationPageState extends State<NavigationPage> {
     switch (distance) {
       case "100 m":
         return 100.0;
+      case "250 m":
+        return 250.0;
       case "500 m":
         return 500.0;
       case "1 km":
@@ -381,8 +383,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -418,8 +420,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -448,8 +450,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -466,12 +468,19 @@ class _NavigationPageState extends State<NavigationPage> {
   void _checkReRoute() {
     if (currentPosition == null || widget.routesWithPoints.isEmpty) return;
 
+    final userPreferences = Provider.of<UserPreferences>(context, listen: false);
+    String rerouteAlertDistance = userPreferences.rerouteAlertDistance; // Get the user's preference
+
+    // Convert string to a double in meters
+    double alertThreshold = _convertAlertDistance(rerouteAlertDistance);
+    print("alertThreshold $alertThreshold");
+
     List<Map<String, dynamic>> defaultRoute = widget.routesWithPoints['defaultRoute'] ?? [];
     List<Map<String, dynamic>> adjustedRoute = widget.routesWithPoints['adjustedRoute'] ?? [];
 
     if (defaultRoute.isEmpty || adjustedRoute.isEmpty) return;
 
-    const double alertThreshold = 250.0; // Notify before divergence
+    // const double alertThreshold = 250.0; // Notify before divergence
     const Distance distance = Distance();
 
     List<LatLng> divergencePoints = [];
@@ -544,7 +553,8 @@ class _NavigationPageState extends State<NavigationPage> {
       }
 
       await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
