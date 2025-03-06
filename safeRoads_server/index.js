@@ -509,9 +509,13 @@ app.get("/search", async (req, res) => {
   }
 
   try {
-    const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)},portugal&limit=${limit}&lang=${lang}`); //Added Portugal to restrict the options
-    const data = await response.json();
-    // console.log(data.features[0]);
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)},portugal&limit=${limit}&lang=${lang}`;
+    const response = await fetch(url);
+    
+    const text = await response.text(); // Get raw response
+    // console.log("Raw API response:", text); 
+  
+    const data = JSON.parse(text); // Now try parsing JSON
     res.status(200).json(data);
   } catch (err) {
     console.error("Error fetching search results:", err);

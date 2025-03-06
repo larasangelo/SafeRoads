@@ -521,14 +521,35 @@ class _NavigationPageState extends State<NavigationPage> {
     lastWarningTime = DateTime.now(); // Update timestamp after sending the warning
 
     try {
+      // Identify the alternative route
+      String alternativeRouteKey = widget.routesWithPoints.keys.firstWhere(
+        (key) => key != selectedRouteKey, 
+        orElse: () => ""
+      );
+
+      if (alternativeRouteKey.isEmpty) return; // No alternative route found
+
+      // Get times for both routes
+      String currentRouteTime = widget.times[selectedRouteKey] ?? "0";
+      String alternativeRouteTime = widget.times[alternativeRouteKey] ?? "0";
+
+      // Compare travel times
+      String notificationBody;
+      if (currentRouteTime == alternativeRouteTime) {
+        notificationBody =
+          "Switch route! It will take the same time but with less risk.";
+      } else {
+        notificationBody =
+          "The alternative route has less risk. Consider changing the route.";
+      }
+
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.162:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
           "title": "🚧 Alternative Route Recommended!",
-          "body": "The alternative route has less risk. Consider changing the route.",
+          "body": notificationBody,
           "button": "true"
         }),
       );
