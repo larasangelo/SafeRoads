@@ -178,8 +178,8 @@ class _NavigationPageState extends State<NavigationPage> {
   Future<void> _sendPositionToServer(double lat, double lon) async {
     try {
       await http.post(
-        // Uri.parse('http://192.168.1.82:3000/update-position'),
-        Uri.parse('http://10.101.121.28:3000/update-position'),    // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/update-position'),
+        // Uri.parse('http://10.101.121.28:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -383,14 +383,15 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       final response = await http.post(
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
           "title": title,
           "body": body,
           "button": "false",
+          "changeRoute": "false"
         }),
       );
 
@@ -420,14 +421,15 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       final response = await http.post(
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
           "title": title,
           "body": body,
           "button": "false",
+          "changeRoute": "false"
         }),
       );
 
@@ -450,14 +452,15 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       await http.post(
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
           "title": "🔃 Wrong Route!",
           "body": "You are off the planned route.",
           "button": "false",
+          "changeRoute": "false"
         }),
       );
     } catch (e) {
@@ -468,12 +471,14 @@ class _NavigationPageState extends State<NavigationPage> {
   void _checkReRoute() {
     if (currentPosition == null || widget.routesWithPoints.isEmpty) return;
 
-    final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-    String rerouteAlertDistance = userPreferences.rerouteAlertDistance; // Get the user's preference
+    final userPreferences = Provider.of<UserPreferences>(context, listen: false); // Get the user's preference
+    String rerouteAlertDistance = userPreferences.rerouteAlertDistance; 
+    bool changeRoute = userPreferences.changeRoute;
 
     // Convert string to a double in meters
     double alertThreshold = _convertAlertDistance(rerouteAlertDistance);
     print("alertThreshold $alertThreshold");
+    print("changeRoute $changeRoute");
 
     List<Map<String, dynamic>> defaultRoute = widget.routesWithPoints['defaultRoute'] ?? [];
     List<Map<String, dynamic>> adjustedRoute = widget.routesWithPoints['adjustedRoute'] ?? [];
@@ -488,30 +493,30 @@ class _NavigationPageState extends State<NavigationPage> {
     // Identify all divergence points along the routes
     bool previouslyDiverged = false;
     for (int i = 0; i < min(defaultRoute.length, adjustedRoute.length); i++) {
-        LatLng defaultPoint = _getLatLngFromMap(defaultRoute[i]);
-        LatLng adjustedPoint = _getLatLngFromMap(adjustedRoute[i]);
+      LatLng defaultPoint = _getLatLngFromMap(defaultRoute[i]);
+      LatLng adjustedPoint = _getLatLngFromMap(adjustedRoute[i]);
 
-        if (!_arePointsClose(defaultPoint, adjustedPoint, threshold: 30.0)) {
-            if (!previouslyDiverged) {
-                divergencePoints.add(defaultPoint); // Save divergence point
-                previouslyDiverged = true; // Mark as diverged
-            }
-        } else {
-            previouslyDiverged = false; // Mark as converged
+      if (!_arePointsClose(defaultPoint, adjustedPoint, threshold: 30.0)) {
+        if (!previouslyDiverged) {
+            divergencePoints.add(defaultPoint); // Save divergence point
+            previouslyDiverged = true; // Mark as diverged
         }
+      } else {
+        previouslyDiverged = false; // Mark as converged
+      }
     }
 
     if (divergencePoints.isEmpty) return; // No divergences found
 
     // Find the next upcoming divergence
     for (LatLng divergencePoint in divergencePoints) {
-        double distanceToDivergence = distance(currentPosition!, divergencePoint);
+      double distanceToDivergence = distance(currentPosition!, divergencePoint);
 
-        if (distanceToDivergence < alertThreshold && !notifiedDivergences.contains(divergencePoint)) {
-            _sendReRouteNotification();
-            notifiedDivergences.add(divergencePoint); // Mark this divergence as notified
-            break; // Stop after notifying the first upcoming divergence
-        }
+      if (distanceToDivergence < alertThreshold && !notifiedDivergences.contains(divergencePoint)) {
+        _sendReRouteNotification(changeRoute);
+        notifiedDivergences.add(divergencePoint); // Mark this divergence as notified
+        break; // Stop after notifying the first upcoming divergence
+      }
     }
   }
 
@@ -520,11 +525,11 @@ class _NavigationPageState extends State<NavigationPage> {
       return distance(p1, p2) < threshold; // Check if points are close enough
   }
 
-  void _sendReRouteNotification() async {
+  void _sendReRouteNotification(bool changeRoute) async {
     if (lastWarningTime == null) {
-        lastWarningTime = DateTime.now(); // Initialize for the first time
+      lastWarningTime = DateTime.now(); // Initialize for the first time
     } else if (DateTime.now().difference(lastWarningTime!) < const Duration(seconds: 30)) {
-        return; // Skip if it's been less than 30 seconds
+      return; // Skip if it's been less than 30 seconds
     }
 
     lastWarningTime = DateTime.now(); // Update timestamp after sending the warning
@@ -553,14 +558,15 @@ class _NavigationPageState extends State<NavigationPage> {
       }
 
       await http.post(
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
           "title": "🚧 Alternative Route Recommended!",
           "body": notificationBody,
-          "button": "true"
+          "button": "true",
+          "changeRoute": changeRoute.toString()
         }),
       );
     } catch (e) {

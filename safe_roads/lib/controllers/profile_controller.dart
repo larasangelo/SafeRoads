@@ -20,7 +20,7 @@ class ProfileController {
       final data = await _userProfileRepository.fetchUserProfile(user.uid);
       // print(data);
       return {
-        're_route': data['re_route'] ?? true,
+        'lowRisk': data['lowRisk'] ?? true,
         'tolls': data['tolls'] ?? false,
         'measure': data['measure'] ?? "km",
         'riskAlertDistance': data['riskAlertDistance'] ?? "100 m",

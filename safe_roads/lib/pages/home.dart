@@ -93,20 +93,20 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         _cancelFetchingRoute = false; // Reset the cancellation flag
       });
 
-      // Access the updated value of 'reRoute' from the UserPreferences provider
+      // Access the updated value of 'lowRisk' from the UserPreferences provider
       final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-      bool reRoute = userPreferences.reRoute; // This gives you the updated value
-      print("reRoute: $reRoute");
+      bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
+      print("lowRisk: $lowRisk");
 
       final response = await http.post(
-        // Uri.parse('http://192.168.1.82:3000/route'),
-        Uri.parse('http://10.101.121.28:3000/route'), // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/route'),
+        // Uri.parse('http://10.101.121.28:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
           "end": {"lat": end.latitude, "lon": end.longitude},
-          "re_route": reRoute, // Use the updated value of reRoute
-          // "re_route": userPreferences["re_route"], // Use the updated value of reRoute
+          "lowRisk": lowRisk, // Use the updated value of lowRisk
+          // "lowRisk": userPreferences["lowRisk"], // Use the updated value of lowRisk
         }),
       );
 
@@ -174,8 +174,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Future<LatLng?> _getCoordinatesFromAddress(String address) async {
     try {
       final response = await http.post(
-        // Uri.parse('http://192.168.1.82:3000/geocode'),
-        Uri.parse('http://10.101.121.28:3000/geocode'), // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/geocode'),
+        // Uri.parse('http://10.101.121.28:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -226,8 +226,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Future<void> _fetchSearchSuggestions(String query) async {
     try {
       final response = await http.get(
-        // Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        Uri.parse('http://10.101.121.28:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+        Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+        // Uri.parse('http://10.101.121.28:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
       if (response.statusCode == 200) {
@@ -736,7 +736,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           left: 0,
                           right: 0,
                           child: Container(
-                            height: 180,
+                            height: 110,
                             alignment: Alignment.center,
                             decoration: const BoxDecoration(
                               color: Colors.white,

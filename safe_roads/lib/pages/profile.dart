@@ -19,7 +19,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   final ProfileController _profileController = ProfileController();
   final AuthController _authController = AuthController();
 
-  bool re_route = true;
+  bool lowRisk = true;
+  bool changeRoute = true;
   bool notifications = true;
   bool tolls = false;
   String measure = "km";
@@ -65,7 +66,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       final userProfile = await _profileController.fetchUserProfile();
       if (mounted) {  // Check if the widget is still in the tree
         setState(() {
-          re_route = userProfile['re_route'] as bool;
+          lowRisk = userProfile['lowRisk'] as bool;
           username = userProfile['username'] ?? "Unknown";
           country = userProfile['country'] ?? "Unknown";
           tolls = userProfile['tolls'] as bool;
@@ -86,19 +87,24 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   }
 
   // Update the preference globally using Provider
-  Future<void> updateReRoute(bool newValue) async {
-    // Use Provider to update the re_route value
-    context.read<UserPreferences>().updateReRoute(newValue);
+  Future<void> updateLowRisk(bool newValue) async {
+    // Use Provider to update the lowRisk value
+    context.read<UserPreferences>().updateLowRisk(newValue);
   }
 
   Future<void> updateRiskAlertDistance(String newValue) async {
-    // Use Provider to update the re_route value
+    // Use Provider to update the riskAlertDistance value
     context.read<UserPreferences>().updateRiskAlertDistance(newValue);
   }
 
   Future<void> updateRerouteAlertDistance(String newValue) async {
-    // Use Provider to update the re_route value
+    // Use Provider to update the rerouteAlertDistance value
     context.read<UserPreferences>().updateRerouteAlertDistance(newValue);
+  }
+
+  Future<void> updateChangeRoute(bool newValue) async {
+    // Use Provider to update the changeRoute value
+    context.read<UserPreferences>().updateChangeRoute(newValue);
   }
 
   Future<void> _showSignOutConfirmation() async {
@@ -353,15 +359,24 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             updatePreference("notifications", notifications);
           }),
           const Divider(),
-          _buildSwitchTile("Only low risk route", re_route, (bool newValue) {
-            updateReRoute(newValue);
+          _buildSwitchTile("Only low risk route", lowRisk, (bool newValue) {
+            updateLowRisk(newValue);
             setState(() {
-              re_route = newValue;
+              lowRisk = newValue;
             });
-            updatePreference("re_route", newValue);
+            updatePreference("lowRisk", newValue);
+          }),
+          const Divider(),
+          _buildSwitchTile("Change route automatically", changeRoute, (bool newValue) {
+            updateChangeRoute(newValue);
+            setState(() {
+              changeRoute = newValue;
+            });
+            updatePreference("changeRoute", newValue);
           }),
           const Divider(),
           buildRiskNotificationDropdown(),
+          const Divider(),
           buildRerouteNotificationDropdown()
           // const Divider(),
           // _buildSwitchTile("Allow tolls", tolls, (bool newValue) {

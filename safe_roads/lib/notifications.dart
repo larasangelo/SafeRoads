@@ -1,7 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'dart:async'; 
+import 'dart:async';
 
 class Notifications {
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -80,16 +80,16 @@ class Notifications {
         ),
       );
 
-      bool showButton = message.data['button'] == 'true'; // Ensure it's parsed as boolean
+      bool showButton = message.data['button'] == 'true'; 
+      bool changeRoute = message.data['changeRoute'] == 'true';
 
-      // Check if context is available before inserting an overlay
       if (scaffoldMessengerKey.currentContext == null) {
         print("Warning: No valid context available for overlay.");
         return;
       }
 
-      // Create the overlay entry
       late OverlayEntry overlayEntry;
+      bool isInteracted = false; // Track if user interacted
 
       overlayEntry = OverlayEntry(
         builder: (context) => Positioned(
@@ -125,35 +125,35 @@ class Notifications {
                   const SizedBox(height: 8.0),
                   Text(
                     message.notification!.body ?? '',
-                    style: const TextStyle(
-                      fontSize: 16.0,
-                    ),
+                    style: const TextStyle(fontSize: 16.0),
                     textAlign: TextAlign.center,
                   ),
-                  if(showButton)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          if (onSwitchRoute != null) {
-                            onSwitchRoute!();  // Call the callback function
-                          }
-                          overlayEntry.remove();  // Remove overlay after button press
-                        },
-                        child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
-                      ),
-                      ElevatedButton(
-                      onPressed: () {
-                        if (ignoreSwitchRoute != null) {
-                          ignoreSwitchRoute!();  // Call the callback function
-                        }
-                        overlayEntry.remove();  // Remove overlay after button press
-                      },
-                      child: const Text("Ignore", style: TextStyle(fontSize: 18.0)),
-                      )
-                    ],
-                  ),
+                  if (showButton)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            isInteracted = true;
+                            if (onSwitchRoute != null) {
+                              onSwitchRoute!();
+                            }
+                            overlayEntry.remove();
+                          },
+                          child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            isInteracted = true;
+                            if (ignoreSwitchRoute != null) {
+                              ignoreSwitchRoute!();
+                            }
+                            overlayEntry.remove();
+                          },
+                          child: const Text("Ignore", style: TextStyle(fontSize: 18.0)),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -161,13 +161,21 @@ class Notifications {
         ),
       );
 
-      // Get the overlay context
       final overlay = Overlay.of(scaffoldMessengerKey.currentContext!);
 
       if (overlay != null) {
         overlay.insert(overlayEntry);
+
         Future.delayed(const Duration(seconds: 5), () {
-          overlayEntry.remove();
+          overlayEntry.remove();    //TODO TESTAR ASSIM
+          if (!isInteracted) {
+            // Perform action based on changeRoute flag
+            if (changeRoute && onSwitchRoute != null) {
+              onSwitchRoute!();
+            } else if (!changeRoute && ignoreSwitchRoute != null) {
+              ignoreSwitchRoute!();
+            }
+          }
         });
       } else {
         print("Warning: Overlay is null, skipping notification display.");

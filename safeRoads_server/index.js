@@ -238,6 +238,7 @@ app.post("/send", (req, res) => {
     const receivedtitle = req.body.title;
     const receivedbody = req.body.body;
     const receivedButton = req.body.button;
+    const receivedChangeRoute = req.body.changeRoute;
 
     const message = {
       token: receivedToken,
@@ -246,7 +247,8 @@ app.post("/send", (req, res) => {
         title: receivedtitle,
       },
       data: {
-        button: receivedButton,  
+        button: receivedButton,
+        changeRoute: receivedChangeRoute
       },
       android: {
         notification: {
