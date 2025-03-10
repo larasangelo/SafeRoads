@@ -67,7 +67,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     _initializeLocation();
 
-    print("widget.time, ${widget.times[selectedRouteKey]}");
+    // print("widget.time, ${widget.times[selectedRouteKey]}");
     _calculateArrivalTime(widget.times[selectedRouteKey] ?? "0 min");
 
     locationSubscription = location.onLocationChanged.listen((LocationData loc) {
@@ -260,7 +260,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Convert string to a double in meters
     double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
-    print("alertDistanceThreshold $alertDistanceThreshold");
+    // print("alertDistanceThreshold $alertDistanceThreshold");
 
     // const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
     const double routeDeviationThreshold = 50.0;  // Detect wrong route
@@ -300,6 +300,7 @@ class _NavigationPageState extends State<NavigationPage> {
           riskPoint = point;
         }
         detectedRiskZone.add(point);
+        // print("detectedRiskZone, $detectedRiskZone");
       }
     }
 
@@ -326,13 +327,17 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Only Notify if Moving into a New High-Risk Zone
     bool enteringNewRiskZone = highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel;
+    print("highestUpcomingRisk -> $highestUpcomingRisk; currentRiskLevel -> $currentRiskLevel");
+    print("Antes da notificação: enteringNewRiskZone -> $enteringNewRiskZone, riskPoint -> $riskPoint, isOnRoute -> $isOnRoute");
 
     if (enteringNewRiskZone && riskPoint != null && isOnRoute) {
       bool alreadyNotified = detectedRiskZone.any((p) => notifiedZones.contains(p));
 
       if (!alreadyNotified) {
+        print("Entra para enviar a notificação: enteringNewRiskZone -> $enteringNewRiskZone, riskPoint -> $riskPoint, isOnRoute -> $isOnRoute");
         _sendRiskWarning(riskPoint, highestUpcomingRisk);
         notifiedZones.addAll(detectedRiskZone); // Mark entire zone as notified
+        // print("notifiedZones, $notifiedZones");
       }
 
       _inRiskZone = true;
@@ -342,6 +347,7 @@ class _NavigationPageState extends State<NavigationPage> {
     // Mark Passed Segments
     if (currentRiskLevel > 2) {
       passedSegments.addAll(detectedRiskZone);
+      // print("passedSegments, $passedSegments");
     }
 
     // Update _inRiskZone
@@ -477,8 +483,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Convert string to a double in meters
     double alertThreshold = _convertAlertDistance(rerouteAlertDistance);
-    print("alertThreshold $alertThreshold");
-    print("changeRoute $changeRoute");
+    // print("alertThreshold $alertThreshold");
+    print("changeRoute no navigation $changeRoute");
 
     List<Map<String, dynamic>> defaultRoute = widget.routesWithPoints['defaultRoute'] ?? [];
     List<Map<String, dynamic>> adjustedRoute = widget.routesWithPoints['adjustedRoute'] ?? [];

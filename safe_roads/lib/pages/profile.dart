@@ -67,6 +67,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       if (mounted) {  // Check if the widget is still in the tree
         setState(() {
           lowRisk = userProfile['lowRisk'] as bool;
+          changeRoute = userProfile['changeRoute'] as bool;
           username = userProfile['username'] ?? "Unknown";
           country = userProfile['country'] ?? "Unknown";
           tolls = userProfile['tolls'] as bool;

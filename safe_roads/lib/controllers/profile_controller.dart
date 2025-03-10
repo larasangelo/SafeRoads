@@ -21,6 +21,7 @@ class ProfileController {
       // print(data);
       return {
         'lowRisk': data['lowRisk'] ?? true,
+        'changeRoute': data['changeRoute'] ?? true,
         'tolls': data['tolls'] ?? false,
         'measure': data['measure'] ?? "km",
         'riskAlertDistance': data['riskAlertDistance'] ?? "100 m",

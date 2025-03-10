@@ -82,6 +82,7 @@ class Notifications {
 
       bool showButton = message.data['button'] == 'true'; 
       bool changeRoute = message.data['changeRoute'] == 'true';
+      // print("changeRoute no notification: $changeRoute");
 
       if (scaffoldMessengerKey.currentContext == null) {
         print("Warning: No valid context available for overlay.");
@@ -167,12 +168,14 @@ class Notifications {
         overlay.insert(overlayEntry);
 
         Future.delayed(const Duration(seconds: 5), () {
-          overlayEntry.remove();    //TODO TESTAR ASSIM
+          overlayEntry.remove();    
           if (!isInteracted) {
             // Perform action based on changeRoute flag
             if (changeRoute && onSwitchRoute != null) {
+              // print("Pediu para switchRoute");
               onSwitchRoute!();
             } else if (!changeRoute && ignoreSwitchRoute != null) {
+              // print("Pediu para ignorar switchRoute");
               ignoreSwitchRoute!();
             }
           }
