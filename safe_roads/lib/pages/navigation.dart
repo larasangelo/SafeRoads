@@ -179,7 +179,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.121.28:3000/update-position'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -260,7 +260,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Convert string to a double in meters
     double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
-    // print("alertDistanceThreshold $alertDistanceThreshold");
+    print("alertDistanceThreshold $alertDistanceThreshold");
 
     // const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
     const double routeDeviationThreshold = 50.0;  // Detect wrong route
@@ -300,7 +300,6 @@ class _NavigationPageState extends State<NavigationPage> {
           riskPoint = point;
         }
         detectedRiskZone.add(point);
-        // print("detectedRiskZone, $detectedRiskZone");
       }
     }
 
@@ -327,17 +326,13 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Only Notify if Moving into a New High-Risk Zone
     bool enteringNewRiskZone = highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel;
-    print("highestUpcomingRisk -> $highestUpcomingRisk; currentRiskLevel -> $currentRiskLevel");
-    print("Antes da notificação: enteringNewRiskZone -> $enteringNewRiskZone, riskPoint -> $riskPoint, isOnRoute -> $isOnRoute");
 
     if (enteringNewRiskZone && riskPoint != null && isOnRoute) {
       bool alreadyNotified = detectedRiskZone.any((p) => notifiedZones.contains(p));
 
       if (!alreadyNotified) {
-        print("Entra para enviar a notificação: enteringNewRiskZone -> $enteringNewRiskZone, riskPoint -> $riskPoint, isOnRoute -> $isOnRoute");
         _sendRiskWarning(riskPoint, highestUpcomingRisk);
         notifiedZones.addAll(detectedRiskZone); // Mark entire zone as notified
-        // print("notifiedZones, $notifiedZones");
       }
 
       _inRiskZone = true;
@@ -347,14 +342,12 @@ class _NavigationPageState extends State<NavigationPage> {
     // Mark Passed Segments
     if (currentRiskLevel > 2) {
       passedSegments.addAll(detectedRiskZone);
-      // print("passedSegments, $passedSegments");
     }
 
     // Update _inRiskZone
     _inRiskZone = currentRiskLevel > 2;
   }
 
-  
   // Function to map string values to double values
   double _convertAlertDistance(String distance) {
     switch (distance) {
@@ -390,7 +383,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -428,7 +421,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -459,7 +452,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -565,7 +558,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.28:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,

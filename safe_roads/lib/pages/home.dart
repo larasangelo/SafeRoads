@@ -100,7 +100,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://10.101.121.28:3000/route'), // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -175,7 +175,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/geocode'),
-        // Uri.parse('http://10.101.121.28:3000/geocode'), // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -227,7 +227,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.get(
         Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://10.101.121.28:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+        // Uri.parse('http://10.101.121.183:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
       if (response.statusCode == 200) {

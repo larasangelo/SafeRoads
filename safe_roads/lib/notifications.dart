@@ -90,76 +90,209 @@ class Notifications {
       }
 
       late OverlayEntry overlayEntry;
-      bool isInteracted = false; // Track if user interacted
+      bool isInteracted = false; 
+
+      // AnimationController for smooth progress transition
+      late AnimationController _animationController;
 
       overlayEntry = OverlayEntry(
-        builder: (context) => Positioned(
-          top: MediaQuery.of(context).size.height * 0.4, 
-          left: MediaQuery.of(context).size.width * 0.1,
-          right: MediaQuery.of(context).size.width * 0.1,
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12.0),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10.0,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    message.notification!.title ?? 'Notification',
-                    style: const TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8.0),
-                  Text(
-                    message.notification!.body ?? '',
-                    style: const TextStyle(fontSize: 16.0),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (showButton)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            isInteracted = true;
-                            if (onSwitchRoute != null) {
-                              onSwitchRoute!();
-                            }
-                            overlayEntry.remove();
-                          },
-                          child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            isInteracted = true;
-                            if (ignoreSwitchRoute != null) {
-                              ignoreSwitchRoute!();
-                            }
-                            overlayEntry.remove();
-                          },
-                          child: const Text("Ignore", style: TextStyle(fontSize: 18.0)),
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setState) {
+              _animationController = AnimationController(
+                vsync: Navigator.of(context), // Ensures smooth animations
+                duration: const Duration(seconds: 5), // Full duration
+              );
+
+              _animationController.forward(); // Start animation immediately
+
+              return Positioned(
+                top: showButton
+                    ? MediaQuery.of(context).size.height * 0.1
+                    : MediaQuery.of(context).size.height * 0.65,
+                left: MediaQuery.of(context).size.width * 0.01,
+                right: MediaQuery.of(context).size.width * 0.01,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.0),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10.0,
+                          offset: Offset(0, 4),
                         ),
                       ],
                     ),
-                ],
-              ),
-            ),
-          ),
-        ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          message.notification?.title ?? 'Notification',
+                          style: const TextStyle(
+                            fontSize: 18.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8.0),
+                        Text(
+                          message.notification?.body ?? '',
+                          style: const TextStyle(fontSize: 16.0),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (showButton) ...[
+                          // If changeRoute is true, apply animation to "Re-route" button
+                          if (changeRoute)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Animated "Re-route" button
+                                AnimatedBuilder(
+                                  animation: _animationController,
+                                  builder: (context, child) {
+                                    return Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        // Animated Background on "Re-route"
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                              maxWidth: 120, maxHeight: 40), // Set a reasonable width
+                                          child: Container(
+                                            height: 50, // Match button height
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(50),
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Colors.pinkAccent.withOpacity(0.5),
+                                                  Colors.purple.withOpacity(0.9)
+                                                ],
+                                                stops: [
+                                                  0.0,
+                                                  _animationController.value
+                                                ], // Progress effect from left to right
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // The actual "Re-route" button with text ABOVE the animation
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            isInteracted = true;
+                                            _animationController.stop(); // Stop animation
+                                            onSwitchRoute?.call();
+                                            overlayEntry.remove();
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent, // Let animation show through
+                                            shadowColor: Colors.transparent, // Remove unwanted shadow
+                                          ),
+                                          child: const Text(
+                                            "Re-route",
+                                            style: TextStyle(
+                                                fontSize: 18.0, color: Colors.white),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                // "Ignore" button
+                                ElevatedButton(
+                                  onPressed: () {
+                                    isInteracted = true;
+                                    _animationController.stop(); // Stop animation
+                                    ignoreSwitchRoute?.call();
+                                    overlayEntry.remove();
+                                  },
+                                  child: const Text("Ignore", style: TextStyle(fontSize: 18.0)),
+                                ),
+                              ],
+                            ),
+                          // If changeRoute is false, apply animation to "Ignore" button
+                          if (!changeRoute)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // "Re-route" button
+                                ElevatedButton(
+                                  onPressed: () {
+                                    isInteracted = true;
+                                    if (onSwitchRoute != null) {
+                                      onSwitchRoute!();
+                                    }
+                                    overlayEntry.remove();
+                                  },
+                                  child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
+                                ),
+                                // Animated "Ignore" button
+                                AnimatedBuilder(
+                                  animation: _animationController,
+                                  builder: (context, child) {
+                                    return Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        // Animated Background on "Ignore"
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                              maxWidth: 120, maxHeight: 40), // Set a reasonable width
+                                          child: Container(
+                                            height: 50, // Match button height
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(50),
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Colors.pinkAccent.withOpacity(0.5),
+                                                  Colors.purple.withOpacity(0.9)
+                                                ],
+                                                stops: [
+                                                  0.0,
+                                                  _animationController.value
+                                                ], // Progress effect from left to right
+                                                begin: Alignment.centerLeft,
+                                                end: Alignment.centerRight,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // The actual "Ignore" button with text ABOVE the animation
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            isInteracted = true;
+                                            _animationController.stop(); // Stop animation
+                                            ignoreSwitchRoute?.call();
+                                            overlayEntry.remove();
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent, // Let animation show through
+                                            shadowColor: Colors.transparent, // Remove unwanted shadow
+                                          ),
+                                          child: const Text(
+                                            "Ignore",
+                                            style: TextStyle(
+                                                fontSize: 18.0, color: Colors.white),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
       );
 
       final overlay = Overlay.of(scaffoldMessengerKey.currentContext!);
