@@ -50,6 +50,8 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   flutter_sound: ^9.6.0
   provider: ^6.1.2
+  path_provider: ^2.1.5
+  audioplayers: ^6.4.0
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +79,7 @@ flutter:
   assets:
     - assets/
     - assets/profile_images/
+    - assets/notification.mp3
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -260,7 +260,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Convert string to a double in meters
     double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
-    print("alertDistanceThreshold $alertDistanceThreshold");
+    // print("alertDistanceThreshold $alertDistanceThreshold");
 
     // const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
     const double routeDeviationThreshold = 50.0;  // Detect wrong route
@@ -293,13 +293,18 @@ class _NavigationPageState extends State<NavigationPage> {
         currentRiskLevel = riskValue;
       }
 
-      // Detect new high-risk zone ahead
-      if (distanceToPoint < alertDistanceThreshold && riskValue > 2) {
-        if (riskValue > highestUpcomingRisk) {
-          highestUpcomingRisk = riskValue;
-          riskPoint = point;
+      // Force notification at the alert threshold distance
+      bool withinAlertDistance = distanceToPoint < alertDistanceThreshold;
+
+      // Change this condition:
+      if (withinAlertDistance && riskValue > 2) {  
+        // Ensure notification is sent when within range
+        if (riskValue > highestUpcomingRisk || highestUpcomingRisk == 0) {  
+            highestUpcomingRisk = riskValue;
+            riskPoint = point;
         }
         detectedRiskZone.add(point);
+        // print("detectedRiskZone: $detectedRiskZone");
       }
     }
 
@@ -365,7 +370,7 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendRiskWarning(LatLng riskPoint, int riskValue) async {
-    if (notifiedZones.contains(riskPoint)) return;
+    // if (notifiedZones.contains(riskPoint)) return;
     notifiedZones.add(riskPoint);
 
     String title;
@@ -403,7 +408,7 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendInitialRiskWarning(LatLng riskPoint, int riskValue) async {
-    if (notifiedZones.contains(riskPoint)) return;
+    // if (notifiedZones.contains(riskPoint)) return;
     notifiedZones.add(riskPoint);
 
     String title;
@@ -477,7 +482,7 @@ class _NavigationPageState extends State<NavigationPage> {
     // Convert string to a double in meters
     double alertThreshold = _convertAlertDistance(rerouteAlertDistance);
     // print("alertThreshold $alertThreshold");
-    print("changeRoute no navigation $changeRoute");
+    // print("changeRoute no navigation $changeRoute");
 
     List<Map<String, dynamic>> defaultRoute = widget.routesWithPoints['defaultRoute'] ?? [];
     List<Map<String, dynamic>> adjustedRoute = widget.routesWithPoints['adjustedRoute'] ?? [];

@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -27,12 +28,16 @@ class Notifications {
       fcmToken = await FirebaseMessaging.instance.getToken();
       print("FCM Token: $fcmToken");
 
-      // Prevent multiple listeners
-      _messageSubscription?.cancel();
-      _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print("Foreground message received: ${message.notification?.title}");
-        showForegroundNotification(message);
-      });
+      // Prevent multiple listeners by checking if subscription already exists
+      if (_messageSubscription == null) {
+        // Listen for foreground messages if no active subscription
+        _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          print("Foreground message received: ${message.notification?.title}");
+          showForegroundNotification(message); // Show custom notification overlay
+        });
+      } else {
+        print("Message subscription already exists.");
+      }
     } else {
       print("Notification permission denied");
     }
@@ -56,29 +61,48 @@ class Notifications {
 
     //Firebase messaging
     await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
+      alert: false,
+      badge: false,
       sound: true,
     );
+  }
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  void playNotificationSound() async {
+    try {
+      // Play the sound from the asset
+      await _audioPlayer.play(AssetSource('notification.mp3'));
+      print("Notification sound is playing.");
+      _audioPlayer.onPlayerComplete.listen((event) {
+        print("Notification sound has finished playing.");
+      });
+    } catch (e) {
+      print("Error playing sound: $e");
+    }
   }
   
   void showForegroundNotification(RemoteMessage message) {
     if (message.notification != null) {
-      flutterLocalNotificationsPlugin.show(
-        0,
-        message.notification!.title,
-        message.notification!.body,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'channel_id_1', // Must match the channel ID
-            'Default Notifications',
-            importance: Importance.high,
-            priority: Priority.high,
-            playSound: true,
-            icon: '@mipmap/ic_launcher',
-          ),
-        ),
-      );
+      // flutterLocalNotificationsPlugin.show(
+      //   0,
+      //   message.notification!.title, //null
+      //   message.notification!.body, //null
+      //   const NotificationDetails(
+      //     android: AndroidNotificationDetails(
+      //       'channel_id_1', // Must match the channel ID
+      //       'Default Notifications',
+      //       importance: Importance.high,
+      //       priority: Priority.high,
+      //       playSound: true,
+      //       icon: '@mipmap/ic_launcher',
+      //       // visibility: NotificationVisibility.secret, // Hidden notification
+      //       // showWhen: false, // Prevents the time from being shown
+      //       // shortcutId: "silent_notification", //unique Id
+      //     ),
+      //   ),
+      // );
+      playNotificationSound();
 
       bool showButton = message.data['button'] == 'true'; 
       bool changeRoute = message.data['changeRoute'] == 'true';

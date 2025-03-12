@@ -339,19 +339,44 @@ app.post("/route", async (req, res) => {
             );
 
             if (startDistanceToLast < startDistanceToFirst) {
-              routePoints.push(
-                ...coordinates.reverse().map(([lon, lat]) => {
-                  if (row.raster_value > 2) hasRisk = true;
-                  return { lat, lon, raster_value: row.raster_value };
-                })
-              );
+              coordinates.reverse().forEach(([lon, lat]) => {
+                if (row.raster_value > 2) hasRisk = true;
+
+                if (
+                  routePoints.length > 0 &&
+                  routePoints[routePoints.length - 1].lat === lat &&
+                  routePoints[routePoints.length - 1].lon === lon
+                ) {
+                  // If same coordinate exists, keep the highest raster_value
+                  routePoints[routePoints.length - 1].raster_value = Math.max(
+                    routePoints[routePoints.length - 1].raster_value,
+                    row.raster_value
+                  );
+                } else {
+                  // Otherwise, add a new unique point
+                  routePoints.push({ lat, lon, raster_value: row.raster_value });
+                }
+              });
+
             } else {
-              routePoints.push(
-                ...coordinates.map(([lon, lat]) => {
-                  if (row.raster_value > 2) hasRisk = true;
-                  return { lat, lon, raster_value: row.raster_value };
-                })
-              );
+              coordinates.forEach(([lon, lat]) => {
+                if (row.raster_value > 2) hasRisk = true;
+
+                if (
+                  routePoints.length > 0 &&
+                  routePoints[routePoints.length - 1].lat === lat &&
+                  routePoints[routePoints.length - 1].lon === lon
+                ) {
+                  // If same coordinate exists, keep the highest raster_value
+                  routePoints[routePoints.length - 1].raster_value = Math.max(
+                    routePoints[routePoints.length - 1].raster_value,
+                    row.raster_value
+                  );
+                } else {
+                  // Otherwise, add a new unique point
+                  routePoints.push({ lat, lon, raster_value: row.raster_value });
+                }
+              });
             }
           } else {
             const lastPointInRoute = routePoints[routePoints.length - 1];
@@ -370,19 +395,44 @@ app.post("/route", async (req, res) => {
             );
 
             if (distanceToLast < distanceToFirst) {
-              routePoints.push(
-                ...coordinates.reverse().map(([lon, lat]) => {
-                  if (row.raster_value > 2) hasRisk = true;
-                  return { lat, lon, raster_value: row.raster_value };
-                })
-              );
+              coordinates.reverse().forEach(([lon, lat]) => {
+                if (row.raster_value > 2) hasRisk = true;
+
+                if (
+                  routePoints.length > 0 &&
+                  routePoints[routePoints.length - 1].lat === lat &&
+                  routePoints[routePoints.length - 1].lon === lon
+                ) {
+                  // If same coordinate exists, keep the highest raster_value
+                  routePoints[routePoints.length - 1].raster_value = Math.max(
+                    routePoints[routePoints.length - 1].raster_value,
+                    row.raster_value
+                  );
+                } else {
+                  // Otherwise, add a new unique point
+                  routePoints.push({ lat, lon, raster_value: row.raster_value });
+                }
+              });
+
             } else {
-              routePoints.push(
-                ...coordinates.map(([lon, lat]) => {
-                  if (row.raster_value > 2) hasRisk = true;
-                  return { lat, lon, raster_value: row.raster_value };
-                })
-              );
+              coordinates.forEach(([lon, lat]) => {
+                if (row.raster_value > 2) hasRisk = true;
+
+                if (
+                  routePoints.length > 0 &&
+                  routePoints[routePoints.length - 1].lat === lat &&
+                  routePoints[routePoints.length - 1].lon === lon
+                ) {
+                  // If same coordinate exists, keep the highest raster_value
+                  routePoints[routePoints.length - 1].raster_value = Math.max(
+                    routePoints[routePoints.length - 1].raster_value,
+                    row.raster_value
+                  );
+                } else {
+                  // Otherwise, add a new unique point
+                  routePoints.push({ lat, lon, raster_value: row.raster_value });
+                }
+              });
             }
           }
         }
