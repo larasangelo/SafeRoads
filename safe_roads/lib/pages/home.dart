@@ -8,8 +8,9 @@ import 'package:http/http.dart' as http;
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/user_preferences.dart';
+import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/navigation.dart';
-import 'package:provider/provider.dart'; // Import the Provider package
+import 'package:provider/provider.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -19,7 +20,7 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin  {
-  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  // final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
@@ -41,6 +42,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Map<String, dynamic> userPreferences = {};
   String _selectedRouteKey = ""; // Default value, updated when routes are fetched
   double _boxHeight = 200;
+  final Notifications _notifications = Notifications();
 
   @override
   bool get wantKeepAlive => true;
@@ -54,6 +56,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     _mapController.mapEventStream.listen((event) {
         setState(() {}); // Update UI dynamically when the map moves
       });
+    // print("Home: scaffoldMessengerKey.currentContext, ${_notifications.scaffoldMessengerKey.currentContext}");
   }
 
   Future<void> _requestLocationPermission() async {
@@ -96,11 +99,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       // Access the updated value of 'lowRisk' from the UserPreferences provider
       final userPreferences = Provider.of<UserPreferences>(context, listen: false);
       bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
+      List<String> selectedSpecies = userPreferences.selectedSpecies;
+
       print("lowRisk: $lowRisk");
+      print("selectedSpecies: $selectedSpecies");
 
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://10.101.121.183:3000/route'), // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -175,7 +181,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/geocode'),
-        // Uri.parse('http://10.101.121.183:3000/geocode'), // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -227,7 +233,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.get(
         Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://10.101.121.183:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
       if (response.statusCode == 200) {
@@ -377,8 +383,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
+
+    // Rever, provavelmente este não é o sítio adequado
+    final userPreferences = Provider.of<UserPreferences>(context, listen: false);
+    List<String> selectedSpecies = userPreferences.selectedSpecies;
+
     return MaterialApp(
-      scaffoldMessengerKey: scaffoldMessengerKey,
+      scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
       home: Scaffold(
         body: Stack(
           children: [
@@ -645,12 +656,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
                           if (hasHighRisk) {
                             return [
-                              _buildRiskMessage("High probability of encountering amphibians", Colors.red),
+                              _buildRiskMessage("High probability of encountering ${selectedSpecies[0]}", Colors.red),
                               const SizedBox(height: 20),
                             ];
                           } else if (hasMediumRisk) {
                             return [
-                              _buildRiskMessage("Medium probability of encountering amphibians", Colors.orange),
+                              _buildRiskMessage("Medium probability of encountering ${selectedSpecies[0]}", Colors.orange),
                               const SizedBox(height: 20),
                             ];
                           }

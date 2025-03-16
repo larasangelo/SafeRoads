@@ -3,9 +3,17 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
+import 'package:safe_roads/navigation_service.dart';
 
 class Notifications {
-  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  // static final Notifications _instance = Notifications._internal();
+  // factory Notifications() => _instance;
+  // Notifications._internal();  // Singleton pattern
+
+  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();  // Defined once
+
+  final NavigationService _navigationService = NavigationService();
+
   String? fcmToken;
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   final AndroidInitializationSettings androidInitializationSettings = const AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -13,10 +21,14 @@ class Notifications {
   // Callback function for navigation
   VoidCallback? onSwitchRoute;
   VoidCallback? ignoreSwitchRoute;
+  VoidCallback? showNotification;
 
-  StreamSubscription<RemoteMessage>? _messageSubscription;
+  // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
+  // StreamSubscription<RemoteMessage>? _messageSubscription;
+  // ---------------------------------------------------------------------------
 
-  Future<void> setupFirebaseMessaging() async {
+  // -------------------------COMENTADO PARA MOSTRAR--------------------------
+  Future<StreamSubscription<RemoteMessage>?> setupFirebaseMessaging(StreamSubscription<RemoteMessage>? messageSubscription) async {
     NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
@@ -28,20 +40,71 @@ class Notifications {
       fcmToken = await FirebaseMessaging.instance.getToken();
       print("FCM Token: $fcmToken");
 
-      // Prevent multiple listeners by checking if subscription already exists
-      if (_messageSubscription == null) {
-        // Listen for foreground messages if no active subscription
-        _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-          print("Foreground message received: ${message.notification?.title}");
-          showForegroundNotification(message); // Show custom notification overlay
-        });
-      } else {
-        print("Message subscription already exists.");
+      if (messageSubscription != null) {
+        print("Existing message subscription found. Ensuring it remains active.");
+        // Re-subscribe to the message stream if necessary
+        try {
+          messageSubscription.resume(); // Try resuming if it was paused
+        } catch (e) {
+          print("Existing subscription is not active. Creating a new one.");
+          messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+            print("Foreground message received: ${message.notification?.title}");
+            // showForegroundNotification(message);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              showForegroundNotification(message);
+            });
+          });
+        }
+        return messageSubscription;
       }
+
+      // No existing subscription, create a new one
+      print("Creating a new message subscription.");
+      messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print("Foreground message received: ${message.notification?.title}");
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showForegroundNotification(message);
+        });
+        // showForegroundNotification(message);
+      });
+
+      return messageSubscription;
     } else {
       print("Notification permission denied");
     }
+    return null;
   }
+  // ---------------------------------------------------------------------------
+
+  // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
+  // Future<void> setupFirebaseMessaging() async {
+  //    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
+  //      alert: true,
+  //      badge: true,
+  //      sound: true,
+  //    );
+ 
+  //    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+  //      print("Notification permission granted");
+  //      fcmToken = await FirebaseMessaging.instance.getToken();
+  //      print("FCM Token: $fcmToken");
+ 
+  //      // Prevent multiple listeners by checking if subscription already exists
+  //      if (_messageSubscription == null) {
+  //        // Listen for foreground messages if no active subscription
+  //        _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  //          print("Foreground message received: ${message.notification?.title}");
+  //          showForegroundNotification(message); // Show custom notification overlay
+  //        });
+  //      } else {
+  //        print("Message subscription already exists.");
+  //      }
+  //    } else {
+  //      print("Notification permission denied");
+  //    }
+  //  }
+  // ---------------------------------------------------------------------------
+
 
   Future<void> setupNotificationChannels() async {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -106,12 +169,31 @@ class Notifications {
 
       bool showButton = message.data['button'] == 'true'; 
       bool changeRoute = message.data['changeRoute'] == 'true';
-      // print("changeRoute no notification: $changeRoute");
 
-      if (scaffoldMessengerKey.currentContext == null) {
+
+      // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
+      // if (scaffoldMessengerKey.currentContext == null) {
+      //   print("Warning: No valid context available for overlay.");
+      //   return;
+      // }
+      // --------------------------------------------------------------------------
+
+      // -------------------------COMENTADO PARA MOSTRAR--------------------------
+      BuildContext? overlayContext = scaffoldMessengerKey.currentContext;
+      // print("scaffoldMessengerKey.currentContext, ${scaffoldMessengerKey.currentContext}");
+      // BuildContext? overlayContext = _navigationService.navigatorKey.currentContext;
+      // BuildContext? overlayContext = NavigationService().navigatorKey.currentContext;
+      if (overlayContext == null) {
         print("Warning: No valid context available for overlay.");
         return;
       }
+
+      final overlay = Overlay.of(overlayContext, rootOverlay: true);
+      if (overlay == null) {  // <- Add this check
+        print("Error: No Overlay widget found.");
+        return;
+      }
+      // --------------------------------------------------------------------------
 
       late OverlayEntry overlayEntry;
       bool isInteracted = false; 
@@ -319,7 +401,9 @@ class Notifications {
         },
       );
 
-      final overlay = Overlay.of(scaffoldMessengerKey.currentContext!);
+      // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
+      // final overlay = Overlay.of(scaffoldMessengerKey.currentContext!);
+      // ----------------------------------------------------------------------------
 
       if (overlay != null) {
         overlay.insert(overlayEntry);

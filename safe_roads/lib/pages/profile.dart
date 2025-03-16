@@ -36,6 +36,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   int places = 0;
   String avatar = 'assets/profile_images/avatar_1.jpg';
 
+  List<Map<String, dynamic>> speciesOptions = [
+    {"name": "Amphibians", "icon": Icons.water},
+    {"name": "Reptiles", "icon": Icons.grass},
+    {"name": "Hedgehogs", "icon": Icons.pets},
+  ];
+  List<String> selectedSpecies = [];
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +87,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           totalKm = userProfile['totalKm'] as int;
           places = userProfile['places'] as int;
           avatar = userProfile['avatar'] ?? "assets/profile_images/avatar_1.jpg";
+          selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
         });
       }
     } catch (e) {
@@ -107,6 +115,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     // Use Provider to update the changeRoute value
     context.read<UserPreferences>().updateChangeRoute(newValue);
   }
+
+  Future<void> updateSelectedSpecies(List<String> newSelectedSpecies) async {
+    // Use Provider to update the selectedSpecies value
+    context.read<UserPreferences>().updateSelectedSpecies(newSelectedSpecies);
+  }
+
 
   Future<void> _showSignOutConfirmation() async {
     final bool? shouldSignOut = await showDialog<bool>(
@@ -274,6 +288,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               const SizedBox(height: 16.0),
               buildPreferencesSection(),
               const SizedBox(height: 16.0),
+              buildSpeciesGrid(),
+              const SizedBox(height: 16.0),
               buildSettingsSection(context),
             ],
           ),
@@ -378,7 +394,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           const Divider(),
           buildRiskNotificationDropdown(),
           const Divider(),
-          buildRerouteNotificationDropdown()
+          buildRerouteNotificationDropdown(),
           // const Divider(),
           // _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
           //   setState(() {
@@ -521,6 +537,36 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           },
         ),
       ),
+    );
+  }
+
+  Widget buildSpeciesGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Select Species for Alerts", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
+        Wrap(
+          spacing: 8.0,
+          children: speciesOptions.map((species) {
+            bool isSelected = selectedSpecies.contains(species["name"]);
+            return ChoiceChip(
+              label: Text(species["name"]),
+              avatar: Icon(species["icon"], color: isSelected ? Colors.white : Colors.black),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  if (selected) {
+                    selectedSpecies.add(species["name"]);
+                  } else {
+                    selectedSpecies.remove(species["name"]);
+                  }
+                });
+                updatePreference("speciesAlerts", selectedSpecies);
+              },
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 

@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart'; // For coordinates
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
 
@@ -61,6 +63,8 @@ class _NavigationPageState extends State<NavigationPage> {
     routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
     location = Location();
 
+    // print("Navigation: scaffoldMessengerKey.currentContext, ${_notifications.scaffoldMessengerKey.currentContext}");
+
     // Assign the callback to handle rerouting
     _notifications.onSwitchRoute = switchToAdjustedRoute;
     _notifications.ignoreSwitchRoute = keepDefaultRoute;
@@ -106,11 +110,27 @@ class _NavigationPageState extends State<NavigationPage> {
     });
   }
 
+  // Update the preference globally using Provider
+  Future<void> updateMessageSubscription(StreamSubscription<RemoteMessage> newValue) async {
+    // Use Provider to update the messageSubscription value
+    context.read<NotificationPreferences>().updateMessageSubscription(newValue);
+  }
+
   Future<void> _initializeLocation() async {
     bool serviceEnabled;
     PermissionStatus permissionGranted;
 
-    await _notifications.setupFirebaseMessaging(); 
+    // -------------------------COMENTADO PARA MOSTRAR--------------------------
+    final notificationPreferences = Provider.of<NotificationPreferences>(context, listen: false);
+    StreamSubscription<RemoteMessage>? messageSubscription = notificationPreferences.messageSubscription; 
+
+    StreamSubscription<RemoteMessage>? result = await _notifications.setupFirebaseMessaging(messageSubscription); 
+    updateMessageSubscription(result!);
+    // ---------------------------------------------------------------------------
+
+    // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
+    // await _notifications.setupFirebaseMessaging(); 
+    // ------------------------------------------------------------------------------
 
     // Check if location services are enabled
     serviceEnabled = await location.serviceEnabled();
@@ -179,7 +199,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.121.183:3000/update-position'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -388,7 +408,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -426,7 +446,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -457,7 +477,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -563,7 +583,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -618,7 +638,8 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
+      // scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
+      // navigatorKey: NavigationService.navigatorKey, // Use the new navigator key
       home: Scaffold(
         body: SafeArea(
           child: Stack(

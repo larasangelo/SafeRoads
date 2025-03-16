@@ -34,7 +34,8 @@ class ProfileController {
         'targetDistance': data['targetDistance'] ?? 200,
         'totalKm': data['totalKm'] ?? 0,
         'places': data['places'] ?? 0,
-        'avatar': data['avatar'] ?? "assets/profile_images/avatar_1.jpg"
+        'avatar': data['avatar'] ?? "assets/profile_images/avatar_1.jpg",
+        'selectedSpecies': data['selectedSpecies'] ?? ["Amphibians"],
       };
     } catch (e) {
       throw Exception("Failed to fetch user profile: $e");

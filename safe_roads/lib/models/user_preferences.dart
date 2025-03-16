@@ -8,11 +8,13 @@ class UserPreferences with ChangeNotifier {
   String _riskAlertDistance = "100 m";
   String _rerouteAlertDistance = "250 m";
   bool _changeRoute = true;
+  List<String> _selectedSpecies = ["Amphibians"];
 
   bool get lowRisk => _lowRisk;
   String get riskAlertDistance => _riskAlertDistance;
   String get rerouteAlertDistance => _rerouteAlertDistance;
   bool get changeRoute => _changeRoute;
+  List<String> get selectedSpecies => _selectedSpecies;
 
   UserPreferences() {
     loadPreferences();
@@ -25,6 +27,7 @@ class UserPreferences with ChangeNotifier {
       _riskAlertDistance = userProfile['riskAlertDistance'] ?? "100 m";
       _rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
       _changeRoute = userProfile['changeRoute'] ?? true;
+      _selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
       notifyListeners();
     } catch (e) {
       print("Error loading user preferences: $e");
@@ -48,6 +51,11 @@ class UserPreferences with ChangeNotifier {
 
   void updateChangeRoute(bool newValue) {
     _changeRoute = newValue;
+    notifyListeners();
+  }
+
+  void updateSelectedSpecies(List<String> newSelectedSpecies) {
+    _selectedSpecies = newSelectedSpecies;
     notifyListeners();
   }
 }
