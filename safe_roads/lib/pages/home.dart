@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/user_preferences.dart';
-import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/navigation.dart';
 import 'package:provider/provider.dart';
 
@@ -42,7 +41,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Map<String, dynamic> userPreferences = {};
   String _selectedRouteKey = ""; // Default value, updated when routes are fetched
   double _boxHeight = 200;
-  final Notifications _notifications = Notifications();
 
   @override
   bool get wantKeepAlive => true;
@@ -388,9 +386,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     final userPreferences = Provider.of<UserPreferences>(context, listen: false);
     List<String> selectedSpecies = userPreferences.selectedSpecies;
 
-    return MaterialApp(
-      scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
-      home: Scaffold(
+    return 
+      // scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
+      Scaffold(
         body: Stack(
           children: [
             FlutterMap(
@@ -807,8 +805,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             ]),
           ],
         ),
-      ),
-    );
+      );
   }
 }
 

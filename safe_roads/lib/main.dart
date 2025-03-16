@@ -39,7 +39,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NotificationPreferences()), 
       ], 
       child: MaterialApp(
-        scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
+        // scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
         // navigatorKey: _navigationService.navigatorKey, 
         initialRoute: '/navigation',
         routes: {

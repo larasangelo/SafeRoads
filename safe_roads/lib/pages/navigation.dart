@@ -57,6 +57,13 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update the context whenever the widget rebuilds
+    _notifications.setContext(context);
+  }
+
+  @override
   void initState() {
     super.initState();
     selectedRouteKey = widget.selectedRouteKey; // Set initial route from Home.dart
@@ -114,6 +121,7 @@ class _NavigationPageState extends State<NavigationPage> {
   Future<void> updateMessageSubscription(StreamSubscription<RemoteMessage> newValue) async {
     // Use Provider to update the messageSubscription value
     context.read<NotificationPreferences>().updateMessageSubscription(newValue);
+    // print("Passei pelo updateMessageSubscription");
   }
 
   Future<void> _initializeLocation() async {
@@ -124,8 +132,9 @@ class _NavigationPageState extends State<NavigationPage> {
     final notificationPreferences = Provider.of<NotificationPreferences>(context, listen: false);
     StreamSubscription<RemoteMessage>? messageSubscription = notificationPreferences.messageSubscription; 
 
-    StreamSubscription<RemoteMessage>? result = await _notifications.setupFirebaseMessaging(messageSubscription); 
+    StreamSubscription<RemoteMessage>? result = await _notifications.setupFirebaseMessaging(context, messageSubscription); 
     updateMessageSubscription(result!);
+    print("NAV Context: $context");
     // ---------------------------------------------------------------------------
 
     // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
@@ -637,10 +646,10 @@ class _NavigationPageState extends State<NavigationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return 
       // scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
       // navigatorKey: NavigationService.navigatorKey, // Use the new navigator key
-      home: Scaffold(
+      Scaffold(
         body: SafeArea(
           child: Stack(
             children: [
@@ -791,7 +800,6 @@ class _NavigationPageState extends State<NavigationPage> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
