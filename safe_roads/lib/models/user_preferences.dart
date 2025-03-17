@@ -8,13 +8,13 @@ class UserPreferences with ChangeNotifier {
   String _riskAlertDistance = "100 m";
   String _rerouteAlertDistance = "250 m";
   bool _changeRoute = true;
-  List<String> _selectedSpecies = ["Amphibians"];
+  List<Object?> _selectedSpecies = ["Amphibians"];
 
   bool get lowRisk => _lowRisk;
   String get riskAlertDistance => _riskAlertDistance;
   String get rerouteAlertDistance => _rerouteAlertDistance;
   bool get changeRoute => _changeRoute;
-  List<String> get selectedSpecies => _selectedSpecies;
+  List<Object?> get selectedSpecies => _selectedSpecies;
 
   UserPreferences() {
     loadPreferences();

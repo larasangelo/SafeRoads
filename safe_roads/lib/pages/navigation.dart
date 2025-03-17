@@ -339,7 +339,7 @@ class _NavigationPageState extends State<NavigationPage> {
       bool withinAlertDistance = distanceToPoint < alertDistanceThreshold;
 
       // Change this condition:
-      if (withinAlertDistance && riskValue > 2) {  
+      if (withinAlertDistance && riskValue > 0.5) {  
         // Ensure notification is sent when within range
         if (riskValue > highestUpcomingRisk || highestUpcomingRisk == 0) {  
             highestUpcomingRisk = riskValue;
@@ -349,7 +349,7 @@ class _NavigationPageState extends State<NavigationPage> {
       }
     }
 
-    if (!_startRiskNotificationSent && currentRiskLevel > 2 && isOnRoute && riskPoint != null) {
+    if (!_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute && riskPoint != null) {
       _sendInitialRiskWarning(riskPoint, currentRiskLevel);
       _startRiskNotificationSent = true; // Mark notification as sent
     }
@@ -371,7 +371,7 @@ class _NavigationPageState extends State<NavigationPage> {
     lastOnRouteState = !confirmedOffRoute; // Update last known state
 
     // Only Notify if Moving into a New High-Risk Zone
-    bool enteringNewRiskZone = highestUpcomingRisk > 2 && highestUpcomingRisk > currentRiskLevel;
+    bool enteringNewRiskZone = highestUpcomingRisk > 0.5 && highestUpcomingRisk > currentRiskLevel;
 
     if (enteringNewRiskZone && riskPoint != null && isOnRoute) {
       bool alreadyNotified = detectedRiskZone.any((p) => notifiedZones.contains(p));
@@ -386,12 +386,12 @@ class _NavigationPageState extends State<NavigationPage> {
     }
 
     // Mark Passed Segments
-    if (currentRiskLevel > 2) {
+    if (currentRiskLevel > 0.5) {
       passedSegments.addAll(detectedRiskZone);
     }
 
     // Update _inRiskZone
-    _inRiskZone = currentRiskLevel > 2;
+    _inRiskZone = currentRiskLevel > 0.5;
   }
 
   // Function to map string values to double values
@@ -417,7 +417,7 @@ class _NavigationPageState extends State<NavigationPage> {
     String body;
 
     // Define notification message based on risk level
-    if (riskValue > 3) {
+    if (riskValue > 0.7) {
       title = "🚨 High Amphibian Risk!";
       body = "Slow down! High risk of amphibians ahead.";
     } else {
@@ -454,7 +454,7 @@ class _NavigationPageState extends State<NavigationPage> {
     String body;
 
     // Define notification message based on risk level
-    if (riskValue > 3) {
+    if (riskValue > 0.7) {
       title = "🚨 High Amphibian Risk!";
       body = "WARNING: You are currently in a high-risk zone for amphibians! Proceed with caution.";
     } else {
@@ -676,9 +676,9 @@ class _NavigationPageState extends State<NavigationPage> {
                       // Determine color based on raster value
                       Color lineColor;
                       if (current['raster_value'] != null) {
-                        if (current['raster_value'] > 3) {
+                        if (current['raster_value'] > 0.7) {
                           lineColor = Colors.red; // High risk
-                        } else if (current['raster_value'] > 2) {
+                        } else if (current['raster_value'] > 0.5) {
                           lineColor = Colors.orange; // Medium risk
                         } else {
                           lineColor = Colors.purple; // Default color

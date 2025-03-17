@@ -55,22 +55,17 @@ const getRasterValue = async (start) => {
 };
 
 // Route computation function
-const getRoute = async (start, end, re_route) => {
+const getRoute = async (start, end, lowRisk, selectedSpecies) => {
   try {
     // Get start and end nodes
-    // console.log("start: ", start);
-    // console.log("end: ", end);
-    // start:  { lat: 41.7013562, lon: -8.1685668 } 30095
-    // end:  { lat: 41.7319093, lon: -7.9765555 } 951623
-
     const startNodeQuery = `
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${start.lon}, ${start.lat}), 4326)::geography) AS dist
       FROM ways_vertices_pgr
       ORDER BY dist ASC
       LIMIT 1;
     `;
-    const startNode = await pool.query(startNodeQuery); 
-    console.log("startNode: ", startNode);
+    const startNode = await pool.query(startNodeQuery);
+    console.log("startNode", startNode.rows[0].id);
 
     const endNodeQuery = `
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)::geography) AS dist
@@ -78,19 +73,24 @@ const getRoute = async (start, end, re_route) => {
       ORDER BY dist ASC
       LIMIT 1;
     `;
-    const endNode = await pool.query(endNodeQuery); 
-    console.log("endNode: ", endNode);
+    const endNode = await pool.query(endNodeQuery);
+    console.log("endNode", endNode.rows[0].id);
 
     // Calculate bounding box
-    const bufferDistance = 0.05; // ~5km buffer
+    const bufferDistance = 0.05;
     const minLat = Math.min(start.lat, end.lat) - bufferDistance;
     const maxLat = Math.max(start.lat, end.lat) + bufferDistance;
     const minLon = Math.min(start.lon, end.lon) - bufferDistance;
     const maxLon = Math.max(start.lon, end.lon) + bufferDistance;
 
-    // Step 1: Create a temporary table with geometries within the bounding box
+    console.log("minLat", minLat);
+    console.log("maxLat", maxLat);
+    console.log("minLon", minLon);
+    console.log("maxLon", maxLon);
+
+    // Create a temporary table to store road segments and species info
     const createTempTableQuery = `
-      CREATE TEMP TABLE temp_ways (
+      CREATE TABLE temp_ways (
         gid INTEGER,
         source INTEGER,
         target INTEGER,
@@ -100,7 +100,8 @@ const getRoute = async (start, end, re_route) => {
         length_m DOUBLE PRECISION,
         maxspeed_forward DOUBLE PRECISION,
         maxspeed_backward DOUBLE PRECISION,
-        raster_value DOUBLE PRECISION DEFAULT NULL
+        raster_value DOUBLE PRECISION DEFAULT NULL,
+        species TEXT[] DEFAULT '{}'
       );
 
       INSERT INTO temp_ways (gid, source, target, cost, reverse_cost, the_geom, length_m, maxspeed_forward, maxspeed_backward)
@@ -115,67 +116,56 @@ const getRoute = async (start, end, re_route) => {
     await pool.query(createTempTableQuery);
     console.log("Temporary table created with bounding box.");
 
-    // Step 2: Add raster values to the temp table
+    // Update temp_ways with raster values and species lists
     const updateTempTableWithRasterQuery = `
       UPDATE temp_ways
-      SET raster_value = subquery.raster_value
+      SET raster_value = subquery.raster_value,
+          species = subquery.species
       FROM (
-          SELECT w_inner.gid,
-                ROUND(AVG(COALESCE(ST_Value(r.rast, 1, ST_Centroid(w_inner.the_geom)), 1))) AS raster_value
+          SELECT 
+              w_inner.gid,
+              AVG(LEAST(${selectedSpecies.map(species => `COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0)`).join(", ")})) AS raster_value,
+              ARRAY_AGG(DISTINCT CASE 
+                  ${selectedSpecies.map(species => `WHEN COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0) > 0 THEN '${species}'`).join(" ")}
+              END) FILTER (WHERE 
+                  ${selectedSpecies.map(species => `COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0) > 0`).join(" OR ")}
+              ) AS species
           FROM temp_ways w_inner
-          LEFT JOIN raster_table r 
-              ON ST_Intersects(r.rast, w_inner.the_geom)
+          ${selectedSpecies.map(species => `LEFT JOIN ${species.toLowerCase()} r_${species.toLowerCase()} 
+                                            ON ST_Intersects(r_${species.toLowerCase()}.rast, w_inner.the_geom)`).join("\n")}
           GROUP BY w_inner.gid
       ) AS subquery
       WHERE temp_ways.gid = subquery.gid;
     `;
     await pool.query(updateTempTableWithRasterQuery);
-    console.log("Raster values added to the temporary table.");
+    console.log("Raster values and species info added to the temporary table.");
 
     // Step 3: Run the pgr_dijkstra query on the temp table
     const routeQuery = `
       SELECT *,
-             ST_AsGeoJSON(the_geom) AS geojson,
-             maxspeed_forward,
-             maxspeed_backward
+            ST_AsGeoJSON(the_geom) AS geojson,
+            maxspeed_forward,
+            maxspeed_backward,
+            species
       FROM pgr_dijkstra(
         'SELECT gid AS id, 
                 source, 
                 target,
-                cost * 
-                  CASE
-                    WHEN raster_value = 1 THEN 1.1
-                    WHEN raster_value = 2 THEN 1.2
-                    WHEN raster_value = 3 THEN 1.5
-                    WHEN raster_value = 4 THEN 2
-                    WHEN raster_value = 5 THEN 3
-                    WHEN raster_value = 6 THEN 5
-                    ELSE 1
-                  END AS cost,
-                reverse_cost * 
-                  CASE
-                    WHEN raster_value = 1 THEN 1.1
-                    WHEN raster_value = 2 THEN 1.2
-                    WHEN raster_value = 3 THEN 1.5
-                    WHEN raster_value = 4 THEN 2
-                    WHEN raster_value = 5 THEN 3
-                    WHEN raster_value = 6 THEN 5
-                    ELSE 1
-                  END AS reverse_cost
-         FROM temp_ways',
+                cost * (1 + raster_value * 4) AS cost,
+                reverse_cost * (1 + raster_value * 4) AS reverse_cost
+        FROM temp_ways',
         ${startNode.rows[0].id}, 
         ${endNode.rows[0].id},
         directed := true
       ) AS route
       JOIN temp_ways ON route.edge = temp_ways.gid
-      ORDER BY route.seq; -- Ensure the results are ordered by seq
+      ORDER BY route.seq;
     `;
     const route = await pool.query(routeQuery);
-    // console.log(route.rows);
 
-    // Step 4: If the user doesn't allow re_routes return the default route
-    if (!re_route){
-      console.log("Entrei no !re_route.")
+    // Step 4: If the user doesn't want only the low-risk route, return the default route
+    if (!lowRisk) {
+      console.log("Fetching default route.");
       const routeDefault = `
         SELECT *,
         ST_AsGeoJSON(the_geom) AS geojson,
@@ -187,25 +177,37 @@ const getRoute = async (start, end, re_route) => {
           directed := true
         ) AS route
         JOIN temp_ways ON route.edge = temp_ways.gid
-        ORDER BY route.seq; -- Ensure the results are ordered by seq
-        `;
+        ORDER BY route.seq;
+      `;
 
-      const routeUnware = await pool.query(routeDefault);
-      console.log("routeUnware,", routeUnware.rows);
+      const routeUnaware = await pool.query(routeDefault);
+      console.log("Default route fetched.");
 
-      // Step 5: Clean up the temporary table
+      // Clean up the temporary table
       await pool.query("DROP TABLE IF EXISTS temp_ways;");
       console.log("Temporary table dropped.");
-    
-      // Send the two routes (even if the user doesn't allow re-routes) to give them the option nonetheless
-      return { adjustedRoute: route.rows, defaultRoute: routeUnware.rows };
-    }else{
-      return { adjustedRoute: route.rows };
-    }    
+
+      return { 
+        adjustedRoute: route.rows.map(row => ({
+          ...row,
+          species: row.species || []  // Ensure species info is included
+        })), 
+        defaultRoute: routeUnaware.rows 
+      };
+    } else {
+      await pool.query("DROP TABLE IF EXISTS temp_ways;");
+      return { 
+        adjustedRoute: route.rows.map(row => ({
+          ...row,
+          species: row.species || []  // Ensure species info is included
+        })) 
+      };
+    }
   } catch (err) {
     console.error(err);
   }
 };
+
 //  São Bento de Sexta Freita
 // 30095, 951623,
 
@@ -286,8 +288,8 @@ app.post("/send", (req, res) => {
 //Calls the getRoute function to get the routes (optimal and default or just optimal)
 app.post("/route", async (req, res) => {
   try {
-    const { start, end, re_route } = req.body;
-    const routes = await getRoute(start, end, re_route);
+    const { start, end, lowRisk, selectedSpecies } = req.body;
+    const routes = await getRoute(start, end, lowRisk, selectedSpecies);
 
     let responseData = {};
     let allRoutes = {}; // Store routes for comparison

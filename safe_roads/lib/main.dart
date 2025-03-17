@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:safe_roads/firebase_options.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
-import 'package:safe_roads/navigation_service.dart';
 import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/edit_profile.dart';
 import 'package:safe_roads/pages/home.dart';
@@ -39,8 +38,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NotificationPreferences()), 
       ], 
       child: MaterialApp(
-        // scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
-        // navigatorKey: _navigationService.navigatorKey, 
         initialRoute: '/navigation',
         routes: {
           '/': (context) => const Loading(),
@@ -59,4 +56,3 @@ void main() async {
 
 GlobalKey<NavigationBarExampleState> navigationBarKey = GlobalKey<NavigationBarExampleState>();
 final Notifications _notifications = Notifications();
-final NavigationService _navigationService = NavigationService();

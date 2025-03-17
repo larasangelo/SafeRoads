@@ -41,7 +41,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     {"name": "Reptiles", "icon": Icons.grass},
     {"name": "Hedgehogs", "icon": Icons.pets},
   ];
-  List<String> selectedSpecies = [];
+  List<String> selectedSpecies = ["Amphibians"];
 
   @override
   void initState() {
@@ -119,6 +119,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   Future<void> updateSelectedSpecies(List<String> newSelectedSpecies) async {
     // Use Provider to update the selectedSpecies value
     context.read<UserPreferences>().updateSelectedSpecies(newSelectedSpecies);
+    print("Entra no updateSelectedSpecies");
   }
 
 
@@ -541,27 +542,36 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   }
 
   Widget buildSpeciesGrid() {
+    final selectedSpecies = context.watch<UserPreferences>().selectedSpecies; // Watch provider state
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Select Species for Alerts", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
+        const Text(
+          "Select Species for Alerts",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0),
+        ),
         Wrap(
           spacing: 8.0,
           children: speciesOptions.map((species) {
             bool isSelected = selectedSpecies.contains(species["name"]);
             return ChoiceChip(
               label: Text(species["name"]),
-              avatar: Icon(species["icon"], color: isSelected ? Colors.white : Colors.black),
+              avatar: Icon(
+                species["icon"],
+                color: isSelected ? Colors.white : Colors.black,
+              ),
               selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    selectedSpecies.add(species["name"]);
-                  } else {
-                    selectedSpecies.remove(species["name"]);
-                  }
-                });
-                updatePreference("speciesAlerts", selectedSpecies);
+              onSelected: (selected) async {
+                List<String> updatedSelection = List.from(selectedSpecies);
+                if (selected) {
+                  updatedSelection.add(species["name"]);
+                } else {
+                  updatedSelection.remove(species["name"]);
+                }
+
+                updatePreference("selectedSpecies", updatedSelection);
+                await updateSelectedSpecies(updatedSelection); // Updates provider
               },
             );
           }).toList(),

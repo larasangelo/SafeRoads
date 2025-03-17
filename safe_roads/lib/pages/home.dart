@@ -95,7 +95,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       // Access the updated value of 'lowRisk' from the UserPreferences provider
       final userPreferences = Provider.of<UserPreferences>(context, listen: false);
       bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
-      List<String> selectedSpecies = userPreferences.selectedSpecies;
+      List<Object?> selectedSpecies = userPreferences.selectedSpecies;
 
       print("lowRisk: $lowRisk");
       print("selectedSpecies: $selectedSpecies");
@@ -108,6 +108,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           "start": {"lat": start.latitude, "lon": start.longitude},
           "end": {"lat": end.latitude, "lon": end.longitude},
           "lowRisk": lowRisk, // Use the updated value of lowRisk
+          "selectedSpecies": selectedSpecies,
         }),
       );
 
@@ -153,7 +154,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           double screenHeight = MediaQuery.of(context).size.height;
           _boxHeight = _hasRisk[_selectedRouteKey] == true 
               ? screenHeight * 0.35  // Adjust for risk message
-              : screenHeight * 0.25; // Default height
+              : screenHeight * 0.35; // Default heigh
         });
 
         print("_boxHeight, $_boxHeight");
@@ -383,327 +384,386 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
     // Rever, provavelmente este não é o sítio adequado
     final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-    List<String> selectedSpecies = userPreferences.selectedSpecies;
+    List<Object?> selectedSpecies = userPreferences.selectedSpecies;
 
     return 
       Scaffold(
-        body: Stack(
-          children: [
-            FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-              initialCenter: const LatLng(0, 0),
-              initialZoom: 12.0,
-              onPositionChanged: (position, hasGesture) {
-                _currentCenter = position.center;
-                _currentZoom = position.zoom;
-              },
-            ),
-              children: [
-                TileLayer(
-                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: const ['a', 'b', 'c'],
-                ),
-                if (_currentLocation != null)
-                  const MarkerLayer(
-                    markers: [
-                      Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                        // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                        child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
-                      ),
-                    ],
+        body: SafeArea(
+          child: Stack(
+            children: [
+              FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                initialCenter: const LatLng(0, 0),
+                initialZoom: 12.0,
+                onPositionChanged: (position, hasGesture) {
+                  _currentCenter = position.center;
+                  _currentZoom = position.zoom;
+                },
+              ),
+                children: [
+                  TileLayer(
+                    urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    subdomains: const ['a', 'b', 'c'],
                   ),
-                if (_destinationLocation != null)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: _destinationLocation!,
-                        child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
-                      ),
-                    ],
-                  ),
-                if (_routesWithPoints.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      // First, draw unselected routes (gray)
-                      ..._routesWithPoints.entries.expand<Polyline>((entry) {
-                        if (entry.key == _selectedRouteKey) return []; // Skip selected route for now
-
-                        final List<Map<String, dynamic>> routePoints = entry.value;
-                        if (routePoints.length < 2) return [];
-
-                        return List.generate(routePoints.length - 1, (index) {
-                          final current = routePoints[index];
-                          final next = routePoints[index + 1];
-
-                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
-
-                          return Polyline(
-                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                            strokeWidth: 4.0,
-                            color: Colors.grey.withOpacity(0.7), // Always gray for unselected routes
-                          );
-                        }).whereType<Polyline>(); // Remove null values
-                      }).toList(),
-
-                      // Now, draw the selected route last (so it's on top)
-                      if (_routesWithPoints.containsKey(_selectedRouteKey))
-                        ..._routesWithPoints[_selectedRouteKey]!.sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1).map((current) {
-                          final next = _routesWithPoints[_selectedRouteKey]![_routesWithPoints[_selectedRouteKey]!.indexOf(current) + 1];
-
-                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
-
-                          Color lineColor;
-                          if (current['raster_value'] > 3) {
-                            lineColor = Colors.red;
-                          } else if (current['raster_value'] > 2) {
-                            lineColor = Colors.orange;
-                          } else {
-                            lineColor = Colors.purple;
-                          }
-
-                          return Polyline(
-                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                            strokeWidth: 4.0,
-                            color: lineColor, // Selected route is colored
-                          );
-                        }).whereType<Polyline>(),
-                    ],
-                  ),
-                  Stack(
-                    children: [
-                      // Add Info Boxes on Routes
-                      for (var i = 0; i < _routesWithPoints.entries.length; i++) 
-                        if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
-                          Builder(
-                            builder: (context) {
-                              var entry = _routesWithPoints.entries.elementAt(i);
-                              var routePoints = entry.value;
-                              var midPointIndex = routePoints.length ~/ 2;
-
-                              // Get midpoint coordinates
-                              LatLng midPoint = routePoints[midPointIndex]['latlng'];
-
-                              // Compute dynamic offset to avoid overlap
-                              double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
-                              double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
-                              double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
-
-                              // Ensure selected route's box is more visible
-                              bool isSelectedRoute = entry.key == _selectedRouteKey;
-                              Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
-                              Color textColor = isSelectedRoute ? Colors.white : Colors.black;
-
-                              return Positioned(
-                                left: screenX,
-                                top: screenY,
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: boxColor,
-                                    borderRadius: BorderRadius.circular(10),
-                                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                  if (_currentLocation != null)
+                    const MarkerLayer(
+                      markers: [
+                        Marker(
+                          // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                          // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                          // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                          // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                          point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                          child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
+                        ),
+                      ],
+                    ),
+                  if (_destinationLocation != null)
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _destinationLocation!,
+                          child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
+                        ),
+                      ],
+                    ),
+                  if (_routesWithPoints.isNotEmpty)
+                    PolylineLayer(
+                      polylines: [
+                        // First, draw unselected routes (gray)
+                        ..._routesWithPoints.entries.expand<Polyline>((entry) {
+                          if (entry.key == _selectedRouteKey) return []; // Skip selected route for now
+          
+                          final List<Map<String, dynamic>> routePoints = entry.value;
+                          if (routePoints.length < 2) return [];
+          
+                          return List.generate(routePoints.length - 1, (index) {
+                            final current = routePoints[index];
+                            final next = routePoints[index + 1];
+          
+                            if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+          
+                            return Polyline(
+                              points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                              strokeWidth: 4.0,
+                              color: Colors.grey.withOpacity(0.7), // Always gray for unselected routes
+                            );
+                          }).whereType<Polyline>(); // Remove null values
+                        }).toList(),
+          
+                        // Now, draw the selected route last (so it's on top)
+                        if (_routesWithPoints.containsKey(_selectedRouteKey))
+                          ..._routesWithPoints[_selectedRouteKey]!.sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1).map((current) {
+                            final next = _routesWithPoints[_selectedRouteKey]![_routesWithPoints[_selectedRouteKey]!.indexOf(current) + 1];
+          
+                            if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+          
+                            Color lineColor;
+                            if (current['raster_value'] > 0.7) {
+                              lineColor = Colors.red;
+                            } else if (current['raster_value'] > 0.5) {
+                              lineColor = Colors.orange;
+                            } else {
+                              lineColor = Colors.purple;
+                            }
+          
+                            return Polyline(
+                              points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                              strokeWidth: 4.0,
+                              color: lineColor, // Selected route is colored
+                            );
+                          }).whereType<Polyline>(),
+                      ],
+                    ),
+                    Stack(
+                      children: [
+                        // Add Info Boxes on Routes
+                        for (var i = 0; i < _routesWithPoints.entries.length; i++) 
+                          if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
+                            Builder(
+                              builder: (context) {
+                                var entry = _routesWithPoints.entries.elementAt(i);
+                                var routePoints = entry.value;
+                                var midPointIndex = routePoints.length ~/ 2;
+          
+                                // Get midpoint coordinates
+                                LatLng midPoint = routePoints[midPointIndex]['latlng'];
+          
+                                // Compute dynamic offset to avoid overlap
+                                double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
+                                double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
+                                double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
+          
+                                // Ensure selected route's box is more visible
+                                bool isSelectedRoute = entry.key == _selectedRouteKey;
+                                Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
+                                Color textColor = isSelectedRoute ? Colors.white : Colors.black;
+          
+                                return Positioned(
+                                  left: screenX,
+                                  top: screenY,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: boxColor,
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          "${_times[entry.key]}",
+                                          style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Column(
+                                );
+                              },
+                            ),
+                      ],
+                    ),
+              Positioned(
+                top: 40.0,
+                left: 10.0,
+                right: 10.0,
+                child: Column(
+                  children: [
+                    if (_isFetchingRoute)       // Esta fetching a route E Nao tem a route
+                    LinearProgressIndicator(
+                      value: null, // Indeterminate progress
+                      backgroundColor: Colors.grey[200],
+                      color: Colors.blue,
+                    ),  // Nao esta fetching a route E ja tem a route
+                    TextField(
+                      controller: _addressController,
+                      decoration: InputDecoration(
+                        labelText: "Enter Destination",
+                        filled: true,
+                        fillColor: Colors.white,
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            navigationBarKey.currentState?.toggleNavigationBar(true);
+          
+                            // Reset the map state and UI elements
+                            setState(() {
+                              _cancelFetchingRoute = true; // Cancel the route-fetching process
+                              _routesWithPoints.clear();
+                              destinationSelected = false;
+                              selectedDestination = "";
+                              _destinationLocation = null;
+                              _addressController.text = "";
+                              _suggestions.clear();
+                              setDestVis = true;
+                              _isFetchingRoute = false;
+                            });
+                            // Center the map on the user's current location
+                            if (_currentLocation != null) {
+                              _mapController.move(
+                                // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                                // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                                // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                                // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                                const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                                13.0, // Adjust zoom level as needed
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8.0),
+                    if (_suggestions.isNotEmpty && !destinationSelected)
+                      Container(
+                        color: Colors.white,
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _suggestions.length,
+                          itemBuilder: (context, index) {
+                            // Assuming _suggestions holds a list of maps with name, city, and country
+                            final suggestion = _suggestions[index];
+                            return 
+                            ListTile(
+                              title: Text(
+                                suggestion['name'] ?? 'Unknown Name', // Default value for null case
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
+                                    ? '${suggestion['city']}, ${suggestion['country']}' // City and country
+                                    : (suggestion['country'] ?? 'Unknown Location'), //  Handle null country
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              onTap: () {
+                                // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag
+                                _addressController.text = suggestion['name'];
+                                FocusScope.of(context).unfocus(); // Dismiss the keyboard
+                                setState(() {
+                                  _suggestions.clear();
+                                  destinationSelected = true;
+                                  selectedDestination = _addressController.text;
+                                });
+                              }
+                            );
+                          },
+                        ),
+                      ),
+                    if(_routesWithPoints.isEmpty && setDestVis)
+                    ElevatedButton(
+                      onPressed: () {
+                        _setDestination();
+                        setState(() {
+                          setDestVis = false;
+                        });
+                      },
+                      child: const Text("Set Destination"),
+                    ),
+                  ],
+                ),
+              ),
+              //button when 
+              if (_routesWithPoints.isNotEmpty)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: _boxHeight, // Adjusted height for messages
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(30.0),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Risk message with dynamic spacing
+                        if (_routesWithPoints[_selectedRouteKey] != null)
+                          ...() {
+                            bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
+                                .any((point) => point['raster_value'] > 0.7);
+                            bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
+                                .any((point) => point['raster_value'] > 0.5 && point['raster_value'] <= 0.7);
+          
+                            if (hasHighRisk) {
+                              return [
+                                _buildRiskMessage("High probability of encountering ${selectedSpecies[0]}", Colors.red, context),
+                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
+                              ];
+                            } else if (hasMediumRisk) {
+                              return [
+                                _buildRiskMessage("Medium probability of encountering ${selectedSpecies[0]}", Colors.orange, context),
+                                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                              ];
+                            }
+                            return [];
+                          }(),
+          
+                        if (_routesWithPoints.length > 1)
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), // Dynamic padding
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  children: [
+                                    Text(
+                                      _distances[_selectedRouteKey] ?? "Unknown",
+                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    ),
+                                    SizedBox(height: MediaQuery.of(context).size.height * 0.01), // Dynamic spacing
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          final keys = _routesWithPoints.keys.toList();
+                                          int currentIndex = keys.indexOf(_selectedRouteKey);
+                                          _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                        });
+                                        print(" key: $_selectedRouteKey");
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                      ),
+                                      child: const Text("Switch Route", style: TextStyle(fontSize: 18.0)),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  children: [
+                                    Text(
+                                      _times[_selectedRouteKey] ?? "Unknown",
+                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    ),
+                                    SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        if (_routesWithPoints.containsKey(_selectedRouteKey)) {
+                                          List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
+          
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => NavigationPage(
+                                                _routesWithPoints,
+                                                _selectedRouteKey,
+                                                selectedRoute,
+                                                _distances,
+                                                _times,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                                      ),
+                                      child: const Text("Start", style: TextStyle(fontSize: 18.0)),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              height: MediaQuery.of(context).size.height * 0.15, // Dynamic height
+                              width: double.infinity,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.rectangle,
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(30.0)),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        "${_times[entry.key]}",
-                                        style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+                                        _distances[_selectedRouteKey] ?? "Unknown",
+                                        style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                      ),
+                                      SizedBox(width: MediaQuery.of(context).size.width * 0.1), // Dynamic width
+                                      Text(
+                                        _times[_selectedRouteKey] ?? "Unknown",
+                                        style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                       ),
                                     ],
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                    ],
-                  ),
-            Positioned(
-              top: 40.0,
-              left: 10.0,
-              right: 10.0,
-              child: Column(
-                children: [
-                  if (_isFetchingRoute)       // Esta fetching a route E Nao tem a route
-                  LinearProgressIndicator(
-                    value: null, // Indeterminate progress
-                    backgroundColor: Colors.grey[200],
-                    color: Colors.blue,
-                  ),  // Nao esta fetching a route E ja tem a route
-                  TextField(
-                    controller: _addressController,
-                    decoration: InputDecoration(
-                      labelText: "Enter Destination",
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          navigationBarKey.currentState?.toggleNavigationBar(true);
-
-                          // Reset the map state and UI elements
-                          setState(() {
-                            _cancelFetchingRoute = true; // Cancel the route-fetching process
-                            _routesWithPoints.clear();
-                            destinationSelected = false;
-                            selectedDestination = "";
-                            _destinationLocation = null;
-                            _addressController.text = "";
-                            _suggestions.clear();
-                            setDestVis = true;
-                            _isFetchingRoute = false;
-                          });
-                          // Center the map on the user's current location
-                          if (_currentLocation != null) {
-                            _mapController.move(
-                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                              // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                              // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                              13.0, // Adjust zoom level as needed
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8.0),
-                  if (_suggestions.isNotEmpty && !destinationSelected)
-                    Container(
-                      color: Colors.white,
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _suggestions.length,
-                        itemBuilder: (context, index) {
-                          // Assuming _suggestions holds a list of maps with name, city, and country
-                          final suggestion = _suggestions[index];
-                          return 
-                          ListTile(
-                            title: Text(
-                              suggestion['name'] ?? 'Unknown Name', // Default value for null case
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
-                                  ? '${suggestion['city']}, ${suggestion['country']}' // City and country
-                                  : (suggestion['country'] ?? 'Unknown Location'), //  Handle null country
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            onTap: () {
-                              // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag
-                              _addressController.text = suggestion['name'];
-                              FocusScope.of(context).unfocus(); // Dismiss the keyboard
-                              setState(() {
-                                _suggestions.clear();
-                                destinationSelected = true;
-                                selectedDestination = _addressController.text;
-                              });
-                            }
-                          );
-                        },
-                      ),
-                    ),
-                  if(_routesWithPoints.isEmpty && setDestVis)
-                  ElevatedButton(
-                    onPressed: () {
-                      _setDestination();
-                      setState(() {
-                        setDestVis = false;
-                      });
-                    },
-                    child: const Text("Set Destination"),
-                  ),
-                ],
-              ),
-            ),
-            //button when 
-            if (_routesWithPoints.isNotEmpty)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: _boxHeight, // Adjusted height for messages
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.rectangle,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(30.0),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Risk message with dynamic spacing
-                      if (_routesWithPoints[_selectedRouteKey] != null)
-                        ...() {
-                          bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > 3);
-                          bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > 2 && point['raster_value'] <= 3);
-
-                          if (hasHighRisk) {
-                            return [
-                              _buildRiskMessage("High probability of encountering ${selectedSpecies[0]}", Colors.red, context),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
-                            ];
-                          } else if (hasMediumRisk) {
-                            return [
-                              _buildRiskMessage("Medium probability of encountering ${selectedSpecies[0]}", Colors.orange, context),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-                            ];
-                          }
-                          return [];
-                        }(),
-
-                      if (_routesWithPoints.length > 1)
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), // Dynamic padding
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                children: [
-                                  Text(
-                                    _distances[_selectedRouteKey] ?? "Unknown",
-                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
-                                  ),
-                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01), // Dynamic spacing
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        final keys = _routesWithPoints.keys.toList();
-                                        int currentIndex = keys.indexOf(_selectedRouteKey);
-                                        _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                                      });
-                                      print(" key: $_selectedRouteKey");
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                    ),
-                                    child: const Text("Switch Route", style: TextStyle(fontSize: 18.0)),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                children: [
-                                  Text(
-                                    _times[_selectedRouteKey] ?? "Unknown",
-                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
-                                  ),
-                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
                                   ElevatedButton(
                                     onPressed: () {
                                       if (_routesWithPoints.containsKey(_selectedRouteKey)) {
                                         List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-
+          
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -718,76 +778,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                         );
                                       }
                                     },
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                                    ),
                                     child: const Text("Start", style: TextStyle(fontSize: 18.0)),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        )
-                      else
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Container(
-                            height: MediaQuery.of(context).size.height * 0.15, // Dynamic height
-                            width: double.infinity,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.rectangle,
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(30.0)),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      _distances[_selectedRouteKey] ?? "Unknown",
-                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
-                                    ),
-                                    SizedBox(width: MediaQuery.of(context).size.width * 0.1), // Dynamic width
-                                    Text(
-                                      _times[_selectedRouteKey] ?? "Unknown",
-                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (_routesWithPoints.containsKey(_selectedRouteKey)) {
-                                      List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => NavigationPage(
-                                            _routesWithPoints,
-                                            _selectedRouteKey,
-                                            selectedRoute,
-                                            _distances,
-                                            _times,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  child: const Text("Start", style: TextStyle(fontSize: 18.0)),
-                                ),
-                              ],
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ]),
-          ],
+              ]),
+            ],
+          ),
         ),
       );
   }
@@ -795,28 +798,20 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
 Widget _buildRiskMessage(String text, Color color, BuildContext context) {
   double screenWidth = MediaQuery.of(context).size.width;
-  double screenHeight= MediaQuery.of(context).size.height;
 
   return Padding(
-    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.01), // 6% of screen width and 1% of screen height
+    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06), 
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.center, // Centers content horizontally
-      crossAxisAlignment: CrossAxisAlignment.center, // Aligns items properly
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          Icons.warning,
-          color: color,
-          size: screenWidth * 0.1, // 10% of screen width
-        ),
-        SizedBox(width: screenWidth * 0.06), // 6% of screen width
-        Expanded( // Ensures text wraps properly
+        Icon(Icons.warning, color: color, size: screenWidth * 0.08), 
+        SizedBox(width: screenWidth * 0.04), 
+        Expanded(
           child: Text(
             text,
-            textAlign: TextAlign.left, // Aligns text left
-            softWrap: true, // Allows text to wrap instead of overflowing
-            overflow: TextOverflow.visible, // Ensures visibility
+            textAlign: TextAlign.left,
             style: TextStyle(
-              fontSize: screenWidth * 0.06, // 6% of screen width
+              fontSize: screenWidth * 0.06, 
               fontWeight: FontWeight.bold,
               color: color,
             ),
@@ -826,6 +821,3 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
     ),
   );
 }
-
-
-
