@@ -3,7 +3,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
-import 'package:safe_roads/navigation_service.dart';
 
 class Notifications {
   static final Notifications _instance = Notifications._internal();
@@ -28,11 +27,6 @@ class Notifications {
   VoidCallback? onSwitchRoute;
   VoidCallback? ignoreSwitchRoute;
 
-  // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
-  // StreamSubscription<RemoteMessage>? _messageSubscription;
-  // ---------------------------------------------------------------------------
-
-  // -------------------------COMENTADO PARA MOSTRAR--------------------------
   Future<StreamSubscription<RemoteMessage>?> setupFirebaseMessaging(BuildContext context, StreamSubscription<RemoteMessage>? messageSubscription) async {
     NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
@@ -47,7 +41,6 @@ class Notifications {
 
       if (messageSubscription != null) {
         print("Existing message subscription found. Ensuring it remains active.");
-        print("NOTIF Context: $context");
         // Re-subscribe to the message stream if necessary
         try {
           messageSubscription.resume(); // Try resuming if it was paused
@@ -79,37 +72,6 @@ class Notifications {
     }
     return null;
   }
-  // ---------------------------------------------------------------------------
-
-  // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
-  // Future<void> setupFirebaseMessaging() async {
-  //    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-  //      alert: true,
-  //      badge: true,
-  //      sound: true,
-  //    );
- 
-  //    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-  //      print("Notification permission granted");
-  //      fcmToken = await FirebaseMessaging.instance.getToken();
-  //      print("FCM Token: $fcmToken");
- 
-  //      // Prevent multiple listeners by checking if subscription already exists
-  //      if (_messageSubscription == null) {
-  //        // Listen for foreground messages if no active subscription
-  //        _messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-  //          print("Foreground message received: ${message.notification?.title}");
-  //          showForegroundNotification(message); // Show custom notification overlay
-  //        });
-  //      } else {
-  //        print("Message subscription already exists.");
-  //      }
-  //    } else {
-  //      print("Notification permission denied");
-  //    }
-  //  }
-  // ---------------------------------------------------------------------------
-
 
   Future<void> setupNotificationChannels() async {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -151,72 +113,36 @@ class Notifications {
   }
   
   void showForegroundNotification(RemoteMessage message) async {
-    print("Entra no showForegroundNotification");
-    // print("Dentro do showForegroundNotification context: $context");
-
     if (_latestContext == null) {
       print("No valid context available to show notification.");
       return;
     }
 
-    print("Notification context: $_latestContext");
     if (message.notification != null) {
-      // flutterLocalNotificationsPlugin.show(
-      //   0,
-      //   message.notification!.title, //null
-      //   message.notification!.body, //null
-      //   const NotificationDetails(
-      //     android: AndroidNotificationDetails(
-      //       'channel_id_1', // Must match the channel ID
-      //       'Default Notifications',
-      //       importance: Importance.high,
-      //       priority: Priority.high,
-      //       playSound: true,
-      //       icon: '@mipmap/ic_launcher',
-      //       // visibility: NotificationVisibility.secret, // Hidden notification
-      //       // showWhen: false, // Prevents the time from being shown
-      //       // shortcutId: "silent_notification", //unique Id
-      //     ),
-      //   ),
-      // );
-      playNotificationSound();
+      flutterLocalNotificationsPlugin.show(
+        0,
+        null, // message.notification!.title
+        null, // message.notification!.body
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'channel_id_1', // Must match the channel ID
+            'Default Notifications',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            icon: '@mipmap/ic_launcher',
+            visibility: NotificationVisibility.secret, // Hidden notification
+            showWhen: false, // Prevents the time from being shown
+            shortcutId: "silent_notification", //unique Id
+          ),
+        ),
+      );
+      // playNotificationSound();
 
       bool showButton = message.data['button'] == 'true'; 
       bool changeRoute = message.data['changeRoute'] == 'true';
 
-
-      // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
-      // if (scaffoldMessengerKey.currentContext == null) {
-      //   print("Warning: No valid context available for overlay.");
-      //   return;
-      // }
-      // --------------------------------------------------------------------------
-
-      // -------------------------COMENTADO PARA MOSTRAR--------------------------
-      // BuildContext? overlayContext = scaffoldMessengerKey.currentContext;
-      // print("NOTIF scaffoldMessengerKey.currentContext, ${scaffoldMessengerKey.currentContext}");
-
-      // if (overlayContext == null) {
-      //   print("Warning: No valid context available for overlay.");
-      //   return;
-      // }
-
-      // final overlay = Overlay.of(overlayContext, rootOverlay: true);
-      // if (overlay == null) {  // <- Add this check
-      //   print("Error: No Overlay widget found.");
-      //   return;
-      // }
-      // --------------------------------------------------------------------------
-
-
-      // BuildContext? navigationContext = _navigationService.navigatorKey.currentContext; //Use navigation service context
-      // print("NOTIF navigationContext, ${navigationContext}");
-
       final overlay = Overlay.of(_latestContext!, rootOverlay: true);
-      if (overlay == null) {
-        print("Error: No Overlay widget found.");
-        return;
-      }
 
       late OverlayEntry overlayEntry;
       bool isInteracted = false; 
@@ -424,29 +350,19 @@ class Notifications {
         },
       );
 
-      // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
-      // final overlay = Overlay.of(scaffoldMessengerKey.currentContext!);
-      // ----------------------------------------------------------------------------
+      overlay.insert(overlayEntry);
 
-      if (overlay != null) {
-        overlay.insert(overlayEntry);
-
-        Future.delayed(const Duration(seconds: 5), () {
-          overlayEntry.remove();    
-          if (!isInteracted) {
-            // Perform action based on changeRoute flag
-            if (changeRoute && onSwitchRoute != null) {
-              // print("Pediu para switchRoute");
-              onSwitchRoute!();
-            } else if (!changeRoute && ignoreSwitchRoute != null) {
-              // print("Pediu para ignorar switchRoute");
-              ignoreSwitchRoute!();
-            }
+      Future.delayed(const Duration(seconds: 5), () {
+        overlayEntry.remove();    
+        if (!isInteracted) {
+          // Perform action based on changeRoute flag
+          if (changeRoute && onSwitchRoute != null) {
+            onSwitchRoute!();
+          } else if (!changeRoute && ignoreSwitchRoute != null) {
+            ignoreSwitchRoute!();
           }
-        });
-      } else {
-        print("Warning: Overlay is null, skipping notification display.");
-      }
+        }
+      });
     }
   }
 }

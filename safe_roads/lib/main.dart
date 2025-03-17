@@ -51,6 +51,7 @@ void main() async {
           '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
           '/editProfile': (context) => const EditProfile()
         },
+        debugShowCheckedModeBanner: false,
       ),
     ),
   );

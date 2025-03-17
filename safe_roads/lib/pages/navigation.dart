@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart'; // For coordinates
+import 'package:latlong2/latlong.dart'; 
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -70,15 +70,12 @@ class _NavigationPageState extends State<NavigationPage> {
     routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
     location = Location();
 
-    // print("Navigation: scaffoldMessengerKey.currentContext, ${_notifications.scaffoldMessengerKey.currentContext}");
-
     // Assign the callback to handle rerouting
     _notifications.onSwitchRoute = switchToAdjustedRoute;
     _notifications.ignoreSwitchRoute = keepDefaultRoute;
 
     _initializeLocation();
 
-    // print("widget.time, ${widget.times[selectedRouteKey]}");
     _calculateArrivalTime(widget.times[selectedRouteKey] ?? "0 min");
 
     locationSubscription = location.onLocationChanged.listen((LocationData loc) {
@@ -121,25 +118,17 @@ class _NavigationPageState extends State<NavigationPage> {
   Future<void> updateMessageSubscription(StreamSubscription<RemoteMessage> newValue) async {
     // Use Provider to update the messageSubscription value
     context.read<NotificationPreferences>().updateMessageSubscription(newValue);
-    // print("Passei pelo updateMessageSubscription");
   }
 
   Future<void> _initializeLocation() async {
     bool serviceEnabled;
     PermissionStatus permissionGranted;
 
-    // -------------------------COMENTADO PARA MOSTRAR--------------------------
     final notificationPreferences = Provider.of<NotificationPreferences>(context, listen: false);
     StreamSubscription<RemoteMessage>? messageSubscription = notificationPreferences.messageSubscription; 
 
     StreamSubscription<RemoteMessage>? result = await _notifications.setupFirebaseMessaging(context, messageSubscription); 
     updateMessageSubscription(result!);
-    print("NAV Context: $context");
-    // ---------------------------------------------------------------------------
-
-    // -------------------VOLTAR A COMENTAR DEPOIS DE MOSTRAR----------------------
-    // await _notifications.setupFirebaseMessaging(); 
-    // ------------------------------------------------------------------------------
 
     // Check if location services are enabled
     serviceEnabled = await location.serviceEnabled();
@@ -164,6 +153,32 @@ class _NavigationPageState extends State<NavigationPage> {
     setState(() {
       currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
     });
+
+    // -------------------- TESTE NO DISPOSITIVO FÍSICO ------------------------
+    // String title = "🚨 TESTE!";
+    // String body = "Isto é um teste para o dispositivo móvel.";
+
+    // try {
+    //   final response = await http.post(
+    //     Uri.parse('http://192.168.1.82:3000/send'),
+    //     // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
+    //     headers: {"Content-Type": "application/json"},
+    //     body: jsonEncode({
+    //       "fcmToken": _notifications.fcmToken,
+    //       "title": title,
+    //       "body": body,
+    //       "button": "false",
+    //       "changeRoute": "false"
+    //     }),
+    //   );
+
+    //   if (response.statusCode == 200) {
+    //     print("Risk alert sent successfully: $title");
+    //   }
+    // } catch (e) {
+    //   print("Error sending risk alert: $e");
+    // }
+    // ------------------------------------------------------------------------
   }
 
   void _calculateArrivalTime(String travelTime) {
@@ -289,9 +304,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Convert string to a double in meters
     double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
-    // print("alertDistanceThreshold $alertDistanceThreshold");
 
-    // const double alertDistanceThreshold = 150.0; // Notify before entering risk zone
     const double routeDeviationThreshold = 50.0;  // Detect wrong route
     const Distance distance = Distance();
 
@@ -333,7 +346,6 @@ class _NavigationPageState extends State<NavigationPage> {
             riskPoint = point;
         }
         detectedRiskZone.add(point);
-        // print("detectedRiskZone: $detectedRiskZone");
       }
     }
 
@@ -399,7 +411,6 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendRiskWarning(LatLng riskPoint, int riskValue) async {
-    // if (notifiedZones.contains(riskPoint)) return;
     notifiedZones.add(riskPoint);
 
     String title;
@@ -437,7 +448,6 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendInitialRiskWarning(LatLng riskPoint, int riskValue) async {
-    // if (notifiedZones.contains(riskPoint)) return;
     notifiedZones.add(riskPoint);
 
     String title;
@@ -510,15 +520,12 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // Convert string to a double in meters
     double alertThreshold = _convertAlertDistance(rerouteAlertDistance);
-    // print("alertThreshold $alertThreshold");
-    // print("changeRoute no navigation $changeRoute");
 
     List<Map<String, dynamic>> defaultRoute = widget.routesWithPoints['defaultRoute'] ?? [];
     List<Map<String, dynamic>> adjustedRoute = widget.routesWithPoints['adjustedRoute'] ?? [];
 
     if (defaultRoute.isEmpty || adjustedRoute.isEmpty) return;
 
-    // const double alertThreshold = 250.0; // Notify before divergence
     const Distance distance = Distance();
 
     List<LatLng> divergencePoints = [];
@@ -634,11 +641,6 @@ class _NavigationPageState extends State<NavigationPage> {
     // Cancel location updates
     locationSubscription?.cancel();
     
-    //Reset current position to null if needed
-    // setState(() {
-    //   currentPosition = null;
-    // });
-
     print("NavigationPage disposed. Stopping location updates and clearing resources.");
     
     super.dispose();
@@ -647,8 +649,6 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   Widget build(BuildContext context) {
     return 
-      // scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
-      // navigatorKey: NavigationService.navigatorKey, // Use the new navigator key
       Scaffold(
         body: SafeArea(
           child: Stack(

@@ -19,7 +19,6 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin  {
-  // final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final MapController _mapController = MapController();
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
@@ -54,7 +53,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     _mapController.mapEventStream.listen((event) {
         setState(() {}); // Update UI dynamically when the map moves
       });
-    // print("Home: scaffoldMessengerKey.currentContext, ${_notifications.scaffoldMessengerKey.currentContext}");
   }
 
   Future<void> _requestLocationPermission() async {
@@ -110,7 +108,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           "start": {"lat": start.latitude, "lon": start.longitude},
           "end": {"lat": end.latitude, "lon": end.longitude},
           "lowRisk": lowRisk, // Use the updated value of lowRisk
-          // "lowRisk": userPreferences["lowRisk"], // Use the updated value of lowRisk
         }),
       );
 
@@ -151,7 +148,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _isFetchingRoute = false; // Hide the progress bar
           _selectedRouteKey = _routesWithPoints.keys.first;
           _hasRisk = hasRisk;
-          _boxHeight = _hasRisk[_selectedRouteKey] == true ? 220 : 180;
+
+          // Dynamically set box height
+          double screenHeight = MediaQuery.of(context).size.height;
+          _boxHeight = _hasRisk[_selectedRouteKey] == true 
+              ? screenHeight * 0.35  // Adjust for risk message
+              : screenHeight * 0.25; // Default height
         });
 
         print("_boxHeight, $_boxHeight");
@@ -160,7 +162,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         if (routesWithPoints.isNotEmpty) {
           List<LatLng> allPoints = routesWithPoints.values.expand((list) => list.map((p) => p['latlng'] as LatLng)).toList();
           LatLngBounds bounds = _calculateBounds(allPoints);
-          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(20)));
+          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(25)));
         }
       } else {
         throw Exception("Failed to fetch route: ${response.body}");
@@ -190,9 +192,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         final lon = data['lon'];
         return LatLng(lat, lon);
       } else {
-        // scaffoldMessengerKey.currentState?.showSnackBar(
-        //   SnackBar(content: Text("Error: ${jsonDecode(response.body)['error']}")),
-        // );
         print("Error: ${jsonDecode(response.body)['error']}");
       }
     } catch (e) {
@@ -305,7 +304,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     double lngRange = maxLng - minLng;
 
     // Determine buffer dynamically based on the route's size
-    double buffer = (latRange + lngRange) * 0.1; // 10% of total span
+    double buffer = (latRange + lngRange) * 0.15; // 15% of total span
     double bottomBuffer = buffer * 3; // Extra buffer at the bottom
 
     return LatLngBounds(
@@ -387,7 +386,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     List<String> selectedSpecies = userPreferences.selectedSpecies;
 
     return 
-      // scaffoldMessengerKey: _notifications.scaffoldMessengerKey,
       Scaffold(
         body: Stack(
           children: [
@@ -524,7 +522,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           ),
                     ],
                   ),
-
             Positioned(
               top: 40.0,
               left: 10.0,
@@ -644,7 +641,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Display risk message if applicable
+                      // Risk message with dynamic spacing
                       if (_routesWithPoints[_selectedRouteKey] != null)
                         ...() {
                           bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
@@ -654,22 +651,21 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
                           if (hasHighRisk) {
                             return [
-                              _buildRiskMessage("High probability of encountering ${selectedSpecies[0]}", Colors.red),
-                              const SizedBox(height: 20),
+                              _buildRiskMessage("High probability of encountering ${selectedSpecies[0]}", Colors.red, context),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
                             ];
                           } else if (hasMediumRisk) {
                             return [
-                              _buildRiskMessage("Medium probability of encountering ${selectedSpecies[0]}", Colors.orange),
-                              const SizedBox(height: 20),
+                              _buildRiskMessage("Medium probability of encountering ${selectedSpecies[0]}", Colors.orange, context),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                             ];
                           }
                           return [];
                         }(),
 
-                      if (_routesWithPoints.length > 1) 
-                        // More than one route exists - Show switchable format
+                      if (_routesWithPoints.length > 1)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), // Dynamic padding
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -679,7 +675,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     _distances[_selectedRouteKey] ?? "Unknown",
                                     style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                   ),
-                                  const SizedBox(height: 10),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01), // Dynamic spacing
                                   ElevatedButton(
                                     onPressed: () {
                                       setState(() {
@@ -692,10 +688,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                     ),
-                                    child: const Text(
-                                      "Switch Route",
-                                      style: TextStyle(fontSize: 18.0),
-                                    ),
+                                    child: const Text("Switch Route", style: TextStyle(fontSize: 18.0)),
                                   ),
                                 ],
                               ),
@@ -705,7 +698,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     _times[_selectedRouteKey] ?? "Unknown",
                                     style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                   ),
-                                  const SizedBox(height: 10),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01),
                                   ElevatedButton(
                                     onPressed: () {
                                       if (_routesWithPoints.containsKey(_selectedRouteKey)) {
@@ -728,25 +721,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                                     ),
-                                    child: const Text(
-                                      "Start",
-                                      style: TextStyle(fontSize: 18.0),
-                                    ),
+                                    child: const Text("Start", style: TextStyle(fontSize: 18.0)),
                                   ),
                                 ],
                               ),
                             ],
                           ),
                         )
-                      else 
-                        // Only one route exists - Show simple format
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
+                      else
+                        Align(
+                          alignment: Alignment.bottomCenter,
                           child: Container(
-                            height: 110,
-                            alignment: Alignment.center,
+                            height: MediaQuery.of(context).size.height * 0.15, // Dynamic height
+                            width: double.infinity,
                             decoration: const BoxDecoration(
                               color: Colors.white,
                               shape: BoxShape.rectangle,
@@ -762,14 +749,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       _distances[_selectedRouteKey] ?? "Unknown",
                                       style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                     ),
-                                    const SizedBox(width: 50),
+                                    SizedBox(width: MediaQuery.of(context).size.width * 0.1), // Dynamic width
                                     Text(
                                       _times[_selectedRouteKey] ?? "Unknown",
                                       style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 20),
+                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
                                 ElevatedButton(
                                   onPressed: () {
                                     if (_routesWithPoints.containsKey(_selectedRouteKey)) {
@@ -789,10 +776,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       );
                                     }
                                   },
-                                  child: const Text(
-                                    "Start",
-                                    style: TextStyle(fontSize: 18.0),
-                                  ),
+                                  child: const Text("Start", style: TextStyle(fontSize: 18.0)),
                                 ),
                               ],
                             ),
@@ -809,23 +793,30 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 }
 
-Widget _buildRiskMessage(String text, Color color) {
+Widget _buildRiskMessage(String text, Color color, BuildContext context) {
+  double screenWidth = MediaQuery.of(context).size.width;
+  double screenHeight= MediaQuery.of(context).size.height;
+
   return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.01), // 6% of screen width and 1% of screen height
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center, // Centers content horizontally
       crossAxisAlignment: CrossAxisAlignment.center, // Aligns items properly
       children: [
-        Icon(Icons.warning, color: color, size: 40),
-        const SizedBox(width: 30),
+        Icon(
+          Icons.warning,
+          color: color,
+          size: screenWidth * 0.1, // 10% of screen width
+        ),
+        SizedBox(width: screenWidth * 0.06), // 6% of screen width
         Expanded( // Ensures text wraps properly
           child: Text(
             text,
-            textAlign: TextAlign.left, // Centers text
+            textAlign: TextAlign.left, // Aligns text left
             softWrap: true, // Allows text to wrap instead of overflowing
             overflow: TextOverflow.visible, // Ensures visibility
             style: TextStyle(
-              fontSize: 22.0,
+              fontSize: screenWidth * 0.06, // 6% of screen width
               fontWeight: FontWeight.bold,
               color: color,
             ),
