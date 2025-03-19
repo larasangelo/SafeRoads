@@ -90,7 +90,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
 
     // Create a temporary table to store road segments and species info
     const createTempTableQuery = `
-      CREATE TABLE temp_ways (
+      CREATE TEMP TABLE temp_ways (
         gid INTEGER,
         source INTEGER,
         target INTEGER,
@@ -195,7 +195,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
         defaultRoute: routeUnaware.rows 
       };
     } else {
-      await pool.query("DROP TABLE IF EXISTS temp_ways;");
+      // await pool.query("DROP TABLE IF EXISTS temp_ways;");
       return { 
         adjustedRoute: route.rows.map(row => ({
           ...row,

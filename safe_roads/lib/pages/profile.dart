@@ -24,7 +24,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   bool notifications = true;
   bool tolls = false;
   String measure = "km";
-  String riskAlertDistance = "100 m";
+  String riskAlertDistance = "250 m";
   String rerouteAlertDistance = "250 m";
 
   String username = "Loading...";
@@ -41,7 +41,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     {"name": "Reptiles", "icon": Icons.grass},
     {"name": "Hedgehogs", "icon": Icons.pets},
   ];
-  List<String> selectedSpecies = ["Amphibians"];
+  List<Object?> selectedSpecies = ["Amphibians"];
 
   @override
   void initState() {
@@ -79,7 +79,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           country = userProfile['country'] ?? "Unknown";
           tolls = userProfile['tolls'] as bool;
           measure = userProfile['measure'] ?? "km";
-          riskAlertDistance = userProfile['riskAlertDistance'] ?? "100 m";
+          riskAlertDistance = userProfile['riskAlertDistance'] ?? "250 m";
           rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
           level = userProfile['level'] as int;
           distance = userProfile['distance'] as int;
@@ -116,7 +116,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     context.read<UserPreferences>().updateChangeRoute(newValue);
   }
 
-  Future<void> updateSelectedSpecies(List<String> newSelectedSpecies) async {
+  Future<void> updateSelectedSpecies(List<Object?> newSelectedSpecies) async {
     // Use Provider to update the selectedSpecies value
     context.read<UserPreferences>().updateSelectedSpecies(newSelectedSpecies);
     print("Entra no updateSelectedSpecies");
@@ -471,7 +471,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         trailing: DropdownButton<String>(
           value: riskAlertDistance,
           items: const [
-            DropdownMenuItem(value: "100 m", child: Text("100 m")),
+            DropdownMenuItem(value: "250 m", child: Text("250 m")),
             DropdownMenuItem(value: "500 m", child: Text("500 m")),
             DropdownMenuItem(value: "1 km", child: Text("1 km")),
           ],
@@ -563,7 +563,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               ),
               selected: isSelected,
               onSelected: (selected) async {
-                List<String> updatedSelection = List.from(selectedSpecies);
+                List<Object?> updatedSelection = List.from(selectedSpecies);
                 if (selected) {
                   updatedSelection.add(species["name"]);
                 } else {

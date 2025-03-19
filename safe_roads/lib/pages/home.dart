@@ -102,7 +102,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://10.101.120.127:3000/route'), // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -157,7 +157,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
               : screenHeight * 0.35; // Default heigh
         });
 
-        print("_boxHeight, $_boxHeight");
+        // print("_boxHeight, $_boxHeight");
 
         // Adjust map view to fit all routes
         if (routesWithPoints.isNotEmpty) {
@@ -182,7 +182,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/geocode'),
-        // Uri.parse('http://10.101.120.127:3000/geocode'), // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -231,7 +231,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.get(
         Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://10.101.120.127:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
       if (response.statusCode == 200) {
@@ -460,9 +460,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
           
                             Color lineColor;
-                            if (current['raster_value'] > 0.7) {
+                            if (current['raster_value'] > 0.5) {
                               lineColor = Colors.red;
-                            } else if (current['raster_value'] > 0.5) {
+                            } else if (current['raster_value'] > 0.3) {
                               lineColor = Colors.orange;
                             } else {
                               lineColor = Colors.purple;
@@ -647,9 +647,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         if (_routesWithPoints[_selectedRouteKey] != null)
                           ...() {
                             bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
-                                .any((point) => point['raster_value'] > 0.7);
+                                .any((point) => point['raster_value'] > 0.5);
                             bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
-                                .any((point) => point['raster_value'] > 0.5 && point['raster_value'] <= 0.7);
+                                .any((point) => point['raster_value'] > 0.3 && point['raster_value'] <= 0.5);
           
                             if (hasHighRisk) {
                               return [

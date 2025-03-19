@@ -5,7 +5,7 @@ class UserPreferences with ChangeNotifier {
   final ProfileController _profileController = ProfileController();
 
   bool _lowRisk = false;
-  String _riskAlertDistance = "100 m";
+  String _riskAlertDistance = "250 m";
   String _rerouteAlertDistance = "250 m";
   bool _changeRoute = true;
   List<Object?> _selectedSpecies = ["Amphibians"];
@@ -24,7 +24,7 @@ class UserPreferences with ChangeNotifier {
     try {
       final userProfile = await _profileController.fetchUserProfile();
       _lowRisk = userProfile['lowRisk'] ?? false;
-      _riskAlertDistance = userProfile['riskAlertDistance'] ?? "100 m";
+      _riskAlertDistance = userProfile['riskAlertDistance'] ?? "250 m";
       _rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
       _changeRoute = userProfile['changeRoute'] ?? true;
       _selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
@@ -54,7 +54,7 @@ class UserPreferences with ChangeNotifier {
     notifyListeners();
   }
 
-  void updateSelectedSpecies(List<String> newSelectedSpecies) {
+  void updateSelectedSpecies(List<Object?> newSelectedSpecies) {
     _selectedSpecies = newSelectedSpecies;
     notifyListeners();
   }

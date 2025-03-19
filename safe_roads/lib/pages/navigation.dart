@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -47,9 +48,8 @@ class _NavigationPageState extends State<NavigationPage> {
   int consecutiveOffRouteCount = 0; // Track how many times user is "off-route"
   int offRouteThreshold = 7; // Require 7 consecutive off-route detections
   bool lastOnRouteState = true; // Track last known on-route state
-  bool _startRiskNotificationSent = false; // Track if the initial notification was sent
   List<dynamic> notifiedDivergences = [];
-
+  bool _firstRiskDetected = false;
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -160,8 +160,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     // try {
     //   final response = await http.post(
-    //     Uri.parse('http://192.168.1.82:3000/send'),
-    //     // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
+    //    // Uri.parse('http://192.168.1.82:3000/send'),
+    //  // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
     //     headers: {"Content-Type": "application/json"},
     //     body: jsonEncode({
     //       "fcmToken": _notifications.fcmToken,
@@ -223,7 +223,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.120.127:3000/update-position'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -295,103 +295,151 @@ class _NavigationPageState extends State<NavigationPage> {
     return (atan2(y, x) * 180 / pi + 360) % 360;
   }
 
-
   void _checkRiskZone() async {
     if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
 
     final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-    String riskAlertDistance = userPreferences.riskAlertDistance; // Get the user's preference
+    String riskAlertDistance = userPreferences.riskAlertDistance;
 
-    // Convert string to a double in meters
     double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
-
-    const double routeDeviationThreshold = 50.0;  // Detect wrong route
+    const double routeDeviationThreshold = 50.0;
     const Distance distance = Distance();
 
     bool isOnRoute = false;
-    int highestUpcomingRisk = 0;
-    int currentRiskLevel = 0;
-    LatLng? riskPoint;
-
-    Set<LatLng> detectedRiskZone = {}; 
+    double highestUpcomingRisk = 0;
+    double currentRiskLevel = 0;
+    Set<LatLng> detectedRiskZones = {};  
+    Map<LatLng, double> upcomingRisks = {}; // Store multiple risk points
 
     for (var segment in routeCoordinates) {
       if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
 
       LatLng point = segment['latlng'];
       double distanceToPoint = distance(currentPosition!, point);
-      int riskValue = segment['raster_value'];
+      double riskValue = segment['raster_value'];
 
-      // Skip segments already passed
       if (passedSegments.contains(point)) continue;
 
-      // Check if user is on the route (more stable check)
       if (distanceToPoint < routeDeviationThreshold) {
         isOnRoute = true;
       }
 
-      // Update current risk level
       if (distanceToPoint < routeDeviationThreshold && riskValue > currentRiskLevel) {
         currentRiskLevel = riskValue;
       }
 
-      // Force notification at the alert threshold distance
       bool withinAlertDistance = distanceToPoint < alertDistanceThreshold;
 
-      // Change this condition:
-      if (withinAlertDistance && riskValue > 0.5) {  
-        // Ensure notification is sent when within range
-        if (riskValue > highestUpcomingRisk || highestUpcomingRisk == 0) {  
-            highestUpcomingRisk = riskValue;
-            riskPoint = point;
+      if (withinAlertDistance && riskValue > 0.3) {
+        upcomingRisks[point] = riskValue;  // Store all upcoming risk values
+        detectedRiskZones.add(point);
+        if (riskValue > highestUpcomingRisk || highestUpcomingRisk == 0) {
+          highestUpcomingRisk = riskValue;
         }
-        detectedRiskZone.add(point);
       }
     }
 
-    if (!_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute && riskPoint != null) {
-      _sendInitialRiskWarning(riskPoint, currentRiskLevel);
-      _startRiskNotificationSent = true; // Mark notification as sent
+    String currentRiskCategory = getRiskCategory(currentRiskLevel);
+
+    // Process all upcoming risk points (instead of just the highest)
+    for (var entry in upcomingRisks.entries) {
+      LatLng riskPoint = entry.key;
+      double riskValue = entry.value;
+      String upcomingRiskCategory = getRiskCategory(riskValue);
+
+      bool enteringNewRiskZone = false;
+
+      if ((currentRiskCategory == "Low" && upcomingRiskCategory == "Medium") ||
+          (currentRiskCategory == "Low" && upcomingRiskCategory == "High") ||
+          (currentRiskCategory == "Medium" && upcomingRiskCategory == "High")) {
+        enteringNewRiskZone = true;
+      }
+
+      print("enteringNewRiskZone: $enteringNewRiskZone, highestUpcomingRisk: $highestUpcomingRisk, currentRiskLevel: $currentRiskLevel");
+
+      if (!enteringNewRiskZone) continue; // Skip if not transitioning to a new risk
+
+      Set<LatLng> connectedRiskZone = _findConnectedRiskZone(riskPoint, upcomingRiskCategory);
+
+      print("Connected Risk Zone Size: ${connectedRiskZone.length}");
+
+      if (connectedRiskZone.difference(notifiedZones).isNotEmpty) {
+        print("🔔 Sending notification for risk at $riskPoint (Risk Level: $riskValue)");
+        print("connectedRiskZone, $connectedRiskZone");
+        print("notifiedZones, $notifiedZones");
+        _sendRiskWarning(riskPoint, riskValue);
+        notifiedZones.addAll(connectedRiskZone);
+      } else {
+        print("⚠️ Risk already notified: Skipping notification for $riskPoint");
+      }
     }
 
-    // Prevent sudden flips between "on-route" and "off-route"
-    if (isOnRoute) {
-      consecutiveOffRouteCount = 0; // Reset counter if back on track
+    if (currentRiskLevel > 0.3) {
+      passedSegments.addAll(detectedRiskZones);
+    }
+
+    _inRiskZone = currentRiskLevel > 0.3;
+  }
+
+  // Determine risk category
+  String getRiskCategory(double riskLevel) {
+    if (riskLevel < 0.3) return "Low";
+    if (riskLevel >= 0.3 && riskLevel < 0.5) return "Medium";
+    return "High";
+  }
+
+  // Find all connected segments in the same risk category
+  Set<LatLng> _findConnectedRiskZone(LatLng startPoint, String riskCategory) {
+    Set<LatLng> connectedZone = {};
+    Queue<LatLng> queue = Queue();
+
+    // Define the threshold for different risk categories
+    double threshold;
+    if (riskCategory == "Medium") {
+      threshold = 0.3;
+    } else if (riskCategory == "High") {
+      threshold = 0.5;
     } else {
-      consecutiveOffRouteCount++; // Count how many times user is "off-route"
+      threshold = double.infinity; 
     }
 
-    bool confirmedOffRoute = consecutiveOffRouteCount >= offRouteThreshold;
+    // Initialize with the startPoint
+    connectedZone.add(startPoint);
+    queue.add(startPoint);
 
-    // Only send off-route warning if user was previously on route and now confirmed off-route
-    if (confirmedOffRoute && lastOnRouteState) {
-      _sendOffRouteWarning();
+    // Find the starting point index in routeCoordinates
+    int startIndex = routeCoordinates.indexWhere((segment) {
+      return segment['latlng'] == startPoint;
+    });
+
+    if (startIndex == -1) {
+      // If startPoint is not found, return an empty set or handle error
+      return connectedZone; 
     }
 
-    lastOnRouteState = !confirmedOffRoute; // Update last known state
+    // Now, iterate through the routeCoordinates from the startPoint onward
+    for (int i = startIndex; i < routeCoordinates.length; i++) {
+      var segment = routeCoordinates[i];
+      
+      if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
 
-    // Only Notify if Moving into a New High-Risk Zone
-    bool enteringNewRiskZone = highestUpcomingRisk > 0.5 && highestUpcomingRisk > currentRiskLevel;
+      LatLng point = segment['latlng'];
+      double riskValue = segment['raster_value'];
+      String segmentCategory = getRiskCategory(riskValue);
 
-    if (enteringNewRiskZone && riskPoint != null && isOnRoute) {
-      bool alreadyNotified = detectedRiskZone.any((p) => notifiedZones.contains(p));
-
-      if (!alreadyNotified) {
-        _sendRiskWarning(riskPoint, highestUpcomingRisk);
-        notifiedZones.addAll(detectedRiskZone); // Mark entire zone as notified
+      // Skip points that are below the threshold
+      if (riskValue < threshold) {
+        return connectedZone;  // Stop adding points once we hit a risk value below threshold
       }
 
-      _inRiskZone = true;
-      print("_inRiskZone: $_inRiskZone, currentRiskLevel: $currentRiskLevel, highestUpcomingRisk: $highestUpcomingRisk");
+      // Only add points that are connected and belong to the same category
+      if (!connectedZone.contains(point) && segmentCategory == riskCategory) {
+        connectedZone.add(point);
+        queue.add(point);
+      }
     }
 
-    // Mark Passed Segments
-    if (currentRiskLevel > 0.5) {
-      passedSegments.addAll(detectedRiskZone);
-    }
-
-    // Update _inRiskZone
-    _inRiskZone = currentRiskLevel > 0.5;
+    return connectedZone;
   }
 
   // Function to map string values to double values
@@ -410,14 +458,15 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
-  void _sendRiskWarning(LatLng riskPoint, int riskValue) async {
+  void _sendRiskWarning(LatLng riskPoint, double riskValue) async {
     notifiedZones.add(riskPoint);
+    _firstRiskDetected = true;
 
     String title;
     String body;
 
     // Define notification message based on risk level
-    if (riskValue > 0.7) {
+    if (riskValue > 0.5) {
       title = "🚨 High Amphibian Risk!";
       body = "Slow down! High risk of amphibians ahead.";
     } else {
@@ -428,7 +477,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -447,14 +496,14 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
-  void _sendInitialRiskWarning(LatLng riskPoint, int riskValue) async {
+  void _sendInitialRiskWarning(LatLng riskPoint, double riskValue) async {
     notifiedZones.add(riskPoint);
 
     String title;
     String body;
 
     // Define notification message based on risk level
-    if (riskValue > 0.7) {
+    if (riskValue > 0.5) {
       title = "🚨 High Amphibian Risk!";
       body = "WARNING: You are currently in a high-risk zone for amphibians! Proceed with caution.";
     } else {
@@ -465,7 +514,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -496,7 +545,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -551,6 +600,7 @@ class _NavigationPageState extends State<NavigationPage> {
     // Find the next upcoming divergence
     for (LatLng divergencePoint in divergencePoints) {
       double distanceToDivergence = distance(currentPosition!, divergencePoint);
+      // print("distanceToDivergence, $distanceToDivergence");
 
       if (distanceToDivergence < alertThreshold && !notifiedDivergences.contains(divergencePoint)) {
         _sendReRouteNotification(changeRoute);
@@ -599,7 +649,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.127:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -676,9 +726,9 @@ class _NavigationPageState extends State<NavigationPage> {
                       // Determine color based on raster value
                       Color lineColor;
                       if (current['raster_value'] != null) {
-                        if (current['raster_value'] > 0.7) {
+                        if (current['raster_value'] > 0.5) {
                           lineColor = Colors.red; // High risk
-                        } else if (current['raster_value'] > 0.5) {
+                        } else if (current['raster_value'] > 0.3) {
                           lineColor = Colors.orange; // Medium risk
                         } else {
                           lineColor = Colors.purple; // Default color
