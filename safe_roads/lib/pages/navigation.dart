@@ -48,6 +48,7 @@ class _NavigationPageState extends State<NavigationPage> {
   int consecutiveOffRouteCount = 0; // Track how many times user is "off-route"
   int offRouteThreshold = 7; // Require 7 consecutive off-route detections
   bool lastOnRouteState = true; // Track last known on-route state
+  bool _startRiskNotificationSent = false; // Track if the initial notification was sent
   List<dynamic> notifiedDivergences = [];
   bool _firstRiskDetected = false;
 
@@ -339,6 +340,22 @@ class _NavigationPageState extends State<NavigationPage> {
       }
     }
 
+    // Prevent sudden flips between "on-route" and "off-route"
+     if (isOnRoute) {
+       consecutiveOffRouteCount = 0; // Reset counter if back on track
+     } else {
+       consecutiveOffRouteCount++; // Count how many times user is "off-route"
+     }
+ 
+     bool confirmedOffRoute = consecutiveOffRouteCount >= offRouteThreshold;
+ 
+     // Only send off-route warning if user was previously on route and now confirmed off-route
+     if (confirmedOffRoute && lastOnRouteState) {
+       _sendOffRouteWarning();
+     }
+ 
+     lastOnRouteState = !confirmedOffRoute; // Update last known state
+
     String currentRiskCategory = getRiskCategory(currentRiskLevel);
 
     // Process all upcoming risk points (instead of just the highest)
@@ -348,6 +365,11 @@ class _NavigationPageState extends State<NavigationPage> {
       String upcomingRiskCategory = getRiskCategory(riskValue);
 
       bool enteringNewRiskZone = false;
+
+      if (!_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute && riskPoint != null) {
+        _sendInitialRiskWarning(riskPoint, currentRiskLevel);
+        _startRiskNotificationSent = true; // Mark notification as sent
+      }
 
       if ((currentRiskCategory == "Low" && upcomingRiskCategory == "Medium") ||
           (currentRiskCategory == "Low" && upcomingRiskCategory == "High") ||
