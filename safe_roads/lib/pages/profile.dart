@@ -119,7 +119,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   Future<void> updateSelectedSpecies(List<Object?> newSelectedSpecies) async {
     // Use Provider to update the selectedSpecies value
     context.read<UserPreferences>().updateSelectedSpecies(newSelectedSpecies);
-    print("Entra no updateSelectedSpecies");
   }
 
 
@@ -542,7 +541,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   }
 
   Widget buildSpeciesGrid() {
-    final selectedSpecies = context.watch<UserPreferences>().selectedSpecies; // Watch provider state
+    final selectedSpecies = context.watch<UserPreferences>().selectedSpecies;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,15 +562,17 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               ),
               selected: isSelected,
               onSelected: (selected) async {
-                List<Object?> updatedSelection = List.from(selectedSpecies);
-                if (selected) {
-                  updatedSelection.add(species["name"]);
-                } else {
-                  updatedSelection.remove(species["name"]);
-                }
+                setState(() {  // Ensure local UI updates correctly
+                  if (selected) {
+                    selectedSpecies.add(species["name"]);
+                  } else {
+                    selectedSpecies.remove(species["name"]);
+                  }
+                });
 
-                updatePreference("selectedSpecies", updatedSelection);
-                await updateSelectedSpecies(updatedSelection); // Updates provider
+                updatePreference("selectedSpecies", selectedSpecies);
+                print("PROFILE buildSpeciesGrid: $selectedSpecies");
+                await updateSelectedSpecies(selectedSpecies); // Update provider
               },
             );
           }).toList(),

@@ -156,7 +156,7 @@ class Notifications {
             builder: (context, setState) {
               _animationController = AnimationController(
                 vsync: Navigator.of(context), // Ensures smooth animations
-                duration: const Duration(seconds: 5), // Full duration
+                duration: const Duration(seconds: 6), // Full duration
               );
 
               _animationController.forward(); // Start animation immediately

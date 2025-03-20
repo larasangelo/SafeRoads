@@ -92,13 +92,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         _cancelFetchingRoute = false; // Reset the cancellation flag
       });
 
-      // Access the updated value of 'lowRisk' from the UserPreferences provider
+      // Access the updated values from the UserPreferences provider
       final userPreferences = Provider.of<UserPreferences>(context, listen: false);
       bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
       List<Object?> selectedSpecies = userPreferences.selectedSpecies;
 
       print("lowRisk: $lowRisk");
-      print("selectedSpecies: $selectedSpecies");
+      print("HOME selectedSpecies: $selectedSpecies");
 
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
@@ -107,7 +107,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
           "end": {"lat": end.latitude, "lon": end.longitude},
-          "lowRisk": lowRisk, // Use the updated value of lowRisk
+          "lowRisk": lowRisk, 
           "selectedSpecies": selectedSpecies,
         }),
       );
@@ -127,7 +127,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           List<Map<String, dynamic>> pointsWithRaster = (routeData['route'] as List).map((point) {
             return {
               'latlng': LatLng(point['lat'], point['lon']),
-              'raster_value': point['raster_value']
+              'raster_value': point['raster_value'],
+              'species': point['species'],
             };
           }).toList();
 
@@ -381,10 +382,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
-
-    // Rever, provavelmente este não é o sítio adequado
-    final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-    List<Object?> selectedSpecies = userPreferences.selectedSpecies;
 
     return 
       Scaffold(
@@ -652,19 +649,40 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 .any((point) => point['raster_value'] > 0.3 && point['raster_value'] <= 0.5);
           
                             if (hasHighRisk) {
+                              // Collect species for high-risk points
+                              Set<String> speciesList = {};
+                              for (var point in _routesWithPoints[_selectedRouteKey]!) {
+                                if (point['raster_value'] > 0.5) {
+                                  speciesList.addAll(List<String>.from(point['species']));
+                                }
+                              }
                               return [
-                                _buildRiskMessage("High probability of encountering ${selectedSpecies[0]}", Colors.red, context),
+                                _buildRiskMessage(
+                                  "High probability of encountering ${speciesList.join(', ')}",
+                                  Colors.red,
+                                  context,
+                                ),
                                 SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
                               ];
                             } else if (hasMediumRisk) {
+                              // Collect species for medium-risk points
+                              Set<String> speciesList = {};
+                              for (var point in _routesWithPoints[_selectedRouteKey]!) {
+                                if (point['raster_value'] > 0.3 && point['raster_value'] <= 0.5) {
+                                  speciesList.addAll(List<String>.from(point['species']));
+                                }
+                              }
                               return [
-                                _buildRiskMessage("Medium probability of encountering ${selectedSpecies[0]}", Colors.orange, context),
+                                _buildRiskMessage(
+                                  "Medium probability of encountering ${speciesList.join(', ')}",
+                                  Colors.orange,
+                                  context,
+                                ),
                                 SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                               ];
                             }
                             return [];
                           }(),
-          
                         if (_routesWithPoints.length > 1)
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), // Dynamic padding

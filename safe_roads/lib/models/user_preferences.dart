@@ -17,7 +17,11 @@ class UserPreferences with ChangeNotifier {
   List<Object?> get selectedSpecies => _selectedSpecies;
 
   UserPreferences() {
-    loadPreferences();
+    _initializePreferences();
+  }
+
+  Future<void> _initializePreferences() async {
+    await loadPreferences();
   }
 
   Future<void> loadPreferences() async {
@@ -28,6 +32,7 @@ class UserPreferences with ChangeNotifier {
       _rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
       _changeRoute = userProfile['changeRoute'] ?? true;
       _selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
+      print("USER_PREFERENCES loadPreferences: $_selectedSpecies");
       notifyListeners();
     } catch (e) {
       print("Error loading user preferences: $e");
@@ -56,6 +61,7 @@ class UserPreferences with ChangeNotifier {
 
   void updateSelectedSpecies(List<Object?> newSelectedSpecies) {
     _selectedSpecies = newSelectedSpecies;
+    print("USER_PREFERENCES updateSelectedSpecies: $_selectedSpecies");
     notifyListeners();
   }
 }

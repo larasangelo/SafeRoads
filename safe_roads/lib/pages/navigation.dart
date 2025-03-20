@@ -341,20 +341,20 @@ class _NavigationPageState extends State<NavigationPage> {
     }
 
     // Prevent sudden flips between "on-route" and "off-route"
-     if (isOnRoute) {
-       consecutiveOffRouteCount = 0; // Reset counter if back on track
-     } else {
-       consecutiveOffRouteCount++; // Count how many times user is "off-route"
-     }
- 
-     bool confirmedOffRoute = consecutiveOffRouteCount >= offRouteThreshold;
- 
-     // Only send off-route warning if user was previously on route and now confirmed off-route
-     if (confirmedOffRoute && lastOnRouteState) {
-       _sendOffRouteWarning();
-     }
- 
-     lastOnRouteState = !confirmedOffRoute; // Update last known state
+    if (isOnRoute) {
+      consecutiveOffRouteCount = 0; // Reset counter if back on track
+    } else {
+      consecutiveOffRouteCount++; // Count how many times user is "off-route"
+    }
+
+    bool confirmedOffRoute = consecutiveOffRouteCount >= offRouteThreshold;
+
+    // Only send off-route warning if user was previously on route and now confirmed off-route
+    if (confirmedOffRoute && lastOnRouteState) {
+      _sendOffRouteWarning();
+    }
+
+    lastOnRouteState = !confirmedOffRoute; // Update last known state
 
     String currentRiskCategory = getRiskCategory(currentRiskLevel);
 
@@ -366,8 +366,17 @@ class _NavigationPageState extends State<NavigationPage> {
 
       bool enteringNewRiskZone = false;
 
+      // We need to extract the species list for the current risk point
+      // Find the segment that corresponds to the current risk point
+      var segment = routeCoordinates.firstWhere(
+        (seg) => seg['latlng'] == riskPoint,
+      );
+
+      List<dynamic> speciesList = segment['species']; // Extract species list for the current risk point
+      print("speciesList: $speciesList");
+
       if (!_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute && riskPoint != null) {
-        _sendInitialRiskWarning(riskPoint, currentRiskLevel);
+        _sendInitialRiskWarning(riskPoint, currentRiskLevel, List<dynamic>.from(speciesList));
         _startRiskNotificationSent = true; // Mark notification as sent
       }
 
@@ -389,7 +398,7 @@ class _NavigationPageState extends State<NavigationPage> {
         print("🔔 Sending notification for risk at $riskPoint (Risk Level: $riskValue)");
         print("connectedRiskZone, $connectedRiskZone");
         print("notifiedZones, $notifiedZones");
-        _sendRiskWarning(riskPoint, riskValue);
+        _sendRiskWarning(riskPoint, riskValue, List<dynamic>.from(speciesList)); // Pass species list here
         notifiedZones.addAll(connectedRiskZone);
       } else {
         print("⚠️ Risk already notified: Skipping notification for $riskPoint");
@@ -480,26 +489,29 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
-  void _sendRiskWarning(LatLng riskPoint, double riskValue) async {
+  void _sendRiskWarning(LatLng riskPoint, double riskValue, List<dynamic> speciesList) async {
+    print("riskPoint: $riskPoint, riskValue: $riskValue, speciesList: $speciesList");
     notifiedZones.add(riskPoint);
     _firstRiskDetected = true;
 
     String title;
     String body;
 
+    // Create a comma-separated string of species names
+    String speciesNames = speciesList.join(", ");
+
     // Define notification message based on risk level
     if (riskValue > 0.5) {
-      title = "🚨 High Amphibian Risk!";
-      body = "Slow down! High risk of amphibians ahead.";
+      title = "🚨 High Risk for $speciesNames!";
+      body = "Attention! High risk of the following species ahead: $speciesNames. Slow down and stay alert!";
     } else {
-      title = "⚠️ Caution: Amphibian Presence";
-      body = "Be careful! Medium risk of amphibians nearby.";
+      title = "⚠️ Caution: $speciesNames at Risk";
+      body = "Be careful! Medium risk of the following species nearby: $speciesNames. Proceed with caution.";
     }
 
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -518,25 +530,27 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
-  void _sendInitialRiskWarning(LatLng riskPoint, double riskValue) async {
+  void _sendInitialRiskWarning(LatLng riskPoint, double riskValue, List<dynamic> speciesList) async {
     notifiedZones.add(riskPoint);
 
     String title;
     String body;
 
+    // Create a comma-separated string of species names
+    String speciesNames = speciesList.join(", ");
+
     // Define notification message based on risk level
     if (riskValue > 0.5) {
-      title = "🚨 High Amphibian Risk!";
-      body = "WARNING: You are currently in a high-risk zone for amphibians! Proceed with caution.";
+      title = "🚨 High Risk for $speciesNames!";
+      body = "WARNING: You are currently in a high-risk zone for the following species: $speciesNames. Proceed with caution!";
     } else {
-      title = "⚠️ Caution: Amphibian Presence";
-      body = "You are now in an area with a medium risk of amphibians. Stay alert and drive carefully.";
+      title = "⚠️ Caution: $speciesNames at Risk";
+      body = "You are now in an area with medium risk for the following species: $speciesNames. Stay alert and drive carefully.";
     }
 
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,

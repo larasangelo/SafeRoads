@@ -65,7 +65,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
       LIMIT 1;
     `;
     const startNode = await pool.query(startNodeQuery);
-    console.log("startNode", startNode.rows[0].id);
+    // console.log("startNode", startNode.rows[0].id);
 
     const endNodeQuery = `
       SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)::geography) AS dist
@@ -74,7 +74,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
       LIMIT 1;
     `;
     const endNode = await pool.query(endNodeQuery);
-    console.log("endNode", endNode.rows[0].id);
+    // console.log("endNode", endNode.rows[0].id);
 
     // Calculate bounding box
     const bufferDistance = 0.05;
@@ -83,14 +83,16 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
     const minLon = Math.min(start.lon, end.lon) - bufferDistance;
     const maxLon = Math.max(start.lon, end.lon) + bufferDistance;
 
-    console.log("minLat", minLat);
-    console.log("maxLat", maxLat);
-    console.log("minLon", minLon);
-    console.log("maxLon", maxLon);
+    // console.log("minLat", minLat);
+    // console.log("maxLat", maxLat);
+    // console.log("minLon", minLon);
+    // console.log("maxLon", maxLon);
 
+    await pool.query("DROP TABLE IF EXISTS temp_ways;");
+    console.log("Temporary table dropped.");
     // Create a temporary table to store road segments and species info
     const createTempTableQuery = `
-      CREATE TEMP TABLE temp_ways (
+      CREATE TABLE temp_ways (
         gid INTEGER,
         source INTEGER,
         target INTEGER,
@@ -119,20 +121,23 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
     // Update temp_ways with raster values and species lists
     const updateTempTableWithRasterQuery = `
       UPDATE temp_ways
-      SET raster_value = subquery.raster_value,
+      SET
+          raster_value = subquery.raster_value,
           species = subquery.species
       FROM (
-          SELECT 
+          SELECT
               w_inner.gid,
-              AVG(LEAST(${selectedSpecies.map(species => `COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0)`).join(", ")})) AS raster_value,
-              ARRAY_AGG(DISTINCT CASE 
-                  ${selectedSpecies.map(species => `WHEN COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0) > 0 THEN '${species}'`).join(" ")}
-              END) FILTER (WHERE 
-                  ${selectedSpecies.map(species => `COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0) > 0`).join(" OR ")}
-              ) AS species
+              MAX(species_data.value) AS raster_value,
+              ARRAY_AGG(DISTINCT species_data.species_name) AS species  -- Store all species
           FROM temp_ways w_inner
-          ${selectedSpecies.map(species => `LEFT JOIN ${species.toLowerCase()} r_${species.toLowerCase()} 
-                                            ON ST_Intersects(r_${species.toLowerCase()}.rast, w_inner.the_geom)`).join("\n")}
+          JOIN LATERAL (
+              ${selectedSpecies.map(species =>
+                  `SELECT '${species.replace(/'/g, "''")}' AS species_name,
+                  COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0) AS value
+                  FROM ${species.toLowerCase()} r_${species.toLowerCase()}
+                  WHERE ST_Intersects(r_${species.toLowerCase()}.rast, w_inner.the_geom)`
+              ).join(" UNION ALL ")}
+          ) AS species_data ON TRUE
           GROUP BY w_inner.gid
       ) AS subquery
       WHERE temp_ways.gid = subquery.gid;
@@ -184,8 +189,8 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
       console.log("Default route fetched.");
 
       // Clean up the temporary table
-      await pool.query("DROP TABLE IF EXISTS temp_ways;");
-      console.log("Temporary table dropped.");
+      // await pool.query("DROP TABLE IF EXISTS temp_ways;");
+      // console.log("Temporary table dropped.");
 
       return { 
         adjustedRoute: route.rows.map(row => ({
@@ -326,59 +331,55 @@ app.post("/route", async (req, res) => {
           const firstCoord = coordinates[0];
           const lastCoord = coordinates[coordinates.length - 1];
 
+          const startDistanceToFirst = calculateDistance(
+            start.lat,
+            start.lon,
+            firstCoord[1],
+            firstCoord[0]
+          );
+          const startDistanceToLast = calculateDistance(
+            start.lat,
+            start.lon,
+            lastCoord[1],
+            lastCoord[0]
+          );
+
+          const processCoordinates = (coords) => {
+            coords.forEach(([lon, lat]) => {
+              if (row.raster_value > 2) hasRisk = true;
+
+              const existingPointIndex = routePoints.findIndex(
+                (point) => point.lat === lat && point.lon === lon
+              );
+
+              if (existingPointIndex !== -1) {
+                // If same coordinate exists, keep the highest raster_value and merge species
+                routePoints[existingPointIndex].raster_value = Math.max(
+                  routePoints[existingPointIndex].raster_value,
+                  row.raster_value
+                );
+                //merge species arrays
+                if(row.raster_value > 0.3 && row.species && row.species.length > 0){
+                    routePoints[existingPointIndex].species = [...new Set([...routePoints[existingPointIndex].species,...row.species])];
+                }
+
+              } else {
+                // Otherwise, add a new unique point
+                routePoints.push({
+                  lat,
+                  lon,
+                  raster_value: row.raster_value,
+                  species: row.raster_value > 0.3 && row.species && row.species.length > 0 ? row.species : []
+                });
+              }
+            });
+          };
+
           if (index === 0) {
-            const startDistanceToFirst = calculateDistance(
-              start.lat,
-              start.lon,
-              firstCoord[1],
-              firstCoord[0]
-            );
-            const startDistanceToLast = calculateDistance(
-              start.lat,
-              start.lon,
-              lastCoord[1],
-              lastCoord[0]
-            );
-
             if (startDistanceToLast < startDistanceToFirst) {
-              coordinates.reverse().forEach(([lon, lat]) => {
-                if (row.raster_value > 2) hasRisk = true;
-
-                if (
-                  routePoints.length > 0 &&
-                  routePoints[routePoints.length - 1].lat === lat &&
-                  routePoints[routePoints.length - 1].lon === lon
-                ) {
-                  // If same coordinate exists, keep the highest raster_value
-                  routePoints[routePoints.length - 1].raster_value = Math.max(
-                    routePoints[routePoints.length - 1].raster_value,
-                    row.raster_value
-                  );
-                } else {
-                  // Otherwise, add a new unique point
-                  routePoints.push({ lat, lon, raster_value: row.raster_value });
-                }
-              });
-
+              processCoordinates(coordinates.slice().reverse());
             } else {
-              coordinates.forEach(([lon, lat]) => {
-                if (row.raster_value > 2) hasRisk = true;
-
-                if (
-                  routePoints.length > 0 &&
-                  routePoints[routePoints.length - 1].lat === lat &&
-                  routePoints[routePoints.length - 1].lon === lon
-                ) {
-                  // If same coordinate exists, keep the highest raster_value
-                  routePoints[routePoints.length - 1].raster_value = Math.max(
-                    routePoints[routePoints.length - 1].raster_value,
-                    row.raster_value
-                  );
-                } else {
-                  // Otherwise, add a new unique point
-                  routePoints.push({ lat, lon, raster_value: row.raster_value });
-                }
-              });
+              processCoordinates(coordinates);
             }
           } else {
             const lastPointInRoute = routePoints[routePoints.length - 1];
@@ -397,44 +398,9 @@ app.post("/route", async (req, res) => {
             );
 
             if (distanceToLast < distanceToFirst) {
-              coordinates.reverse().forEach(([lon, lat]) => {
-                if (row.raster_value > 2) hasRisk = true;
-
-                if (
-                  routePoints.length > 0 &&
-                  routePoints[routePoints.length - 1].lat === lat &&
-                  routePoints[routePoints.length - 1].lon === lon
-                ) {
-                  // If same coordinate exists, keep the highest raster_value
-                  routePoints[routePoints.length - 1].raster_value = Math.max(
-                    routePoints[routePoints.length - 1].raster_value,
-                    row.raster_value
-                  );
-                } else {
-                  // Otherwise, add a new unique point
-                  routePoints.push({ lat, lon, raster_value: row.raster_value });
-                }
-              });
-
+              processCoordinates(coordinates.slice().reverse());
             } else {
-              coordinates.forEach(([lon, lat]) => {
-                if (row.raster_value > 2) hasRisk = true;
-
-                if (
-                  routePoints.length > 0 &&
-                  routePoints[routePoints.length - 1].lat === lat &&
-                  routePoints[routePoints.length - 1].lon === lon
-                ) {
-                  // If same coordinate exists, keep the highest raster_value
-                  routePoints[routePoints.length - 1].raster_value = Math.max(
-                    routePoints[routePoints.length - 1].raster_value,
-                    row.raster_value
-                  );
-                } else {
-                  // Otherwise, add a new unique point
-                  routePoints.push({ lat, lon, raster_value: row.raster_value });
-                }
-              });
+              processCoordinates(coordinates);
             }
           }
         }
@@ -488,7 +454,6 @@ app.post("/route", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 
 // Test if we can get the raster_values for a single point
