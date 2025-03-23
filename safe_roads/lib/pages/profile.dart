@@ -541,7 +541,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   }
 
   Widget buildSpeciesGrid() {
-    final selectedSpecies = context.watch<UserPreferences>().selectedSpecies;
+    final selectedSpecies = context.watch<UserPreferences>().selectedSpecies; // Watch provider state
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -562,17 +562,15 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               ),
               selected: isSelected,
               onSelected: (selected) async {
-                setState(() {  // Ensure local UI updates correctly
-                  if (selected) {
-                    selectedSpecies.add(species["name"]);
-                  } else {
-                    selectedSpecies.remove(species["name"]);
-                  }
-                });
+                List<Object?> updatedSelection = List.from(selectedSpecies);
+                if (selected) {
+                  updatedSelection.add(species["name"]);
+                } else {
+                  updatedSelection.remove(species["name"]);
+                }
 
-                updatePreference("selectedSpecies", selectedSpecies);
-                print("PROFILE buildSpeciesGrid: $selectedSpecies");
-                await updateSelectedSpecies(selectedSpecies); // Update provider
+                updatePreference("selectedSpecies", updatedSelection);
+                await updateSelectedSpecies(updatedSelection); // Updates provider
               },
             );
           }).toList(),

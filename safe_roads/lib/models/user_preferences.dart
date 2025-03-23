@@ -17,10 +17,10 @@ class UserPreferences with ChangeNotifier {
   List<Object?> get selectedSpecies => _selectedSpecies;
 
   UserPreferences() {
-    _initializePreferences();
+    initializePreferences();
   }
 
-  Future<void> _initializePreferences() async {
+  Future<void> initializePreferences() async {
     await loadPreferences();
   }
 

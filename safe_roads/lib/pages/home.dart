@@ -49,7 +49,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     super.initState();
     _requestLocationPermission();
     _setupAutocompleteListener();
-    fetchUserPreferences();
+    // Wait for preferences to load, then fetch routes
+    Provider.of<UserPreferences>(context, listen: false)
+        .initializePreferences()
+        .then((_) => fetchUserPreferences());  // Ensure you fetch after preferences are loaded
     _mapController.mapEventStream.listen((event) {
         setState(() {}); // Update UI dynamically when the map moves
       });

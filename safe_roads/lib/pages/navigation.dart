@@ -375,9 +375,10 @@ class _NavigationPageState extends State<NavigationPage> {
       List<dynamic> speciesList = segment['species']; // Extract species list for the current risk point
       print("speciesList: $speciesList");
 
-      if (!_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute && riskPoint != null) {
+      if (!_firstRiskDetected && !_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute && riskPoint != null) {
         _sendInitialRiskWarning(riskPoint, currentRiskLevel, List<dynamic>.from(speciesList));
         _startRiskNotificationSent = true; // Mark notification as sent
+        _firstRiskDetected = true;
       }
 
       if ((currentRiskCategory == "Low" && upcomingRiskCategory == "Medium") ||
