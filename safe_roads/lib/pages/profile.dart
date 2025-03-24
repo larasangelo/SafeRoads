@@ -2,11 +2,15 @@ import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
 import 'package:notification_permissions/notification_permissions.dart';
+import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/auth_controller.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/models/user_preferences.dart';
+import 'package:safe_roads/pages/alertDistance.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/profile_config.dart';
+
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -19,29 +23,27 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   final ProfileController _profileController = ProfileController();
   final AuthController _authController = AuthController();
 
-  bool lowRisk = true;
-  bool changeRoute = true;
-  bool notifications = true;
-  bool tolls = false;
-  String measure = "km";
-  String riskAlertDistance = "250 m";
-  String rerouteAlertDistance = "250 m";
+  bool lowRisk = ProfileConfig.defaultLowRisk;
+  bool changeRoute = ProfileConfig.defaultChangeRoute;
+  bool notifications = ProfileConfig.defaultNotifications;
+  bool tolls = ProfileConfig.defaultTolls;
+  String measure = ProfileConfig.defaultMeasure;
+  String riskAlertDistance = ProfileConfig.defaultRiskAlertDistance;
+  String rerouteAlertDistance = ProfileConfig.defaultRerouteAlertDistance;
 
-  String username = "Loading...";
-  String country = "Loading...";
-  int level = 1;
-  int distance = 0;
-  int targetDistance = 200;
-  int totalKm = 0;
-  int places = 0;
-  String avatar = 'assets/profile_images/avatar_1.jpg';
+  String username = ProfileConfig.defaultUsername;
+  String country = ProfileConfig.defaultCountry;
+  int level = ProfileConfig.defaultLevel;
+  int distance = ProfileConfig.defaultDistance;
+  int targetDistance = ProfileConfig.defaultTargetDistance;
+  int totalKm = ProfileConfig.defaultTotalKm;
+  int places = ProfileConfig.defaultPlaces;
+  String avatar = ProfileConfig.defaultAvatar;
 
-  List<Map<String, dynamic>> speciesOptions = [
-    {"name": "Amphibians", "icon": Icons.water},
-    {"name": "Reptiles", "icon": Icons.grass},
-    {"name": "Hedgehogs", "icon": Icons.pets},
-  ];
-  List<Object?> selectedSpecies = ["Amphibians"];
+  List<Map<String, dynamic>> speciesOptions = ProfileConfig.speciesOptions;
+  List<Object?> selectedSpecies = ProfileConfig.defaultSelectedSpecies;
+  String selectedLanguage = ProfileConfig.defaultLanguage;
+
 
   @override
   void initState() {
@@ -88,6 +90,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           places = userProfile['places'] as int;
           avatar = userProfile['avatar'] ?? "assets/profile_images/avatar_1.jpg";
           selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
+          selectedLanguage = userProfile['selectedLanguage'] ?? "en";
         });
       }
     } catch (e) {
@@ -121,21 +124,26 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     context.read<UserPreferences>().updateSelectedSpecies(newSelectedSpecies);
   }
 
+  Future<void> updateLanguage(String newValue) async {
+    // Use Provider to update the rerouteAlertDistance value
+    context.read<UserPreferences>().updateLanguage(newValue);
+  }
+
 
   Future<void> _showSignOutConfirmation() async {
     final bool? shouldSignOut = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Sign Out"),
-        content: const Text("Sign out your account?"),
+        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut')),
+        content: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOutConfirmation')),  
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false), // Cancel
-            child: const Text("Cancel"),
+            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true), // Confirm
-            child: const Text("Sign Out", style: TextStyle(color: Colors.red),),
+            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'), style: const TextStyle(color: Colors.red),),
           ),
         ],
       ),
@@ -153,18 +161,18 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Delete Account"),
+        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'deleteAccount')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Please enter your password to confirm account deletion."),
+            Text(LanguageConfig.getLocalizedString(selectedLanguage, 'enterPassword')),
             const SizedBox(height: 16.0),
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Password",
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: LanguageConfig.getLocalizedString(selectedLanguage, 'password'),
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -172,13 +180,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false), // Cancel
-            child: const Text("Cancel"),
+            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true), // Confirm
-            child: const Text(
-              "Delete",
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              LanguageConfig.getLocalizedString(selectedLanguage, 'delete'),
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -191,7 +199,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         await _profileController.deleteUserAccount(context: context, password: password);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password is required to delete your account.")),
+          SnackBar(content: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'passwordRequired'))),
         );
       }
     }
@@ -245,7 +253,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       await _profileController.updateUserPreference(context: context, key: key, value: value);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to update preference: $e")),
+        SnackBar(content: Text("${LanguageConfig.getLocalizedString(selectedLanguage, 'updateFailed')}: $e")),
       );
     }
   }
@@ -324,12 +332,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Statistics", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
+        Text(LanguageConfig.getLocalizedString(selectedLanguage, 'statistics'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildStatisticCard("$totalKm", "Total km", Icons.flash_on),
-            _buildStatisticCard("$places", "Places", Icons.map),
+            _buildStatisticCard("$totalKm", LanguageConfig.getLocalizedString(selectedLanguage, 'totalKm'), Icons.flash_on),
+            _buildStatisticCard("$places", LanguageConfig.getLocalizedString(selectedLanguage, 'places'), Icons.map),
           ],
         ),
         const SizedBox(height: 16.0),
@@ -337,7 +345,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () {},
-            child: const Text("View route history >"),
+            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'viewRouteHistory')),
           ),
         ),
       ],
@@ -348,7 +356,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Preferences", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
+        Text(LanguageConfig.getLocalizedString(selectedLanguage, 'preferences'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
         const SizedBox(height: 8.0),
         buildPreferenceSwitches(),
       ],
@@ -370,13 +378,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       ),
       child: Column(
         children: [
-          _buildSwitchTile("Allow notifications", notifications, (bool newValue) async {
+          _buildSwitchTile(LanguageConfig.getLocalizedString(selectedLanguage, 'allowNotifications'), notifications, (bool newValue) async {
             await handleNotificationPermission();
             await checkNotificationPermissions();
             updatePreference("notifications", notifications);
           }),
           const Divider(),
-          _buildSwitchTile("Only low risk route", lowRisk, (bool newValue) {
+          _buildSwitchTile(LanguageConfig.getLocalizedString(selectedLanguage, 'onlyLowRisk'), lowRisk, (bool newValue) {
             updateLowRisk(newValue);
             setState(() {
               lowRisk = newValue;
@@ -384,7 +392,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             updatePreference("lowRisk", newValue);
           }),
           const Divider(),
-          _buildSwitchTile("Change route automatically", changeRoute, (bool newValue) {
+          _buildSwitchTile(LanguageConfig.getLocalizedString(selectedLanguage, 'changeRoute'), changeRoute, (bool newValue) {
             updateChangeRoute(newValue);
             setState(() {
               changeRoute = newValue;
@@ -395,6 +403,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           buildRiskNotificationDropdown(),
           const Divider(),
           buildRerouteNotificationDropdown(),
+          const Divider(),
+          buildLanguageDropdown(),
           // const Divider(),
           // _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
           //   setState(() {
@@ -414,7 +424,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: ListTile(
-        title: const Text("Unit of measure"),
+        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'unitMeasure')),
         trailing: DropdownButton<String>(
           value: measure,
           items: const [
@@ -436,37 +446,27 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: ListTile(
-        title: Row(
-          children: [
-            const Text("Risk alert distance"),
-            const SizedBox(width: 5), // Small spacing between text and icon
-            IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.grey),
-              tooltip: "What is this?",
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text("Risk Alert Distance Info"),
-                      content: const Text(
-                        "This setting determines the distance at which you will receive a notification "
-                        "about upcoming risk zones. Choose a smaller distance for precise alerts or "
-                        "a larger distance for early warnings.",
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text("OK"),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AlertDistancePage(
+                title: LanguageConfig.getLocalizedString(selectedLanguage, 'info'),
+                chosen: LanguageConfig.getLocalizedString(selectedLanguage, 'riskAlertDistance'),
+                info: LanguageConfig.getLocalizedString(selectedLanguage, 'riskAlertDistanceInfo'),
+                selectedValue: riskAlertDistance,
+                onValueChanged: (newValue) {
+                  setState(() {
+                    riskAlertDistance = newValue;
+                  });
+                  updateRiskAlertDistance(newValue);
+                  updatePreference("riskAlertDistance", riskAlertDistance);
+                },
+              ),
             ),
-          ],
-        ),
+          );
+        },
+        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'riskAlertDistance')),
         trailing: DropdownButton<String>(
           value: riskAlertDistance,
           items: const [
@@ -490,37 +490,27 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: ListTile(
-        title: Row(
-          children: [
-            const Text("Re-route alert distance"),
-            const SizedBox(width: 5), // Small spacing between text and icon
-            IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.grey),
-              tooltip: "What is this?",
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text("Re-route Alert Distance Info"),
-                      content: const Text(
-                        "This setting determines the distance at which you will receive a notification "
-                        "about upcoming Re-route opportunities. Choose a smaller distance for precise alerts or "
-                        "a larger distance for early warnings.",
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text("OK"),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AlertDistancePage(
+                title: LanguageConfig.getLocalizedString(selectedLanguage, 'info'),
+                chosen: LanguageConfig.getLocalizedString(selectedLanguage, 'reRouteAlertDistance'),
+                info: LanguageConfig.getLocalizedString(selectedLanguage, 'reRouteAlertDistanceInfo'),
+                selectedValue: rerouteAlertDistance,
+                onValueChanged: (newValue) {
+                  setState(() {
+                    rerouteAlertDistance = newValue;
+                  });
+                  updateRerouteAlertDistance(newValue);
+                  updatePreference("rerouteAlertDistance", rerouteAlertDistance);
+                },
+              ),
             ),
-          ],
-        ),
+          );
+        },
+        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'reRouteAlertDistance')),
         trailing: DropdownButton<String>(
           value: rerouteAlertDistance,
           items: const [
@@ -540,22 +530,51 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     );
   }
 
+  Widget buildLanguageDropdown() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: ListTile(
+        title: Row(
+          children: [
+            Text(LanguageConfig.getLocalizedString(selectedLanguage, 'language')),
+            // const SizedBox(width: 5), // Small spacing between text and icon
+          ],
+        ),
+        trailing: DropdownButton<String>(
+          value: selectedLanguage,
+          items: const [
+            DropdownMenuItem(value: "en", child: Text("English")),
+            DropdownMenuItem(value: "pt", child: Text("Português")),
+            DropdownMenuItem(value: "es", child: Text("Español")),
+          ],
+          onChanged: (String? newValue) {
+            setState(() {
+              selectedLanguage = newValue!;
+            });
+            updateLanguage(newValue!);
+            updatePreference("selectedLanguage", selectedLanguage);
+          },
+        ),
+      ),
+    );
+  }
+
   Widget buildSpeciesGrid() {
     final selectedSpecies = context.watch<UserPreferences>().selectedSpecies; // Watch provider state
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Select Species for Alerts",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0),
+        Text(
+          LanguageConfig.getLocalizedString(selectedLanguage, 'speciesForAlerts'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0),
         ),
         Wrap(
           spacing: 8.0,
           children: speciesOptions.map((species) {
             bool isSelected = selectedSpecies.contains(species["name"]);
             return ChoiceChip(
-              label: Text(species["name"]),
+              label: Text(LanguageConfig.getLocalizedString(selectedLanguage, species['key'])),
               avatar: Icon(
                 species["icon"],
                 color: isSelected ? Colors.white : Colors.black,
@@ -583,7 +602,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Settings", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
+        Text(LanguageConfig.getLocalizedString(selectedLanguage, 'settings'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
         const SizedBox(height: 8.0),
         buildSettingsOptions(context),
       ],
@@ -605,16 +624,16 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       ),
       child: Column(
         children: [
-          buildSettingsItem("Edit profile", Icons.chevron_right, () async {
+          buildSettingsItem(LanguageConfig.getLocalizedString(selectedLanguage, 'editProfile'), Icons.chevron_right, () async {
             final result = await Navigator.pushNamed(context, '/editProfile');
             if (result == true) {
               fetchUserProfile();
             }
           }),
           const Divider(),
-          buildSettingsItem("Sign out", null, _showSignOutConfirmation, color: Colors.red),
+          buildSettingsItem(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'), null, _showSignOutConfirmation, color: Colors.red),
           const Divider(),
-          buildSettingsItem("Delete account", null, () => _showDeleteAccountDialog(), color: Colors.red,)
+          buildSettingsItem(LanguageConfig.getLocalizedString(selectedLanguage, 'deleteAccount'), null, () => _showDeleteAccountDialog(), color: Colors.red,)
         ],
       ),
     );

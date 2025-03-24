@@ -9,12 +9,15 @@ class UserPreferences with ChangeNotifier {
   String _rerouteAlertDistance = "250 m";
   bool _changeRoute = true;
   List<Object?> _selectedSpecies = ["Amphibians"];
+  String _languageCode = "en"; // Default language
+
 
   bool get lowRisk => _lowRisk;
   String get riskAlertDistance => _riskAlertDistance;
   String get rerouteAlertDistance => _rerouteAlertDistance;
   bool get changeRoute => _changeRoute;
   List<Object?> get selectedSpecies => _selectedSpecies;
+  String get languageCode => _languageCode;
 
   UserPreferences() {
     initializePreferences();
@@ -32,6 +35,7 @@ class UserPreferences with ChangeNotifier {
       _rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
       _changeRoute = userProfile['changeRoute'] ?? true;
       _selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
+      _languageCode = userProfile['selectedLanguage'] ?? "en";
       print("USER_PREFERENCES loadPreferences: $_selectedSpecies");
       notifyListeners();
     } catch (e) {
@@ -62,6 +66,11 @@ class UserPreferences with ChangeNotifier {
   void updateSelectedSpecies(List<Object?> newSelectedSpecies) {
     _selectedSpecies = newSelectedSpecies;
     print("USER_PREFERENCES updateSelectedSpecies: $_selectedSpecies");
+    notifyListeners();
+  }
+
+  void updateLanguage(String newLanguage) {
+    _languageCode = newLanguage;
     notifyListeners();
   }
 }

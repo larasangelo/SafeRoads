@@ -36,6 +36,7 @@ class ProfileController {
         'places': data['places'] ?? 0,
         'avatar': data['avatar'] ?? "assets/profile_images/avatar_1.jpg",
         'selectedSpecies': data['selectedSpecies'] ?? ["Amphibians"],
+        'selectedLanguage': data['selectedLanguage'] ?? "en",
       };
     } catch (e) {
       throw Exception("Failed to fetch user profile: $e");
