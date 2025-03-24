@@ -53,12 +53,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     checkNotificationPermissions();
   }
 
-  // @override
-  // void dispose() {
-  //   WidgetsBinding.instance.removeObserver(this);
-  //   super.dispose();
-  // }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
@@ -77,20 +71,20 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         setState(() {
           lowRisk = userProfile['lowRisk'] as bool;
           changeRoute = userProfile['changeRoute'] as bool;
-          username = userProfile['username'] ?? "Unknown";
-          country = userProfile['country'] ?? "Unknown";
+          username = userProfile['username'] ?? ProfileConfig.defaultUsername;
+          country = userProfile['country'] ?? ProfileConfig.defaultCountry;
           tolls = userProfile['tolls'] as bool;
-          measure = userProfile['measure'] ?? "km";
-          riskAlertDistance = userProfile['riskAlertDistance'] ?? "250 m";
-          rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
+          measure = userProfile['measure'] ?? ProfileConfig.defaultMeasure;
+          riskAlertDistance = userProfile['riskAlertDistance'] ?? ProfileConfig.defaultRiskAlertDistance;
+          rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? ProfileConfig.defaultRerouteAlertDistance;
           level = userProfile['level'] as int;
           distance = userProfile['distance'] as int;
           targetDistance = userProfile['targetDistance'] as int;
           totalKm = userProfile['totalKm'] as int;
           places = userProfile['places'] as int;
-          avatar = userProfile['avatar'] ?? "assets/profile_images/avatar_1.jpg";
-          selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
-          selectedLanguage = userProfile['selectedLanguage'] ?? "en";
+          avatar = userProfile['avatar'] ?? ProfileConfig.defaultAvatar;
+          selectedSpecies = userProfile['selectedSpecies'] ?? ProfileConfig.defaultSelectedSpecies;
+          selectedLanguage = userProfile['selectedLanguage'] ?? ProfileConfig.defaultLanguage;
         });
       }
     } catch (e) {
@@ -572,7 +566,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         Wrap(
           spacing: 8.0,
           children: speciesOptions.map((species) {
-            bool isSelected = selectedSpecies.contains(species["name"]);
+            bool isSelected = selectedSpecies.contains(species["key"]);
             return ChoiceChip(
               label: Text(LanguageConfig.getLocalizedString(selectedLanguage, species['key'])),
               avatar: Icon(
@@ -583,11 +577,10 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               onSelected: (selected) async {
                 List<Object?> updatedSelection = List.from(selectedSpecies);
                 if (selected) {
-                  updatedSelection.add(species["name"]);
+                  updatedSelection.add(species["key"]);
                 } else {
-                  updatedSelection.remove(species["name"]);
+                  updatedSelection.remove(species["key"]);
                 }
-
                 updatePreference("selectedSpecies", updatedSelection);
                 await updateSelectedSpecies(updatedSelection); // Updates provider
               },

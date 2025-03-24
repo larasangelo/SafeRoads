@@ -1,6 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/configuration/profile_config.dart';
 import 'package:safe_roads/models/profile_model.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/repositories/user_profile_repository.dart';
 
 class ProfileController {
@@ -20,23 +24,23 @@ class ProfileController {
       final data = await _userProfileRepository.fetchUserProfile(user.uid);
       // print(data);
       return {
-        'lowRisk': data['lowRisk'] ?? true,
-        'changeRoute': data['changeRoute'] ?? true,
-        'tolls': data['tolls'] ?? false,
-        'measure': data['measure'] ?? "km",
-        'riskAlertDistance': data['riskAlertDistance'] ?? "100 m",
-        'rerouteAlertDistance': data['rerouteAlertDistance'] ?? "250 m",
-        'username': data['username'] ?? "Unknown",
-        'country': data['location'] ?? "Unknown",
-        'email': data['email'] ?? user.email ?? "Unknown",
-        'level': data['level'] ?? 1,
-        'distance': data['distance'] ?? 0,
-        'targetDistance': data['targetDistance'] ?? 200,
-        'totalKm': data['totalKm'] ?? 0,
-        'places': data['places'] ?? 0,
-        'avatar': data['avatar'] ?? "assets/profile_images/avatar_1.jpg",
-        'selectedSpecies': data['selectedSpecies'] ?? ["Amphibians"],
-        'selectedLanguage': data['selectedLanguage'] ?? "en",
+        'lowRisk': data['lowRisk'] ?? ProfileConfig.defaultLowRisk,
+        'changeRoute': data['changeRoute'] ?? ProfileConfig.defaultChangeRoute,
+        'tolls': data['tolls'] ?? ProfileConfig.defaultTolls,
+        'measure': data['measure'] ?? ProfileConfig.defaultMeasure,
+        'riskAlertDistance': data['riskAlertDistance'] ?? ProfileConfig.defaultRiskAlertDistance,
+        'rerouteAlertDistance': data['rerouteAlertDistance'] ?? ProfileConfig.defaultRerouteAlertDistance,
+        'username': data['username'] ?? ProfileConfig.defaultUsername,
+        'country': data['location'] ?? ProfileConfig.defaultCountry,
+        'email': data['email'] ?? user.email ?? ProfileConfig.defaultEmail,
+        'level': data['level'] ?? ProfileConfig.defaultLevel,
+        'distance': data['distance'] ?? ProfileConfig.defaultDistance,
+        'targetDistance': data['targetDistance'] ?? ProfileConfig.defaultTargetDistance,
+        'totalKm': data['totalKm'] ?? ProfileConfig.defaultTotalKm,
+        'places': data['places'] ?? ProfileConfig.defaultPlaces,
+        'avatar': data['avatar'] ?? ProfileConfig.defaultAvatar,
+        'selectedSpecies': data['selectedSpecies'] ?? ProfileConfig.defaultSelectedSpecies,
+        'selectedLanguage': data['selectedLanguage'] ?? ProfileConfig.defaultLanguage,
       };
     } catch (e) {
       throw Exception("Failed to fetch user profile: $e");
@@ -52,11 +56,6 @@ class ProfileController {
     required String avatar,
   }) async {
     final User? user = FirebaseAuth.instance.currentUser;
-
-    // print("username: $username");
-    // print("email: $email");
-    // print("country: $country");
-    // print("avatar: $avatar");
 
     if (user == null) {
      _showErrorDialog(context, "No user is currently signed in.");
@@ -81,9 +80,9 @@ class ProfileController {
       });
 
       // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully!")),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text("Profile updated successfully!")),
+      // );
     } catch (e) {
       _showErrorDialog(context, e.toString());
     }
@@ -95,6 +94,7 @@ class ProfileController {
     required dynamic value,
   }) async {
     final User? user = FirebaseAuth.instance.currentUser;
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
 
     if (user == null) {
      _showErrorDialog(context, "No user is currently signed in.");
@@ -109,7 +109,7 @@ class ProfileController {
 
       // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully!")),
+        SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileUpdated'))),
       );
     } catch (e) {
       _showErrorDialog(context, e.toString());
@@ -135,6 +135,7 @@ class ProfileController {
     required String password,
   }) async {
     final User? user = FirebaseAuth.instance.currentUser;
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
 
     if (user == null) {
       _showErrorDialog(context, "No user is currently signed in.");
@@ -157,7 +158,7 @@ class ProfileController {
 
       // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Account deleted successfully.")),
+        SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileDeleted'))),
       );
     } catch (e) {
       _showErrorDialog(context, e.toString());

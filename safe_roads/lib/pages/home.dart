@@ -5,6 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
+import 'package:safe_roads/configuration/home_config.dart';
+import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/user_preferences.dart';
@@ -22,24 +24,24 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   final MapController _mapController = MapController();
   LocationData? _currentLocation;
   LatLng? _destinationLocation;
-  Map<String, List<Map<String, dynamic>>> _routesWithPoints = {};
+  Map<String, List<Map<String, dynamic>>> _routesWithPoints = HomeConfig.defaultRoutesWithPoints;
   final TextEditingController _addressController = TextEditingController();
   List<Map<String, dynamic>> _suggestions = []; // Stores autocomplete suggestions
   Timer? _debounce; // To avoid over calling the API
-  LatLng _currentCenter = const LatLng(0, 0);
-  double _currentZoom = 13.0;
-  bool destinationSelected = false;
-  String? selectedDestination;
-  Map<String, String> _distances = {};
-  Map<String, String> _times = {};
-  Map<String, bool> _hasRisk = {}; 
-  bool setDestVis = true;
-  bool _isFetchingRoute = false;
-  bool _cancelFetchingRoute = false;
+  LatLng _currentCenter = HomeConfig.defaultCenter;
+  double _currentZoom = HomeConfig.defaultZoom;
+  bool destinationSelected = HomeConfig.defaultDestinationSelected;
+  String? selectedDestination = HomeConfig.defaultSelectedDestination;
+  Map<String, String> _distances = HomeConfig.defaultDistances;
+  Map<String, String> _times = HomeConfig.defaultTimes;
+  Map<String, bool> _hasRisk = HomeConfig.defaultHasRisk;
+  bool setDestVis = HomeConfig.defaultSetDestVis;
+  bool _isFetchingRoute = HomeConfig.defaultIsFetchingRoute;
+  bool _cancelFetchingRoute = HomeConfig.defaultCancelFetchingRoute;
   final ProfileController _profileController = ProfileController();
-  Map<String, dynamic> userPreferences = {};
-  String _selectedRouteKey = ""; // Default value, updated when routes are fetched
-  double _boxHeight = 200;
+  Map<String, dynamic> userPreferences = HomeConfig.defaultUserPreferences;
+  String _selectedRouteKey = HomeConfig.defaultRouteKey;
+  double _boxHeight = HomeConfig.defaultBoxHeight;
 
   @override
   bool get wantKeepAlive => true;
@@ -89,6 +91,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       setState(() {
         _isFetchingRoute = true; // Show the progress bar
@@ -170,11 +173,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(25)));
         }
       } else {
-        throw Exception("Failed to fetch route: ${response.body}");
+        throw Exception("${LanguageConfig.getLocalizedString(languageCode, 'failFetchingRoute')}: ${response.body}");
       }
     } catch (e) {
       if (!_cancelFetchingRoute) {
-        print("Error fetching route: $e");
+        print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
       }
       setState(() {
         _isFetchingRoute = false; // Hide the progress bar
@@ -183,6 +186,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   Future<LatLng?> _getCoordinatesFromAddress(String address) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/geocode'),
@@ -200,7 +204,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         print("Error: ${jsonDecode(response.body)['error']}");
       }
     } catch (e) {
-      print("Error fetching coordinates: $e");
+      print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingCoordinates')} : $e");
     }
     return null;
   }
@@ -232,6 +236,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   Future<void> _fetchSearchSuggestions(String query) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.get(
         Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
@@ -253,10 +258,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _suggestions = suggestions;
         });
       } else {
-        print("Error fetching suggestions: ${response.reasonPhrase}");
+        print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingSuggestions')}: ${response.reasonPhrase}");
       }
     } catch (e) {
-      print("Error fetching suggestions: $e");
+      print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingSuggestions')}: $e");
     }
   }
 
@@ -352,6 +357,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   Future<void> fetchUserPreferences() async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final preferences = await _profileController.fetchUserProfile();
       if (mounted) {
@@ -360,7 +366,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         });
       }
     } catch (e) {
-      print("Error fetching preferences: $e");
+      print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingSuggestions')}: $e");
     }
   }
 
@@ -385,6 +391,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
 
     return 
       Scaffold(
@@ -539,7 +546,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     TextField(
                       controller: _addressController,
                       decoration: InputDecoration(
-                        labelText: "Enter Destination",
+                        labelText: LanguageConfig.getLocalizedString(languageCode, 'enterDestination'),
                         filled: true,
                         fillColor: Colors.white,
                         prefixIcon: const Icon(Icons.search),
@@ -588,13 +595,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             return 
                             ListTile(
                               title: Text(
-                                suggestion['name'] ?? 'Unknown Name', // Default value for null case
+                                suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'), // Default value for null case
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Text(
                                 (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
                                     ? '${suggestion['city']}, ${suggestion['country']}' // City and country
-                                    : (suggestion['country'] ?? 'Unknown Location'), //  Handle null country
+                                    : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')), //  Handle null country
                                 style: const TextStyle(fontSize: 12),
                               ),
                               onTap: () {
@@ -619,7 +626,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           setDestVis = false;
                         });
                       },
-                      child: const Text("Set Destination"),
+                      child: Text(LanguageConfig.getLocalizedString(languageCode, 'setDestination')),
                     ),
                   ],
                 ),
@@ -659,13 +666,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   speciesList.addAll(List<String>.from(point['species']));
                                 }
                               }
+                              
+                              // Translate species names
+                              List<String> translatedSpecies = speciesList.map(
+                                (species) => LanguageConfig.getLocalizedString(languageCode, species)
+                              ).toList();
+
                               return [
                                 _buildRiskMessage(
-                                  "High probability of encountering ${speciesList.join(', ')}",
+                                  "${LanguageConfig.getLocalizedString(languageCode, 'highProbability')} ${translatedSpecies.join(', ')}",
                                   Colors.red,
                                   context,
                                 ),
-                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
+                                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                               ];
                             } else if (hasMediumRisk) {
                               // Collect species for medium-risk points
@@ -675,9 +688,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   speciesList.addAll(List<String>.from(point['species']));
                                 }
                               }
+                              
+                              // Translate species names
+                              List<String> translatedSpecies = speciesList.map(
+                                (species) => LanguageConfig.getLocalizedString(languageCode, species)
+                              ).toList();
+
                               return [
                                 _buildRiskMessage(
-                                  "Medium probability of encountering ${speciesList.join(', ')}",
+                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
                                   Colors.orange,
                                   context,
                                 ),
@@ -695,7 +714,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 Column(
                                   children: [
                                     Text(
-                                      _distances[_selectedRouteKey] ?? "Unknown",
+                                      _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
                                       style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                     ),
                                     SizedBox(height: MediaQuery.of(context).size.height * 0.01), // Dynamic spacing
@@ -711,14 +730,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       style: ElevatedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                       ),
-                                      child: const Text("Switch Route", style: TextStyle(fontSize: 18.0)),
+                                      child: Text(LanguageConfig.getLocalizedString(languageCode, 'switchRoute'), style: const TextStyle(fontSize: 18.0)),
                                     ),
                                   ],
                                 ),
                                 Column(
                                   children: [
                                     Text(
-                                      _times[_selectedRouteKey] ?? "Unknown",
+                                      _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
                                       style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                     ),
                                     SizedBox(height: MediaQuery.of(context).size.height * 0.01),
@@ -744,7 +763,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       style: ElevatedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                                       ),
-                                      child: const Text("Start", style: TextStyle(fontSize: 18.0)),
+                                      child: Text(LanguageConfig.getLocalizedString(languageCode, 'start'), style: const TextStyle(fontSize: 18.0)),
                                     ),
                                   ],
                                 ),
@@ -769,12 +788,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        _distances[_selectedRouteKey] ?? "Unknown",
+                                        _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
                                         style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                       ),
                                       SizedBox(width: MediaQuery.of(context).size.width * 0.1), // Dynamic width
                                       Text(
-                                        _times[_selectedRouteKey] ?? "Unknown",
+                                        _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
                                         style: const TextStyle(fontSize: 25.0, color: Colors.black),
                                       ),
                                     ],
@@ -799,7 +818,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                         );
                                       }
                                     },
-                                    child: const Text("Start", style: TextStyle(fontSize: 18.0)),
+                                    child: Text(LanguageConfig.getLocalizedString(languageCode, 'start'), style: const TextStyle(fontSize: 18.0)),
                                   ),
                                 ],
                               ),

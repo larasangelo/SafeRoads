@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/configuration/profile_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -9,10 +13,10 @@ class EditProfile extends StatefulWidget {
 }
 
 class _EditProfileState extends State<EditProfile> {
-  String username = "Loading...";
-  String email = "Loading...";
-  String country = "Loading...";
-  String selectedImage = 'assets/profile_images/avatar_1.jpg';
+  String username = ProfileConfig.defaultUsername;
+  String email = ProfileConfig.defaultEmail;
+  String country = ProfileConfig.defaultCountry;
+  String selectedImage = ProfileConfig.defaultAvatar;
 
   final ProfileController _profileController = ProfileController();
   final TextEditingController _usernameController = TextEditingController();
@@ -20,22 +24,16 @@ class _EditProfileState extends State<EditProfile> {
   final TextEditingController _currentPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final List<String> availableImages = [
-    'assets/profile_images/avatar_1.jpg',
-    'assets/profile_images/avatar_2.jpg',
-    'assets/profile_images/avatar_3.jpg',
-    'assets/profile_images/avatar_4.jpg',
-    'assets/profile_images/avatar_5.jpg',
-    'assets/profile_images/avatar_6.jpg',
-  ];
+  final List<String> availableImages = ProfileConfig.availableAvatars;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     fetchUserProfile();
   }
 
   Future<void> fetchUserProfile() async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final profileData = await _profileController.fetchUserProfile();
       print(profileData);
@@ -47,12 +45,13 @@ class _EditProfileState extends State<EditProfile> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching profile: $e")),
+        SnackBar(content: Text("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingProfile')}: $e")),
       );
     }
   }
 
   Future<void> updateProfile() async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       await _profileController.updateUser(
         context: context,
@@ -63,7 +62,7 @@ class _EditProfileState extends State<EditProfile> {
         country: _countryController.text.trim().isNotEmpty
             ? _countryController.text.trim()
             : country,
-        avatar: selectedImage
+        avatar: selectedImage,
       );
 
       // Change password if both fields are filled
@@ -71,23 +70,24 @@ class _EditProfileState extends State<EditProfile> {
           _newPasswordController.text.isNotEmpty) {
         await _profileController.changePassword(_currentPasswordController.text.trim(), _newPasswordController.text.trim());
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password updated successfully!")),
+          SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'passwordUpdated'))),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profile updated successfully!")),
+          SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileUpdated'))),
         );
       }
 
       Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error updating profile: $e")),
+        SnackBar(content: Text("${LanguageConfig.getLocalizedString(languageCode, 'errorUpdatingProfile')}: $e")),
       );
     }
   }
 
   void _showImagePicker() {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     showDialog(
       context: context,
       builder: (context) {
@@ -97,9 +97,9 @@ class _EditProfileState extends State<EditProfile> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Select Profile Image',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  LanguageConfig.getLocalizedString(languageCode, 'selectProfile'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 GridView.builder(
@@ -142,12 +142,12 @@ class _EditProfileState extends State<EditProfile> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Profile"),
+        title: Text(LanguageConfig.getLocalizedString(languageCode, 'editProfile')),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -169,7 +169,7 @@ class _EditProfileState extends State<EditProfile> {
                     children: [
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage: AssetImage(selectedImage), 
+                        backgroundImage: AssetImage(selectedImage),
                       ),
                       Positioned(
                         bottom: 0,
@@ -177,7 +177,7 @@ class _EditProfileState extends State<EditProfile> {
                         child: GestureDetector(
                           onTap: _showImagePicker,
                           child: Container(
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: Colors.black,
                               shape: BoxShape.circle,
                             ),
@@ -193,7 +193,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 40.0),
-                const Text("Username", style: TextStyle(fontSize: 18.0),),
+                Text(LanguageConfig.getLocalizedString(languageCode, 'enterUsername'), style: const TextStyle(fontSize: 18.0)),
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
@@ -206,7 +206,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Email", style: TextStyle(fontSize: 18.0),),
+                Text(LanguageConfig.getLocalizedString(languageCode, 'enterEmail'), style: const TextStyle(fontSize: 18.0)),
                 TextFormField(
                   enabled: false,
                   decoration: InputDecoration(
@@ -219,7 +219,7 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Country", style: TextStyle(fontSize: 18.0),),
+                Text(LanguageConfig.getLocalizedString(languageCode, 'enterCountry'), style: const TextStyle(fontSize: 18.0)),
                 TextFormField(
                   controller: _countryController,
                   decoration: InputDecoration(
@@ -232,12 +232,12 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("Current Password", style: TextStyle(fontSize: 18.0),),
+                Text(LanguageConfig.getLocalizedString(languageCode, 'currentPass'), style: const TextStyle(fontSize: 18.0)),
                 TextFormField(
                   controller: _currentPasswordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    labelText: "Enter current password",
+                    labelText: LanguageConfig.getLocalizedString(languageCode, 'enterCurrent'),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -246,12 +246,12 @@ class _EditProfileState extends State<EditProfile> {
                   ),
                 ),
                 const SizedBox(height: 20.0),
-                const Text("New Password", style: TextStyle(fontSize: 18.0),),
+                Text(LanguageConfig.getLocalizedString(languageCode, 'newPass'), style: const TextStyle(fontSize: 18.0)),
                 TextFormField(
                   controller: _newPasswordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    labelText: "Enter new password",
+                    labelText: LanguageConfig.getLocalizedString(languageCode, 'enterNew'),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10.0),
                     ),
@@ -271,9 +271,9 @@ class _EditProfileState extends State<EditProfile> {
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                     ),
-                    child: const Text(
-                      "Update",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    child: Text(
+                      LanguageConfig.getLocalizedString(languageCode, 'update'),
+                      style: const TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
                 ),

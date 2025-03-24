@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:safe_roads/configuration/profile_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 
 class UserPreferences with ChangeNotifier {
   final ProfileController _profileController = ProfileController();
 
-  bool _lowRisk = false;
-  String _riskAlertDistance = "250 m";
-  String _rerouteAlertDistance = "250 m";
-  bool _changeRoute = true;
-  List<Object?> _selectedSpecies = ["Amphibians"];
-  String _languageCode = "en"; // Default language
+  bool _lowRisk = ProfileConfig.defaultLowRisk;
+  String _riskAlertDistance = ProfileConfig.defaultRiskAlertDistance;
+  String _rerouteAlertDistance = ProfileConfig.defaultRerouteAlertDistance;
+  bool _changeRoute = ProfileConfig.defaultChangeRoute;
+  List<Object?> _selectedSpecies = ProfileConfig.defaultSelectedSpecies;
+  String _languageCode = ProfileConfig.defaultLanguage; // Default language
 
 
   bool get lowRisk => _lowRisk;
@@ -30,12 +31,12 @@ class UserPreferences with ChangeNotifier {
   Future<void> loadPreferences() async {
     try {
       final userProfile = await _profileController.fetchUserProfile();
-      _lowRisk = userProfile['lowRisk'] ?? false;
-      _riskAlertDistance = userProfile['riskAlertDistance'] ?? "250 m";
-      _rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? "250 m";
-      _changeRoute = userProfile['changeRoute'] ?? true;
-      _selectedSpecies = userProfile['selectedSpecies'] ?? ["Amphibians"];
-      _languageCode = userProfile['selectedLanguage'] ?? "en";
+      _lowRisk = userProfile['lowRisk'] ?? ProfileConfig.defaultLowRisk;
+      _riskAlertDistance = userProfile['riskAlertDistance'] ?? ProfileConfig.defaultRiskAlertDistance;
+      _rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? ProfileConfig.defaultRerouteAlertDistance;
+      _changeRoute = userProfile['changeRoute'] ?? ProfileConfig.defaultChangeRoute;;
+      _selectedSpecies = userProfile['selectedSpecies'] ?? ProfileConfig.defaultSelectedSpecies;
+      _languageCode = userProfile['selectedLanguage'] ?? ProfileConfig.defaultLanguage;
       print("USER_PREFERENCES loadPreferences: $_selectedSpecies");
       notifyListeners();
     } catch (e) {
