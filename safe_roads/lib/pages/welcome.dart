@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     return Scaffold(
       body: Stack(
         children: [
@@ -39,9 +43,9 @@ class WelcomePage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10.0),
                         ),
                       ),
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      child: Text(
+                        LanguageConfig.getLocalizedString(languageCode, 'login'),
+                        style: const TextStyle(fontSize: 18, color: Colors.white),
                       ),
                     ),
                   ),
@@ -65,9 +69,9 @@ class WelcomePage extends StatelessWidget {
                           style: BorderStyle.solid,
                         ),
                       ),
-                      child: const Text(
-                        "Register",
-                        style: TextStyle(fontSize: 18, color: Colors.black),
+                      child: Text(
+                        LanguageConfig.getLocalizedString(languageCode, 'register'),
+                        style: const TextStyle(fontSize: 18, color: Colors.black),
                       ),
                     ),
                   ),
@@ -75,7 +79,6 @@ class WelcomePage extends StatelessWidget {
               ),
             ),
           )
-
         ],
       ),
     );

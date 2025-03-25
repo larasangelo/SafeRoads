@@ -66,7 +66,28 @@ class LanguageConfig {
       'mediumProbability': 'Medium probability of encountering',
       'unknown': 'Unknown',
       'switchRoute': 'Switch Route',
-      'start': 'Start'
+      'start': 'Start',
+      // Login
+      'welcome': 'Welcome back!\nGlad to see you, Again!',
+      'inputEmail': 'Enter your email',
+      'pleaseEmail': 'Please enter your email',
+      'userPass': 'Enter your password',
+      'pleasePass': 'Please enter your password',
+      'forgotPass': 'Forgot Password?',
+      'login': 'Login',
+      'noAccount': 'Don’t have an account? ',
+      'registerNow': 'Register Now',
+      // Register
+      'helloRegister': 'Hello! \nRegister to get started',
+      'pass': 'Password',
+      'confirmPass': 'Confirm password',
+      'register': 'Register',
+      'accountAlready': 'Already have an account? ',
+      'loginNow': 'Login Now',
+      // Navigation Bar
+      'about': 'About',
+      'navigation': 'Navigation',
+      'profile': 'Profile',
     },
     'pt': {
       // About
@@ -134,7 +155,28 @@ class LanguageConfig {
       "mediumProbability": "Média probabilidade de encontrar",
       "unknown": "Desconhecido",
       "switchRoute": "Alterar rota",
-      "start": "Iniciar"
+      // Login
+      "start": "Iniciar",
+      'welcome': 'Bem-vindo de volta!\nQue bom vê-lo novamente!',
+      'inputEmail': 'Digite o seu e-mail',
+      'pleaseEmail': 'Por favor, insira o seu e-mail',
+      'userPass': 'Digite a sua senha',
+      'pleasePass': 'Por favor, insira a sua senha',
+      'forgotPass': 'Esqueceu-se da senha?',
+      'login': 'Entrar',
+      'noAccount': 'Não tem uma conta? ',
+      'registerNow': 'Cadastre-se agora',
+      // Register
+      'helloRegister': 'Olá! \nCadastre-se para começar',
+      'pass': 'Senha',
+      'confirmPass': 'Confirmar senha',
+      'register': 'Cadastrar',
+      'accountAlready': 'Já tem uma conta? ',
+      'loginNow': 'Entrar agora',
+      // Navigation Bar
+      'about': 'Sobre',
+      'navigation': 'Navegação',
+      'profile': 'Perfil'
     },
     'es': {
       // About
@@ -202,7 +244,28 @@ class LanguageConfig {
       "mediumProbability": "Probabilidad media de encontrar",
       "unknown": "Desconocido",
       "switchRoute": "Cambiar ruta",
-      "start": "Iniciar"
+      "start": "Iniciar",
+      // Login
+      'welcome': '¡Bienvenido de nuevo!\n¡Qué bueno verte otra vez!',
+      'inputEmail': 'Ingresa tu correo electrónico',
+      'pleaseEmail': 'Por favor, ingresa tu correo electrónico',
+      'userPass': 'Ingresa tu contraseña',
+      'pleasePass': 'Por favor, ingresa tu contraseña',
+      'forgotPass': '¿Olvidaste tu contraseña?',
+      'login': 'Iniciar sesión',
+      'noAccount': '¿No tienes una cuenta? ',
+      'registerNow': 'Regístrate ahora',
+      // Register
+      'helloRegister': '¡Hola! \nRegístrate para empezar',
+      'pass': 'Contraseña',
+      'confirmPass': 'Confirmar contraseña',
+      'register': 'Registrarse',
+      'accountAlready': '¿Ya tienes una cuenta? ',
+      'loginNow': 'Inicia sesión ahora',
+      // Navigation Bar
+      'about': 'Acerca de',
+      'navigation': 'Navegación',
+      'profile': 'Perfil'
     },
   };
 

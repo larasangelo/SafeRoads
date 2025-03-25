@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/configuration/navigation_bar_config.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/about.dart';
 import 'package:safe_roads/pages/home.dart';
 import 'package:safe_roads/pages/profile.dart';
@@ -11,10 +15,10 @@ class NavigationBarExample extends StatefulWidget {
 }
 
 class NavigationBarExampleState extends State<NavigationBarExample> {
-  int _selectedIndex = 1; // Default to the MapPage
-  bool _showNavigationBar = true; // Track visibility of navigation bar
-  final PageController _pageController = PageController(initialPage: 1);
-  final PageStorageBucket _bucket = PageStorageBucket(); // For persisting state
+  int _selectedIndex = NavigationBarConfig.selectedIndex;
+  bool _showNavigationBar = NavigationBarConfig.showNavigationBar;
+  final PageController _pageController = NavigationBarConfig.pageController;
+  final PageStorageBucket _bucket = NavigationBarConfig.bucket; // For persisting state
 
   // Toggle navigation bar visibility
   void toggleNavigationBar(bool show) {
@@ -31,6 +35,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
 
   @override
   Widget build(BuildContext context) {
+    String languageCode = Provider.of<UserPreferences>(context).languageCode;
     return Scaffold(
       body: PageView(
         controller: _pageController,
@@ -55,21 +60,21 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
               onDestinationSelected: (int index) {
                 _pageController.jumpToPage(index);
               },
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.info_outline),
-                  selectedIcon: Icon(Icons.info),
-                  label: "About",
+                  icon: const Icon(Icons.info_outline),
+                  selectedIcon: const Icon(Icons.info),
+                  label: LanguageConfig.getLocalizedString(languageCode, 'about'), 
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.place_outlined),
-                  selectedIcon: Icon(Icons.place),
-                  label: "Navigation",
+                  icon: const Icon(Icons.place_outlined),
+                  selectedIcon: const Icon(Icons.place),
+                  label: LanguageConfig.getLocalizedString(languageCode, 'navigation'), 
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: "Profile",
+                  icon: const Icon(Icons.person_outline),
+                  selectedIcon: const Icon(Icons.person),
+                  label: LanguageConfig.getLocalizedString(languageCode, 'profile'),
                 ),
               ],
               backgroundColor: Colors.white,

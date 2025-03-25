@@ -6,7 +6,7 @@ import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/auth_controller.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/models/user_preferences.dart';
-import 'package:safe_roads/pages/alertDistance.dart';
+import 'package:safe_roads/pages/alert_distance.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/profile_config.dart';
