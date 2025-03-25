@@ -9,6 +9,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/configuration/navigation_config.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
@@ -29,28 +31,28 @@ class NavigationPage extends StatefulWidget {
 class _NavigationPageState extends State<NavigationPage> {
   late String selectedRouteKey;
   late List<Map<String, dynamic>> routeCoordinates;
-  final Notifications _notifications = Notifications();
+  final Notifications _notifications = NavigationConfig.notifications;
   late Location location;
   LatLng? currentPosition;
   LatLng? previousPosition;
-  double bearing = 0.0; // For map rotation
+  double bearing = NavigationConfig.bearing; // For map rotation
   StreamSubscription<LocationData>? locationSubscription;
-  final MapController _mapController = MapController();
-  bool isFirstLocationUpdate = true;
-  String estimatedArrivalTime = "??:??"; // To display the arrival time
-  bool isAnimating = false; // To prevent overlapping animations
-  bool _destinationReached = false;
-  Set<LatLng> notifiedZones = {}; // Track notified risk zones
-  bool _inRiskZone = false;
+  final MapController _mapController = NavigationConfig.mapController;
+  bool isFirstLocationUpdate = NavigationConfig.isFirstLocationUpdate;
+  String estimatedArrivalTime = NavigationConfig.estimatedArrivalTime; // To display the arrival time
+  bool isAnimating = NavigationConfig.isAnimating; // To prevent overlapping animations
+  bool _destinationReached = NavigationConfig.destinationReached;
+  Set<LatLng> notifiedZones = NavigationConfig.notifiedZones; // Track notified risk zones
+  bool inRiskZone = NavigationConfig.inRiskZone;
   DateTime? lastWarningTime; // Move this outside the function to persist the value
-  bool keepRoute = true;
-  Set<LatLng> passedSegments = {}; // Store segments already passed
-  int consecutiveOffRouteCount = 0; // Track how many times user is "off-route"
-  int offRouteThreshold = 7; // Require 7 consecutive off-route detections
-  bool lastOnRouteState = true; // Track last known on-route state
-  bool _startRiskNotificationSent = false; // Track if the initial notification was sent
-  List<dynamic> notifiedDivergences = [];
-  bool _firstRiskDetected = false;
+  bool keepRoute = NavigationConfig.keepRoute;
+  Set<LatLng> passedSegments = NavigationConfig.passedSegments; // Store segments already passed
+  int consecutiveOffRouteCount = NavigationConfig.consecutiveOffRouteCount; // Track how many times user is "off-route"
+  int offRouteThreshold = NavigationConfig.offRouteThreshold; // Require 7 consecutive off-route detections
+  bool lastOnRouteState = NavigationConfig.lastOnRouteState; // Track last known on-route state
+  bool _startRiskNotificationSent = NavigationConfig.startRiskNotificationSent; // Track if the initial notification was sent
+  List<dynamic> notifiedDivergences = NavigationConfig.notifiedDivergences;
+  bool _firstRiskDetected = NavigationConfig.firstRiskDetected;
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -77,7 +79,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
     _initializeLocation();
 
-    _calculateArrivalTime(widget.times[selectedRouteKey] ?? "0 min");
+    _calculateArrivalTime(widget.times[selectedRouteKey] ?? NavigationConfig.defaultTime);
 
     locationSubscription = location.onLocationChanged.listen((LocationData loc) {
       if (loc.latitude != null && loc.longitude != null) {
@@ -92,7 +94,7 @@ class _NavigationPageState extends State<NavigationPage> {
           });
 
           if (isFirstLocationUpdate) {
-            _mapController.moveAndRotate(currentPosition!, 19.0, bearing);
+            _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
             isFirstLocationUpdate = false;
           }
         }
@@ -105,8 +107,8 @@ class _NavigationPageState extends State<NavigationPage> {
         // Extract last coordinate safely
         LatLng lastPoint = _getLatLngFromMap(routeCoordinates.last);
         
-        if ((currentPosition!.latitude - lastPoint.latitude).abs() < 0.0001 &&
-            (currentPosition!.longitude - lastPoint.longitude).abs() < 0.0001) {
+        if ((currentPosition!.latitude - lastPoint.latitude).abs() < NavigationConfig.threshold &&
+            (currentPosition!.longitude - lastPoint.longitude).abs() < NavigationConfig.threshold) {
           setState(() {
             _destinationReached = true;
           });
@@ -183,6 +185,7 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _calculateArrivalTime(String travelTime) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       DateTime now = DateTime.now();
       int totalMinutes = 0;
@@ -203,7 +206,7 @@ class _NavigationPageState extends State<NavigationPage> {
       }
 
       if (totalMinutes == 0) {
-        print("Invalid travel time format.");
+        print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
         return;
       }
 
@@ -216,7 +219,7 @@ class _NavigationPageState extends State<NavigationPage> {
         estimatedArrivalTime = formattedTime;
       });
     } catch (e) {
-      print("Error calculating arrival time: $e");
+      print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
     }
   }
 
@@ -238,8 +241,8 @@ class _NavigationPageState extends State<NavigationPage> {
   }
   
   void _animateMarker(LatLng start, LatLng end) async {
-    const int steps = 20; // Number of steps for smooth animation
-    const duration = Duration(milliseconds: 50); // Time per step
+    int steps = NavigationConfig.animationSteps; // Number of steps for smooth animation
+    Duration duration = Duration(milliseconds: NavigationConfig.timePerStep); // Time per step
 
     double deltaLat = (end.latitude - start.latitude) / steps;
     double deltaLon = (end.longitude - start.longitude) / steps;
@@ -303,14 +306,14 @@ class _NavigationPageState extends State<NavigationPage> {
     String riskAlertDistance = userPreferences.riskAlertDistance;
 
     double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
-    const double routeDeviationThreshold = 50.0;
+    double routeDeviationThreshold = NavigationConfig.routeDeviationThreshold;
     const Distance distance = Distance();
 
-    bool isOnRoute = false;
-    double highestUpcomingRisk = 0;
-    double currentRiskLevel = 0;
-    Set<LatLng> detectedRiskZones = {};  
-    Map<LatLng, double> upcomingRisks = {}; // Store multiple risk points
+    bool isOnRoute = NavigationConfig.isOnRoute;
+    double highestUpcomingRisk = NavigationConfig.highestUpcomingRisk;
+    double currentRiskLevel = NavigationConfig.currentRiskLevel;
+    Set<LatLng> detectedRiskZones = NavigationConfig.detectedRiskZones;  
+    Map<LatLng, double> upcomingRisks = NavigationConfig.upcomingRisks; // Store multiple risk points
 
     for (var segment in routeCoordinates) {
       if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
@@ -331,7 +334,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
       bool withinAlertDistance = distanceToPoint < alertDistanceThreshold;
 
-      if (withinAlertDistance && riskValue > 0.3) {
+      if (withinAlertDistance && riskValue > NavigationConfig.mediumRisk) {
         upcomingRisks[point] = riskValue;  // Store all upcoming risk values
         detectedRiskZones.add(point);
         if (riskValue > highestUpcomingRisk || highestUpcomingRisk == 0) {
@@ -406,17 +409,17 @@ class _NavigationPageState extends State<NavigationPage> {
       }
     }
 
-    if (currentRiskLevel > 0.3) {
+    if (currentRiskLevel > NavigationConfig.mediumRisk) {
       passedSegments.addAll(detectedRiskZones);
     }
 
-    _inRiskZone = currentRiskLevel > 0.3;
+    inRiskZone = currentRiskLevel > NavigationConfig.mediumRisk;
   }
 
   // Determine risk category
   String getRiskCategory(double riskLevel) {
-    if (riskLevel < 0.3) return "Low";
-    if (riskLevel >= 0.3 && riskLevel < 0.5) return "Medium";
+    if (riskLevel < NavigationConfig.mediumRisk) return "Low";
+    if (riskLevel >= NavigationConfig.mediumRisk && riskLevel < NavigationConfig.highRisk) return "Medium";
     return "High";
   }
 
@@ -428,9 +431,9 @@ class _NavigationPageState extends State<NavigationPage> {
     // Define the threshold for different risk categories
     double threshold;
     if (riskCategory == "Medium") {
-      threshold = 0.3;
+      threshold = NavigationConfig.mediumRisk;
     } else if (riskCategory == "High") {
-      threshold = 0.5;
+      threshold = NavigationConfig.highRisk;
     } else {
       threshold = double.infinity; 
     }
@@ -491,6 +494,7 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendRiskWarning(LatLng riskPoint, double riskValue, List<dynamic> speciesList) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     print("riskPoint: $riskPoint, riskValue: $riskValue, speciesList: $speciesList");
     notifiedZones.add(riskPoint);
     _firstRiskDetected = true;
@@ -498,16 +502,20 @@ class _NavigationPageState extends State<NavigationPage> {
     String title;
     String body;
 
+    List<String> translatedSpecies = speciesList.map(
+      (species) => LanguageConfig.getLocalizedString(languageCode, species)
+    ).toList();
+
     // Create a comma-separated string of species names
-    String speciesNames = speciesList.join(", ");
+    String speciesNames = translatedSpecies.join(", ");
 
     // Define notification message based on risk level
-    if (riskValue > 0.5) {
-      title = "🚨 High Risk for $speciesNames!";
-      body = "Attention! High risk of the following species ahead: $speciesNames. Slow down and stay alert!";
+    if (riskValue > NavigationConfig.highRisk) {
+      title = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgTitle')}: $speciesNames!";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
     } else {
-      title = "⚠️ Caution: $speciesNames at Risk";
-      body = "Be careful! Medium risk of the following species nearby: $speciesNames. Proceed with caution.";
+      title = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgTitle')}: $speciesNames ${LanguageConfig.getLocalizedString(languageCode, 'atRisk')}";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
     }
 
     try {
@@ -532,21 +540,27 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendInitialRiskWarning(LatLng riskPoint, double riskValue, List<dynamic> speciesList) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     notifiedZones.add(riskPoint);
 
     String title;
     String body;
 
+    List<String> translatedSpecies = speciesList.map(
+      (species) => LanguageConfig.getLocalizedString(languageCode, species)
+    ).toList();
+
     // Create a comma-separated string of species names
-    String speciesNames = speciesList.join(", ");
+    String speciesNames = translatedSpecies.join(", ");
 
     // Define notification message based on risk level
-    if (riskValue > 0.5) {
-      title = "🚨 High Risk for $speciesNames!";
-      body = "WARNING: You are currently in a high-risk zone for the following species: $speciesNames. Proceed with caution!";
+    if (riskValue > NavigationConfig.highRisk) {
+      title = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgTitle')}: $speciesNames!";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'warning')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
+
     } else {
-      title = "⚠️ Caution: $speciesNames at Risk";
-      body = "You are now in an area with medium risk for the following species: $speciesNames. Stay alert and drive carefully.";
+      title = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgTitle')}: $speciesNames ${LanguageConfig.getLocalizedString(languageCode, 'atRisk')}";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'riskZoneHere')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
     }
 
     try {
@@ -571,6 +585,7 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   void _sendOffRouteWarning() async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     if (lastWarningTime == null) {
         lastWarningTime = DateTime.now(); // Initialize for the first time
     } else if (DateTime.now().difference(lastWarningTime!) < const Duration(seconds: 30)) {
@@ -586,8 +601,8 @@ class _NavigationPageState extends State<NavigationPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
-          "title": "🔃 Wrong Route!",
-          "body": "You are off the planned route.",
+          "title": LanguageConfig.getLocalizedString(languageCode, 'wrongRouteMsgTitle'),
+          "body": LanguageConfig.getLocalizedString(languageCode, 'wrongRouteMsgBody'),
           "button": "false",
           "changeRoute": "false"
         }),
@@ -622,7 +637,7 @@ class _NavigationPageState extends State<NavigationPage> {
       LatLng defaultPoint = _getLatLngFromMap(defaultRoute[i]);
       LatLng adjustedPoint = _getLatLngFromMap(adjustedRoute[i]);
 
-      if (!_arePointsClose(defaultPoint, adjustedPoint, threshold: 30.0)) {
+      if (!_arePointsClose(defaultPoint, adjustedPoint, threshold: NavigationConfig.pointsCloseThreshold)) {
         if (!previouslyDiverged) {
             divergencePoints.add(defaultPoint); // Save divergence point
             previouslyDiverged = true; // Mark as diverged
@@ -647,15 +662,16 @@ class _NavigationPageState extends State<NavigationPage> {
     }
   }
 
-  bool _arePointsClose(LatLng p1, LatLng p2, {double threshold = 30.0}) {
+  bool _arePointsClose(LatLng p1, LatLng p2, {required double threshold} ) {
       const Distance distance = Distance();
       return distance(p1, p2) < threshold; // Check if points are close enough
   }
 
   void _sendReRouteNotification(bool changeRoute) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     if (lastWarningTime == null) {
       lastWarningTime = DateTime.now(); // Initialize for the first time
-    } else if (DateTime.now().difference(lastWarningTime!) < const Duration(seconds: 30)) {
+    } else if (DateTime.now().difference(lastWarningTime!) < Duration(seconds: NavigationConfig.reRouteReSend)) {
       return; // Skip if it's been less than 30 seconds
     }
 
@@ -678,10 +694,10 @@ class _NavigationPageState extends State<NavigationPage> {
       String notificationBody;
       if (currentRouteTime == alternativeRouteTime) {
         notificationBody =
-          "Switch route! It will take the same time but with less risk.";
+          LanguageConfig.getLocalizedString(languageCode, 'sameTimeMsg');
       } else {
         notificationBody =
-          "The alternative route has less risk. Consider changing the route.";
+          LanguageConfig.getLocalizedString(languageCode, 'changeRouteMsg');
       }
 
       await http.post(
@@ -690,7 +706,7 @@ class _NavigationPageState extends State<NavigationPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
-          "title": "🚧 Alternative Route Recommended!",
+          "title": LanguageConfig.getLocalizedString(languageCode, 'altRouteTitle'),
           "body": notificationBody,
           "button": "true",
           "changeRoute": changeRoute.toString()
@@ -709,7 +725,7 @@ class _NavigationPageState extends State<NavigationPage> {
     });
 
     if (routeCoordinates.isNotEmpty) {
-      _mapController.move(_getLatLngFromMap(routeCoordinates.first), 19.0);
+      _mapController.move(_getLatLngFromMap(routeCoordinates.first), NavigationConfig.cameraZoom);
     }
 
     print("Switched to Adjusted Route!");
@@ -735,6 +751,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
   @override
   Widget build(BuildContext context) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     return 
       Scaffold(
         body: SafeArea(
@@ -745,7 +762,7 @@ class _NavigationPageState extends State<NavigationPage> {
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: currentPosition ?? _getLatLngFromMap(routeCoordinates.first), 
-                  initialZoom: 19.0,
+                  initialZoom: NavigationConfig.cameraZoom,
                   initialRotation: bearing, // Set initial rotation
                 ),
                 children: [
@@ -763,9 +780,9 @@ class _NavigationPageState extends State<NavigationPage> {
                       // Determine color based on raster value
                       Color lineColor;
                       if (current['raster_value'] != null) {
-                        if (current['raster_value'] > 0.5) {
+                        if (current['raster_value'] > NavigationConfig.highRisk) {
                           lineColor = Colors.red; // High risk
-                        } else if (current['raster_value'] > 0.3) {
+                        } else if (current['raster_value'] > NavigationConfig.mediumRisk) {
                           lineColor = Colors.orange; // Medium risk
                         } else {
                           lineColor = Colors.purple; // Default color
@@ -868,18 +885,18 @@ class _NavigationPageState extends State<NavigationPage> {
                     color: Colors.white,
                     shape: BoxShape.rectangle,
                   ),
-                  child: const Column(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Destination Reached!",
-                        style: TextStyle(
+                        LanguageConfig.getLocalizedString(languageCode, 'destinationReached'),
+                        style: const TextStyle(
                           fontSize: 30.0,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),

@@ -160,8 +160,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           // Dynamically set box height
           double screenHeight = MediaQuery.of(context).size.height;
           _boxHeight = _hasRisk[_selectedRouteKey] == true 
-              ? screenHeight * 0.35  // Adjust for risk message
-              : screenHeight * 0.35; // Default heigh
+              ? screenHeight * HomeConfig.adjustedRiskBoxHeight  // Adjust for risk message
+              : screenHeight * HomeConfig.defaultRiskBoxHeight; // Default height
         });
 
         // print("_boxHeight, $_boxHeight");

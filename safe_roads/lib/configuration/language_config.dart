@@ -88,6 +88,24 @@ class LanguageConfig {
       'about': 'About',
       'navigation': 'Navigation',
       'profile': 'Profile',
+      // Navigation
+      'invalidTime': 'Invalid travel time format.',
+      'errorFetchingTime': 'Error calculating arrival time',
+      'highRiskMsgTitle': '🚨 High Risk for',
+      'highRiskMsgBody': 'Attention! High risk of the following species ahead',
+      'stayAlert': 'Slow down and stay alert!',
+      'mediumRiskMsgTitle': '⚠️ Caution',
+      'atRisk': 'at Risk',
+      'mediumRiskMsgBody': 'Be careful! Medium risk of the following species nearby',
+      'caution': 'Proceed with caution.',
+      'warning': 'WARNING: You are currently in a high-risk zone for the following species',
+      'riskZoneHere': 'You are now in an area with medium risk for the following species',
+      'wrongRouteMsgTitle': '🔃 Wrong Route!',
+      'wrongRouteMsgBody': 'You are off the planned route.',
+      'sameTimeMsg': 'Switch route! It will take the same time but with less risk.',
+      'changeRouteMsg': 'The alternative route has less risk. Consider changing the route.',
+      'altRouteTitle': '🚧 Alternative Route Recommended!',
+      'destinationReached': 'Destination Reached!'
     },
     'pt': {
       // About
@@ -176,7 +194,25 @@ class LanguageConfig {
       // Navigation Bar
       'about': 'Sobre',
       'navigation': 'Navegação',
-      'profile': 'Perfil'
+      'profile': 'Perfil',
+      // Navigation
+      'invalidTime': 'Formato de tempo de viagem inválido.',
+      'errorFetchingTime': 'Erro ao calcular o tempo de chegada',
+      'highRiskMsgTitle': '🚨 Alto Risco para',
+      'highRiskMsgBody': 'Atenção! Alto risco das seguintes espécies à frente',
+      'stayAlert': 'Reduza a velocidade e fique atento!',
+      'mediumRiskMsgTitle': '⚠️ Atenção',
+      'atRisk': 'em Risco',
+      'mediumRiskMsgBody': 'Cuidado! Risco médio das seguintes espécies nas proximidades',
+      'caution': 'Prossiga com cautela.',
+      'warning': 'AVISO: Você está em uma zona de alto risco para as seguintes espécies',
+      'riskZoneHere': 'Você está agora em uma área com risco médio para as seguintes espécies',
+      'wrongRouteMsgTitle': '🔃 Rota Errada!',
+      'wrongRouteMsgBody': 'Você saiu da rota planejada.',
+      'sameTimeMsg': 'Mude de rota! Levará o mesmo tempo, mas com menos risco.',
+      'changeRouteMsg': 'A rota alternativa tem menos risco. Considere mudar de rota.',
+      'altRouteTitle': '🚧 Rota Alternativa Recomendada!',
+      'destinationReached': 'Destino Alcançado!'
     },
     'es': {
       // About
@@ -265,7 +301,25 @@ class LanguageConfig {
       // Navigation Bar
       'about': 'Acerca de',
       'navigation': 'Navegación',
-      'profile': 'Perfil'
+      'profile': 'Perfil',
+      // Navigation
+      'invalidTime': 'Formato de tiempo de viaje inválido.',
+      'errorFetchingTime': 'Error al calcular el tiempo de llegada',
+      'highRiskMsgTitle': '🚨 Alto Riesgo para',
+      'highRiskMsgBody': '¡Atención! Alto riesgo de las siguientes especies adelante',
+      'stayAlert': '¡Reduce la velocidad y mantente alerta!',
+      'mediumRiskMsgTitle': '⚠️ Precaución',
+      'atRisk': 'en Riesgo',
+      'mediumRiskMsgBody': '¡Ten cuidado! Riesgo medio de las siguientes especies cerca',
+      'caution': 'Procede con precaución.',
+      'warning': 'ADVERTENCIA: Estás en una zona de alto riesgo para las siguientes especies',
+      'riskZoneHere': 'Ahora estás en un área con riesgo medio para las siguientes especies',
+      'wrongRouteMsgTitle': '🔃 ¡Ruta Incorrecta!',
+      'wrongRouteMsgBody': 'Te has desviado de la ruta planificada.',
+      'sameTimeMsg': '¡Cambia de ruta! Tomará el mismo tiempo pero con menos riesgo.',
+      'changeRouteMsg': 'La ruta alternativa tiene menos riesgo. Considera cambiar de ruta.',
+      'altRouteTitle': '🚧 ¡Ruta Alternativa Recomendada!',
+      'destinationReached': '¡Destino Alcanzado!'
     },
   };
 

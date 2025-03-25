@@ -38,8 +38,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NotificationPreferences()), 
       ], 
       child: MaterialApp(
-        // initialRoute: '/navigation',
-        initialRoute: '/welcome',
+        initialRoute: '/navigation',
+        // initialRoute: '/welcome',
         routes: {
           '/': (context) => const Loading(),
           '/home': (context) => const MapPage(),
