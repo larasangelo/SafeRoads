@@ -77,11 +77,36 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
     // console.log("endNode", endNode.rows[0].id);
 
     // Calculate bounding box
-    const bufferDistance = 0.05;
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+    
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) *
+          Math.cos(lat2 * (Math.PI / 180)) *
+          Math.sin(dLon / 2) *
+          Math.sin(dLon / 2);
+    
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // Distance in km
+    }
+    
+    // Calculate distance between start and end
+    const distanceKm = calculateDistance(start.lat, start.lon, end.lat, end.lon);
+    
+    // Dynamically adjust bufferDistance
+    const baseBuffer = 0.02; // Minimum buffer for short distances
+    const maxBuffer = 1; // Maximum buffer for very large distances
+    const bufferDistance = Math.min(baseBuffer + distanceKm * 0.01, maxBuffer); // Scales with distance
+    
     const minLat = Math.min(start.lat, end.lat) - bufferDistance;
     const maxLat = Math.max(start.lat, end.lat) + bufferDistance;
     const minLon = Math.min(start.lon, end.lon) - bufferDistance;
     const maxLon = Math.max(start.lon, end.lon) + bufferDistance;
+    
+    console.log(`Dynamic Buffer Distance: ${bufferDistance}`);
 
     // console.log("minLat", minLat);
     // console.log("maxLat", maxLat);
@@ -167,6 +192,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
       ORDER BY route.seq;
     `;
     const route = await pool.query(routeQuery);
+    console.log('adjustedRoute', route);
 
     // Step 4: If the user doesn't want only the low-risk route, return the default route
     if (!lowRisk) {
@@ -177,7 +203,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
         maxspeed_forward,
         maxspeed_backward
         FROM pgr_dijkstra(
-          'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM ways',
+          'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM temp_ways',
           ${startNode.rows[0].id}, ${endNode.rows[0].id},
           directed := true
         ) AS route
@@ -296,12 +322,18 @@ app.post("/route", async (req, res) => {
     const { start, end, lowRisk, selectedSpecies } = req.body;
     const routes = await getRoute(start, end, lowRisk, selectedSpecies);
 
+    // console.log('routes', routes);
+
     let responseData = {};
     let allRoutes = {}; // Store routes for comparison
 
     for (const [key, route] of Object.entries(routes)) {
       if (!route || route.length === 0) {
-        return res.status(404).json({ error: "Route not found" });
+        console.log("key", key);
+        console.log("route", route);
+        // return res.status(404).json({ error: "Route not found" });
+        console.log(`Skipping route: ${key}, no valid data found.`);
+        continue; // Skip this route and continue with the next one
       }
 
       let routePoints = [];

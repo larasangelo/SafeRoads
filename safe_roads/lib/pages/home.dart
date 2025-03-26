@@ -493,20 +493,21 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 var entry = _routesWithPoints.entries.elementAt(i);
                                 var routePoints = entry.value;
                                 var midPointIndex = routePoints.length ~/ 2;
-          
+
                                 // Get midpoint coordinates
                                 LatLng midPoint = routePoints[midPointIndex]['latlng'];
-          
+
                                 // Compute dynamic offset to avoid overlap
                                 double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
                                 double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
                                 double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
-          
+
                                 // Ensure selected route's box is more visible
                                 bool isSelectedRoute = entry.key == _selectedRouteKey;
+                                bool isAdjustedRoute = entry.key == 'adjustedRoute'; // Check if it's the adjusted route
                                 Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
                                 Color textColor = isSelectedRoute ? Colors.white : Colors.black;
-          
+
                                 return Positioned(
                                   left: screenX,
                                   top: screenY,
@@ -517,8 +518,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       borderRadius: BorderRadius.circular(10),
                                       boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
                                     ),
-                                    child: Column(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        if (isAdjustedRoute) // Show an icon for the adjusted route
+                                          const Icon(Icons.star, color: Colors.yellow, size: 15),
+
                                         Text(
                                           "${_times[entry.key]}",
                                           style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
