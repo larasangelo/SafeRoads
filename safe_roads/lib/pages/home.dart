@@ -391,7 +391,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
-    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    // String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    String languageCode = Provider.of<UserPreferences>(context).languageCode;
+
 
     return 
       Scaffold(
