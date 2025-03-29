@@ -14,6 +14,7 @@ import 'package:safe_roads/configuration/navigation_config.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NavigationPage extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> routesWithPoints;
@@ -25,7 +26,7 @@ class NavigationPage extends StatefulWidget {
   const NavigationPage(this.routesWithPoints, this.selectedRouteKey, this.routeCoordinates, this.distances, this.times, {super.key});
 
   @override
-  _NavigationPageState createState() => _NavigationPageState();
+  State<NavigationPage> createState() => _NavigationPageState();
 }
 
 class _NavigationPageState extends State<NavigationPage> {
@@ -37,7 +38,7 @@ class _NavigationPageState extends State<NavigationPage> {
   LatLng? previousPosition;
   double bearing = NavigationConfig.bearing; // For map rotation
   StreamSubscription<LocationData>? locationSubscription;
-  final MapController _mapController = NavigationConfig.mapController;
+  late MapController _mapController;
   bool isFirstLocationUpdate = NavigationConfig.isFirstLocationUpdate;
   String estimatedArrivalTime = NavigationConfig.estimatedArrivalTime; // To display the arrival time
   bool isAnimating = NavigationConfig.isAnimating; // To prevent overlapping animations
@@ -53,6 +54,12 @@ class _NavigationPageState extends State<NavigationPage> {
   bool _startRiskNotificationSent = NavigationConfig.startRiskNotificationSent; // Track if the initial notification was sent
   List<dynamic> notifiedDivergences = NavigationConfig.notifiedDivergences;
   bool _firstRiskDetected = NavigationConfig.firstRiskDetected;
+  bool enteringNewRiskZone = NavigationConfig.enteringNewRiskZone;
+  bool isOnRoute = NavigationConfig.isOnRoute;
+  double highestUpcomingRisk = NavigationConfig.highestUpcomingRisk;
+  double currentRiskLevel = NavigationConfig.currentRiskLevel;
+  Set<LatLng> detectedRiskZones = NavigationConfig.detectedRiskZones;  
+  Map<LatLng, double> upcomingRisks = NavigationConfig.upcomingRisks; // Store multiple risk points
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -68,10 +75,36 @@ class _NavigationPageState extends State<NavigationPage> {
 
   @override
   void initState() {
+    // Reset NavigationConfig values
+    NavigationConfig.isFirstLocationUpdate = true;
+    NavigationConfig.estimatedArrivalTime = "";
+    NavigationConfig.isAnimating = false;
+    NavigationConfig.destinationReached = false;
+    NavigationConfig.notifiedZones.clear();
+    NavigationConfig.inRiskZone = false;
+    NavigationConfig.keepRoute = false;
+    NavigationConfig.passedSegments.clear();
+    NavigationConfig.consecutiveOffRouteCount = 0;
+    NavigationConfig.lastOnRouteState = true;
+    NavigationConfig.startRiskNotificationSent = false;
+    NavigationConfig.notifiedDivergences.clear();
+    NavigationConfig.firstRiskDetected = false;
+    NavigationConfig.enteringNewRiskZone = false;
+    NavigationConfig.isOnRoute = false;
+    NavigationConfig.highestUpcomingRisk = 0;
+    NavigationConfig.currentRiskLevel = 0;
+    NavigationConfig.detectedRiskZones.clear();  
+    NavigationConfig.upcomingRisks.clear(); 
+    
+    // print("enteringNewRiskZone: $enteringNewRiskZone");
+    // print("NavigationConfig.enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}");
+    // print("NavigationConfig.upcomingRisks: ${NavigationConfig.upcomingRisks}");
+
     super.initState();
     selectedRouteKey = widget.selectedRouteKey; // Set initial route from Home.dart
     routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
     location = Location();
+    _mapController = MapController();
 
     // Assign the callback to handle rerouting
     _notifications.onSwitchRoute = switchToAdjustedRoute;
@@ -158,29 +191,29 @@ class _NavigationPageState extends State<NavigationPage> {
     });
 
     // -------------------- TESTE NO DISPOSITIVO FÍSICO ------------------------
-    // String title = "🚨 TESTE!";
-    // String body = "Isto é um teste para o dispositivo móvel.";
+  //   String title = "🚨 TESTE!";
+  //   String body = "Isto é um teste para o dispositivo móvel.";
 
-    // try {
-    //   final response = await http.post(
-    //    // Uri.parse('http://192.168.1.82:3000/send'),
-    //  // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
-    //     headers: {"Content-Type": "application/json"},
-    //     body: jsonEncode({
-    //       "fcmToken": _notifications.fcmToken,
-    //       "title": title,
-    //       "body": body,
-    //       "button": "false",
-    //       "changeRoute": "false"
-    //     }),
-    //   );
+  //   try {
+  //     final response = await http.post(
+  //     Uri.parse('http://192.168.1.82:3000/send'),
+  //  //  Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
+  //       headers: {"Content-Type": "application/json"},
+  //       body: jsonEncode({
+  //         "fcmToken": _notifications.fcmToken,
+  //         "title": title,
+  //         "body": body,
+  //         "button": "false",
+  //         "changeRoute": "false"
+  //       }),
+  //     );
 
-    //   if (response.statusCode == 200) {
-    //     print("Risk alert sent successfully: $title");
-    //   }
-    // } catch (e) {
-    //   print("Error sending risk alert: $e");
-    // }
+  //     if (response.statusCode == 200) {
+  //       print("Risk alert sent successfully: $title");
+  //     }
+  //   } catch (e) {
+  //     print("Error sending risk alert: $e");
+  //   }
     // ------------------------------------------------------------------------
   }
 
@@ -227,7 +260,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.121.197:3000/update-position'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.62:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -309,12 +342,6 @@ class _NavigationPageState extends State<NavigationPage> {
     double routeDeviationThreshold = NavigationConfig.routeDeviationThreshold;
     const Distance distance = Distance();
 
-    bool isOnRoute = NavigationConfig.isOnRoute;
-    double highestUpcomingRisk = NavigationConfig.highestUpcomingRisk;
-    double currentRiskLevel = NavigationConfig.currentRiskLevel;
-    Set<LatLng> detectedRiskZones = NavigationConfig.detectedRiskZones;  
-    Map<LatLng, double> upcomingRisks = NavigationConfig.upcomingRisks; // Store multiple risk points
-
     for (var segment in routeCoordinates) {
       if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
 
@@ -367,8 +394,6 @@ class _NavigationPageState extends State<NavigationPage> {
       double riskValue = entry.value;
       String upcomingRiskCategory = getRiskCategory(riskValue);
 
-      bool enteringNewRiskZone = false;
-
       // We need to extract the species list for the current risk point
       // Find the segment that corresponds to the current risk point
       var segment = routeCoordinates.firstWhere(
@@ -376,9 +401,9 @@ class _NavigationPageState extends State<NavigationPage> {
       );
 
       List<dynamic> speciesList = segment['species']; // Extract species list for the current risk point
-      print("speciesList: $speciesList");
+      // print("speciesList: $speciesList");
 
-      if (!_firstRiskDetected && !_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute && riskPoint != null) {
+      if (!_firstRiskDetected && !_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute) {
         _sendInitialRiskWarning(riskPoint, currentRiskLevel, List<dynamic>.from(speciesList));
         _startRiskNotificationSent = true; // Mark notification as sent
         _firstRiskDetected = true;
@@ -388,6 +413,7 @@ class _NavigationPageState extends State<NavigationPage> {
           (currentRiskCategory == "Low" && upcomingRiskCategory == "High") ||
           (currentRiskCategory == "Medium" && upcomingRiskCategory == "High")) {
         enteringNewRiskZone = true;
+        // print('ele volta a entrar no if e diz que enteringNewRiskZone = $enteringNewRiskZone');
       }
 
       print("enteringNewRiskZone: $enteringNewRiskZone, highestUpcomingRisk: $highestUpcomingRisk, currentRiskLevel: $currentRiskLevel");
@@ -397,11 +423,13 @@ class _NavigationPageState extends State<NavigationPage> {
       Set<LatLng> connectedRiskZone = _findConnectedRiskZone(riskPoint, upcomingRiskCategory);
 
       print("Connected Risk Zone Size: ${connectedRiskZone.length}");
+      // print("connectedRiskZone, $connectedRiskZone");
+      // print("notifiedZones, $notifiedZones");
 
       if (connectedRiskZone.difference(notifiedZones).isNotEmpty) {
         print("🔔 Sending notification for risk at $riskPoint (Risk Level: $riskValue)");
-        print("connectedRiskZone, $connectedRiskZone");
-        print("notifiedZones, $notifiedZones");
+        // print("connectedRiskZone, $connectedRiskZone");
+        // print("notifiedZones, $notifiedZones");
         _sendRiskWarning(riskPoint, riskValue, List<dynamic>.from(speciesList)); // Pass species list here
         notifiedZones.addAll(connectedRiskZone);
       } else {
@@ -495,7 +523,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
   void _sendRiskWarning(LatLng riskPoint, double riskValue, List<dynamic> speciesList) async {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-    print("riskPoint: $riskPoint, riskValue: $riskValue, speciesList: $speciesList");
+    // print("riskPoint: $riskPoint, riskValue: $riskValue, speciesList: $speciesList");
     notifiedZones.add(riskPoint);
     _firstRiskDetected = true;
 
@@ -521,6 +549,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -566,6 +595,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
+        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -597,7 +627,7 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -702,7 +732,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.197:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -743,6 +773,7 @@ class _NavigationPageState extends State<NavigationPage> {
   void dispose() {
     // Cancel location updates
     locationSubscription?.cancel();
+    _mapController.dispose();
     
     print("NavigationPage disposed. Stopping location updates and clearing resources.");
     
@@ -819,7 +850,8 @@ class _NavigationPageState extends State<NavigationPage> {
                 child: IconButton(
                   icon: const Icon(Icons.close, size: 40),
                   onPressed: () {
-                    Navigator.of(context, rootNavigator: true).pop();
+                    // Navigator.of(context, rootNavigator: true).pop();
+                    Navigator.pop(context); //TEST!!!!
                   }
                 )
               ),

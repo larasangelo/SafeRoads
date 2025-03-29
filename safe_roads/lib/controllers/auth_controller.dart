@@ -42,9 +42,13 @@ class AuthController {
           'avatar': 'assets/profile_images/avatar_1.jpg'
         });
       }
-      Navigator.pushNamed(context, '/login');
+      if (context.mounted) {
+        Navigator.pushNamed(context, '/login');
+      }
     } catch (e) {
-      _showErrorDialog(context, e.toString());
+      if (context.mounted) {
+        _showErrorDialog(context, e.toString());
+      }
     }
   }
 
@@ -63,9 +67,13 @@ class AuthController {
       await _authModel.loginUser(email: email, password: password);
 
       // Navigate to the home page after successful login
-      Navigator.pushReplacementNamed(context, '/navigation');
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, '/navigation');
+      }
     } catch (e) {
-      _showErrorDialog(context, e.toString());
+      if (context.mounted) {
+        _showErrorDialog(context, e.toString());
+      }
     }
   }
 

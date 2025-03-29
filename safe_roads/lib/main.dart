@@ -51,6 +51,7 @@ void main() async {
       ], 
       child: MaterialApp(
         initialRoute: '/navigation',
+        // initialRoute: '/welcome ',
         routes: {
           '/': (context) => const Loading(),
           '/home': (context) => const MapPage(),
@@ -154,36 +155,4 @@ void onStart(ServiceInstance service) async {
   service.on('stopService').listen((event) {
     service.stopSelf();
   });
-
-  // Timer.periodic(const Duration(minutes: 5), (timer) async {
-  //   if (service is AndroidServiceInstance) {
-  //     if (await service.isForegroundService()) {
-  //       // Check some condition before sending notifications
-  //       bool shouldSendNotification = checkRiskZone(); // Implement this function
-
-  //       if (shouldSendNotification) {
-  //         flutterLocalNotificationsPlugin.show(
-  //           888,
-  //           'Risk Alert',
-  //           'You are approaching a risk zone!',
-  //           const NotificationDetails(
-  //             android: AndroidNotificationDetails(
-  //               'my_foreground',
-  //               'MY FOREGROUND SERVICE',
-  //               icon: 'ic_bg_service_small',
-  //               ongoing: false, // Make it dismissible
-  //             ),
-  //           ),
-  //         );
-
-  //         service.setForegroundNotificationInfo(
-  //           title: "Risk Alert",
-  //           content: "You're near a risk zone!",
-  //         );
-  //       }
-  //     }
-  //   }
-
-    // debugPrint('FLUTTER BACKGROUND SERVICE CHECK: ${DateTime.now()}');
-  // });
 }

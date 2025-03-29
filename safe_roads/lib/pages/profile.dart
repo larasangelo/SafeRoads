@@ -16,7 +16,7 @@ class Profile extends StatefulWidget {
   const Profile({super.key});
 
   @override
-  _ProfileState createState() => _ProfileState();
+  State<Profile> createState() => _ProfileState();
 }
 
 class _ProfileState extends State<Profile> with WidgetsBindingObserver {
@@ -145,6 +145,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
 
     if (shouldSignOut == true) {
       await _authController.logout();
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     }
   }
@@ -190,8 +191,10 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     if (shouldDelete == true) {
       final password = passwordController.text;
       if (password.isNotEmpty) {
+        if (!mounted) return;
         await _profileController.deleteUserAccount(context: context, password: password);
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'passwordRequired'))),
         );
@@ -246,6 +249,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     try {
       await _profileController.updateUserPreference(context: context, key: key, value: value);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("${LanguageConfig.getLocalizedString(selectedLanguage, 'updateFailed')}: $e")),
       );

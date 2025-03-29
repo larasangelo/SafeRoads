@@ -148,18 +148,18 @@ class Notifications {
       bool isInteracted = false; 
 
       // AnimationController for smooth progress transition
-      late AnimationController _animationController;
+      late AnimationController animationController;
 
       overlayEntry = OverlayEntry(
         builder: (context) {
           return StatefulBuilder(
             builder: (context, setState) {
-              _animationController = AnimationController(
+              animationController = AnimationController(
                 vsync: Navigator.of(context), // Ensures smooth animations
                 duration: const Duration(seconds: 6), // Full duration
               );
 
-              _animationController.forward(); // Start animation immediately
+              animationController.forward(); // Start animation immediately
 
               return Positioned(
                 top: showButton
@@ -207,7 +207,7 @@ class Notifications {
                               children: [
                                 // Animated "Re-route" button
                                 AnimatedBuilder(
-                                  animation: _animationController,
+                                  animation: animationController,
                                   builder: (context, child) {
                                     return Stack(
                                       alignment: Alignment.center,
@@ -227,7 +227,7 @@ class Notifications {
                                                 ],
                                                 stops: [
                                                   0.0,
-                                                  _animationController.value
+                                                  animationController.value
                                                 ], // Progress effect from left to right
                                                 begin: Alignment.centerLeft,
                                                 end: Alignment.centerRight,
@@ -239,7 +239,7 @@ class Notifications {
                                         ElevatedButton(
                                           onPressed: () {
                                             isInteracted = true;
-                                            _animationController.stop(); // Stop animation
+                                            animationController.stop(); // Stop animation
                                             onSwitchRoute?.call();
                                             overlayEntry.remove();
                                           },
@@ -261,7 +261,7 @@ class Notifications {
                                 ElevatedButton(
                                   onPressed: () {
                                     isInteracted = true;
-                                    _animationController.stop(); // Stop animation
+                                    animationController.stop(); // Stop animation
                                     ignoreSwitchRoute?.call();
                                     overlayEntry.remove();
                                   },
@@ -287,7 +287,7 @@ class Notifications {
                                 ),
                                 // Animated "Ignore" button
                                 AnimatedBuilder(
-                                  animation: _animationController,
+                                  animation: animationController,
                                   builder: (context, child) {
                                     return Stack(
                                       alignment: Alignment.center,
@@ -307,7 +307,7 @@ class Notifications {
                                                 ],
                                                 stops: [
                                                   0.0,
-                                                  _animationController.value
+                                                  animationController.value
                                                 ], // Progress effect from left to right
                                                 begin: Alignment.centerLeft,
                                                 end: Alignment.centerRight,
@@ -319,7 +319,7 @@ class Notifications {
                                         ElevatedButton(
                                           onPressed: () {
                                             isInteracted = true;
-                                            _animationController.stop(); // Stop animation
+                                            animationController.stop(); // Stop animation
                                             ignoreSwitchRoute?.call();
                                             overlayEntry.remove();
                                           },

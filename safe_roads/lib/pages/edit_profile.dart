@@ -9,7 +9,7 @@ class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
 
   @override
-  _EditProfileState createState() => _EditProfileState();
+  State<EditProfile> createState() => _EditProfileState();
 }
 
 class _EditProfileState extends State<EditProfile> {
@@ -44,6 +44,7 @@ class _EditProfileState extends State<EditProfile> {
         selectedImage = profileData['avatar']!;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingProfile')}: $e")),
       );
@@ -68,18 +69,29 @@ class _EditProfileState extends State<EditProfile> {
       // Change password if both fields are filled
       if (_currentPasswordController.text.isNotEmpty &&
           _newPasswordController.text.isNotEmpty) {
-        await _profileController.changePassword(_currentPasswordController.text.trim(), _newPasswordController.text.trim());
+        await _profileController.changePassword(
+          _currentPasswordController.text.trim(),
+          _newPasswordController.text.trim(),
+        );
+
+        if (!mounted) return; // Ensure the widget is still mounted before using context
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'passwordUpdated'))),
         );
       } else {
+        if (!mounted) return; // Ensure the widget is still mounted before using context
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileUpdated'))),
         );
       }
 
+      if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
+      if (!mounted) return; // Ensure the widget is still mounted before using context
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("${LanguageConfig.getLocalizedString(languageCode, 'errorUpdatingProfile')}: $e")),
       );

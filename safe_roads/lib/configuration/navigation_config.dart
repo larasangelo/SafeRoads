@@ -1,4 +1,4 @@
-import 'package:flutter_map/flutter_map.dart';
+// import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:safe_roads/notifications.dart';
 
@@ -6,7 +6,7 @@ class NavigationConfig {
 
   static final Notifications notifications = Notifications();
   static double bearing = 0.0; // For map rotation
-  static final MapController mapController = MapController();
+  // static final MapController mapController = MapController();
   static bool isFirstLocationUpdate = true;
   static String estimatedArrivalTime = "??:??"; // To display the arrival time
   static bool isAnimating = false; // To prevent overlapping animations
@@ -39,5 +39,7 @@ class NavigationConfig {
 
   static double pointsCloseThreshold = 30.0;
   static int reRouteReSend = 30;
+
+  static bool enteringNewRiskZone = false;
 
 }

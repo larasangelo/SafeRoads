@@ -84,7 +84,9 @@ class ProfileController {
       //   const SnackBar(content: Text("Profile updated successfully!")),
       // );
     } catch (e) {
-      _showErrorDialog(context, e.toString());
+      if (context.mounted) {
+        _showErrorDialog(context, e.toString());
+      }
     }
   }
 
@@ -108,11 +110,15 @@ class ProfileController {
       });
 
       // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileUpdated'))),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileUpdated'))),
+        );
+      }
     } catch (e) {
-      _showErrorDialog(context, e.toString());
+      if (context.mounted) {
+        _showErrorDialog(context, e.toString());
+      }
     }
   }
 
@@ -154,14 +160,20 @@ class ProfileController {
       await user.delete();
 
       // Navigate the user to the login screen
-      Navigator.pushReplacementNamed(context, '/login');
+      if (context.mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
 
       // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileDeleted'))),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileDeleted'))),
+        );
+      }
     } catch (e) {
-      _showErrorDialog(context, e.toString());
+      if (context.mounted) {
+        _showErrorDialog(context, e.toString());
+      }
     }
   }
 

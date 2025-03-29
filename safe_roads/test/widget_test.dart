@@ -7,8 +7,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:safe_roads/main.dart';
 import 'package:safe_roads/pages/home.dart';
 
 void main() {

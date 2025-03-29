@@ -17,7 +17,7 @@ class AlertDistancePage extends StatefulWidget {
   });
 
   @override
-  _AlertDistancePageState createState() => _AlertDistancePageState();
+  State<AlertDistancePage> createState() => _AlertDistancePageState();
 }
 
 class _AlertDistancePageState extends State<AlertDistancePage> {

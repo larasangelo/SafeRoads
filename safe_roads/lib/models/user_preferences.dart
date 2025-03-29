@@ -34,7 +34,7 @@ class UserPreferences with ChangeNotifier {
       _lowRisk = userProfile['lowRisk'] ?? ProfileConfig.defaultLowRisk;
       _riskAlertDistance = userProfile['riskAlertDistance'] ?? ProfileConfig.defaultRiskAlertDistance;
       _rerouteAlertDistance = userProfile['rerouteAlertDistance'] ?? ProfileConfig.defaultRerouteAlertDistance;
-      _changeRoute = userProfile['changeRoute'] ?? ProfileConfig.defaultChangeRoute;;
+      _changeRoute = userProfile['changeRoute'] ?? ProfileConfig.defaultChangeRoute;
       _selectedSpecies = userProfile['selectedSpecies'] ?? ProfileConfig.defaultSelectedSpecies;
       _languageCode = userProfile['selectedLanguage'] ?? ProfileConfig.defaultLanguage;
       print("USER_PREFERENCES loadPreferences: $_selectedSpecies");
