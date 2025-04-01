@@ -27,51 +27,38 @@ class Notifications {
   VoidCallback? onSwitchRoute;
   VoidCallback? ignoreSwitchRoute;
 
-  Future<StreamSubscription<RemoteMessage>?> setupFirebaseMessaging(BuildContext context, StreamSubscription<RemoteMessage>? messageSubscription) async {
-    NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+  Future<StreamSubscription<RemoteMessage>?> setupFirebaseMessaging(BuildContext? context, StreamSubscription<RemoteMessage>? messageSubscription) async {
+  NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+    criticalAlert: true, // For iOS to allow critical notifications
+    announcement: true,  // For accessibility-related announcements
+  );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print("Notification permission granted");
-      fcmToken = await FirebaseMessaging.instance.getToken();
-      print("FCM Token: $fcmToken");
+  if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+    print("Notification permission granted");
+    fcmToken = await FirebaseMessaging.instance.getToken();
+    print("FCM Token: $fcmToken");
 
-      if (messageSubscription != null) {
-        print("Existing message subscription found. Ensuring it remains active.");
-        // Re-subscribe to the message stream if necessary
-        try {
-          messageSubscription.resume(); // Try resuming if it was paused
-        } catch (e) {
-          print("Existing subscription is not active. Creating a new one.");
-          messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-            print("Foreground message received: ${message.notification?.title}");
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              showForegroundNotification(message);
-            });
-          });
-        }
-        return messageSubscription;
-      }
+    if (messageSubscription != null) {
+      messageSubscription.resume(); 
+      return messageSubscription;
+    }
 
-      // No existing subscription, create a new one
-      print("Creating a new message subscription.");
-      messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        print("Foreground message received: ${message.notification?.title}");
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          showForegroundNotification(message);
-        });
+    messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("Foreground message received: ${message.notification?.title}");
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         showForegroundNotification(message);
       });
+    });
 
-      return messageSubscription;
-    } else {
-      print("Notification permission denied");
-    }
-    return null;
+    return messageSubscription;
+  } else {
+    print("Notification permission denied");
   }
+  return null;
+}
 
   Future<void> setupNotificationChannels() async {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(

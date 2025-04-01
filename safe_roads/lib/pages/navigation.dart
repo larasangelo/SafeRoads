@@ -14,7 +14,6 @@ import 'package:safe_roads/configuration/navigation_config.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class NavigationPage extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> routesWithPoints;
@@ -191,29 +190,29 @@ class _NavigationPageState extends State<NavigationPage> {
     });
 
     // -------------------- TESTE NO DISPOSITIVO FÍSICO ------------------------
-  //   String title = "🚨 TESTE!";
-  //   String body = "Isto é um teste para o dispositivo móvel.";
+    String title = "🚨 TESTE!";
+    String body = "Isto é um teste para o dispositivo móvel.";
 
-  //   try {
-  //     final response = await http.post(
-  //     Uri.parse('http://192.168.1.82:3000/send'),
-  //  //  Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
-  //       headers: {"Content-Type": "application/json"},
-  //       body: jsonEncode({
-  //         "fcmToken": _notifications.fcmToken,
-  //         "title": title,
-  //         "body": body,
-  //         "button": "false",
-  //         "changeRoute": "false"
-  //       }),
-  //     );
+    try {
+      final response = await http.post(
+      Uri.parse('http://192.168.1.82:3000/send'),
+   //  Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "fcmToken": _notifications.fcmToken,
+          "title": title,
+          "body": body,
+          "button": "false",
+          "changeRoute": "false"
+        }),
+      );
 
-  //     if (response.statusCode == 200) {
-  //       print("Risk alert sent successfully: $title");
-  //     }
-  //   } catch (e) {
-  //     print("Error sending risk alert: $e");
-  //   }
+      if (response.statusCode == 200) {
+        print("Risk alert sent successfully: $title");
+      }
+    } catch (e) {
+      print("Error sending risk alert: $e");
+    }
     // ------------------------------------------------------------------------
   }
 

@@ -79,11 +79,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -278,11 +278,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
 
@@ -394,423 +394,366 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     // String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
 
-
     return 
       Scaffold(
-        body: SafeArea(
-          child: Stack(
-            children: [
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                initialCenter: const LatLng(0, 0),
-                initialZoom: 12.0,
-                onPositionChanged: (position, hasGesture) {
-                  _currentCenter = position.center;
-                  _currentZoom = position.zoom;
-                },
-              ),
-                children: [
-                  TileLayer(
-                    urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                    subdomains: const ['a', 'b', 'c'],
-                  ),
-                  if (_currentLocation != null)
-                    const MarkerLayer(
-                      markers: [
-                        Marker(
-                          // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                          // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                          // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                          // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                          point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                          child: Icon(Icons.location_pin, color: Colors.blue, size: 40),
-                        ),
-                      ],
-                    ),
-                  if (_destinationLocation != null)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _destinationLocation!,
-                          child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
-                        ),
-                      ],
-                    ),
-                  if (_routesWithPoints.isNotEmpty)
-                    PolylineLayer(
-                      polylines: [
-                        // First, draw unselected routes (gray)
-                        ..._routesWithPoints.entries.expand<Polyline>((entry) {
-                          if (entry.key == _selectedRouteKey) return []; // Skip selected route for now
-          
-                          final List<Map<String, dynamic>> routePoints = entry.value;
-                          if (routePoints.length < 2) return [];
-          
-                          return List.generate(routePoints.length - 1, (index) {
-                            final current = routePoints[index];
-                            final next = routePoints[index + 1];
-          
-                            if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
-          
-                            return Polyline(
-                              points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                              strokeWidth: 4.0,
-                              color: Colors.grey.withOpacity(0.7), // Always gray for unselected routes
-                            );
-                          }).whereType<Polyline>(); // Remove null values
-                        }),
-          
-                        // Now, draw the selected route last (so it's on top)
-                        if (_routesWithPoints.containsKey(_selectedRouteKey))
-                          ..._routesWithPoints[_selectedRouteKey]!.sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1).map((current) {
-                            final next = _routesWithPoints[_selectedRouteKey]![_routesWithPoints[_selectedRouteKey]!.indexOf(current) + 1];
-          
-                            if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
-          
-                            Color lineColor;
-                            if (current['raster_value'] > 0.5) {
-                              lineColor = Colors.red;
-                            } else if (current['raster_value'] > 0.3) {
-                              lineColor = Colors.orange;
-                            } else {
-                              lineColor = Colors.purple;
-                            }
-          
-                            return Polyline(
-                              points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                              strokeWidth: 4.0,
-                              color: lineColor, // Selected route is colored
-                            );
-                          }).whereType<Polyline>(),
-                      ],
-                    ),
-                    Stack(
-                      children: [
-                        // Add Info Boxes on Routes
-                        for (var i = 0; i < _routesWithPoints.entries.length; i++) 
-                          if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
-                            Builder(
-                              builder: (context) {
-                                var entry = _routesWithPoints.entries.elementAt(i);
-                                var routePoints = entry.value;
-                                var midPointIndex = routePoints.length ~/ 2;
-
-                                // Get midpoint coordinates
-                                LatLng midPoint = routePoints[midPointIndex]['latlng'];
-
-                                // Compute dynamic offset to avoid overlap
-                                double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
-                                double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
-                                double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
-
-                                // Ensure selected route's box is more visible
-                                bool isSelectedRoute = entry.key == _selectedRouteKey;
-                                bool isAdjustedRoute = entry.key == 'adjustedRoute'; // Check if it's the adjusted route
-                                Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
-                                Color textColor = isSelectedRoute ? Colors.white : Colors.black;
-
-                                return Positioned(
-                                  left: screenX,
-                                  top: screenY,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: boxColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (isAdjustedRoute) // Show an icon for the adjusted route
-                                          const Icon(Icons.star, color: Colors.yellow, size: 15),
-
-                                        Text(
-                                          "${_times[entry.key]}",
-                                          style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                      ],
-                    ),
-              Positioned(
-                top: 40.0,
-                left: 10.0,
-                right: 10.0,
-                child: Column(
-                  children: [
-                    if (_isFetchingRoute)       // Esta fetching a route E Nao tem a route
-                    LinearProgressIndicator(
-                      value: null, // Indeterminate progress
-                      backgroundColor: Colors.grey[200],
-                      color: Colors.blue,
-                    ),  // Nao esta fetching a route E ja tem a route
-                    TextField(
-                      controller: _addressController,
-                      decoration: InputDecoration(
-                        labelText: LanguageConfig.getLocalizedString(languageCode, 'enterDestination'),
-                        filled: true,
-                        fillColor: Colors.white,
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            navigationBarKey.currentState?.toggleNavigationBar(true);
-          
-                            // Reset the map state and UI elements
-                            setState(() {
-                              _cancelFetchingRoute = true; // Cancel the route-fetching process
-                              _routesWithPoints.clear();
-                              destinationSelected = false;
-                              selectedDestination = "";
-                              _destinationLocation = null;
-                              _addressController.text = "";
-                              _suggestions.clear();
-                              setDestVis = true;
-                              _isFetchingRoute = false;
-                            });
-                            // Center the map on the user's current location
-                            if (_currentLocation != null) {
-                              _mapController.move(
-                                // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                                // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                                // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                                // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                                const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                                13.0, // Adjust zoom level as needed
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8.0),
-                    if (_suggestions.isNotEmpty && !destinationSelected)
-                      Container(
-                        color: Colors.white,
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: _suggestions.length,
-                          itemBuilder: (context, index) {
-                            // Assuming _suggestions holds a list of maps with name, city, and country
-                            final suggestion = _suggestions[index];
-                            return 
-                            ListTile(
-                              title: Text(
-                                suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'), // Default value for null case
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text(
-                                (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
-                                    ? '${suggestion['city']}, ${suggestion['country']}' // City and country
-                                    : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')), //  Handle null country
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              onTap: () {
-                                // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag
-                                _addressController.text = suggestion['name'];
-                                FocusScope.of(context).unfocus(); // Dismiss the keyboard
-                                setState(() {
-                                  _suggestions.clear();
-                                  destinationSelected = true;
-                                  selectedDestination = _addressController.text;
-                                });
-                              }
-                            );
-                          },
-                        ),
-                      ),
-                    if(_routesWithPoints.isEmpty && setDestVis)
-                    ElevatedButton(
-                      onPressed: () {
-                        _setDestination();
-                        setState(() {
-                          setDestVis = false;
-                        });
-                      },
-                      child: Text(LanguageConfig.getLocalizedString(languageCode, 'setDestination')),
-                    ),
-                  ],
+        body: Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+              initialCenter: const LatLng(0, 0),
+              initialZoom: 12.0,
+              onPositionChanged: (position, hasGesture) {
+                _currentCenter = position.center;
+                _currentZoom = position.zoom;
+              },
+            ),
+              children: [
+                TileLayer(
+                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  subdomains: const ['a', 'b', 'c'],
                 ),
-              ),
-              //button when 
-              if (_routesWithPoints.isNotEmpty)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: _boxHeight, // Adjusted height for messages
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(30.0),
+                if (_currentLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                        // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                        // point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Risk message with dynamic spacing
-                        if (_routesWithPoints[_selectedRouteKey] != null)
-                          ...() {
-                            bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
-                                .any((point) => point['raster_value'] > 0.5);
-                            bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
-                                .any((point) => point['raster_value'] > 0.3 && point['raster_value'] <= 0.5);
-          
-                            if (hasHighRisk) {
-                              // Collect species for high-risk points
-                              Set<String> speciesList = {};
-                              for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                                if (point['raster_value'] > 0.5) {
-                                  speciesList.addAll(List<String>.from(point['species']));
-                                }
-                              }
-                              
-                              // Translate species names
-                              List<String> translatedSpecies = speciesList.map(
-                                (species) => LanguageConfig.getLocalizedString(languageCode, species)
-                              ).toList();
+                    ],
+                  ),
+                if (_destinationLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _destinationLocation!,
+                        child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
+                      ),
+                    ],
+                  ),
+                if (_routesWithPoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      // First, draw unselected routes (gray)
+                      ..._routesWithPoints.entries.expand<Polyline>((entry) {
+                        if (entry.key == _selectedRouteKey) return []; // Skip selected route for now
+        
+                        final List<Map<String, dynamic>> routePoints = entry.value;
+                        if (routePoints.length < 2) return [];
+        
+                        return List.generate(routePoints.length - 1, (index) {
+                          final current = routePoints[index];
+                          final next = routePoints[index + 1];
+        
+                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+        
+                          return Polyline(
+                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                            strokeWidth: 4.0,
+                            color: Colors.grey.withOpacity(0.7), // Always gray for unselected routes
+                          );
+                        }).whereType<Polyline>(); // Remove null values
+                      }),
+        
+                      // Now, draw the selected route last (so it's on top)
+                      if (_routesWithPoints.containsKey(_selectedRouteKey))
+                        ..._routesWithPoints[_selectedRouteKey]!.sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1).map((current) {
+                          final next = _routesWithPoints[_selectedRouteKey]![_routesWithPoints[_selectedRouteKey]!.indexOf(current) + 1];
+        
+                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+        
+                          Color lineColor;
+                          if (current['raster_value'] > 0.5) {
+                            lineColor = Colors.red;
+                          } else if (current['raster_value'] > 0.3) {
+                            lineColor = Colors.orange;
+                          } else {
+                            lineColor = Colors.purple;
+                          }
+        
+                          return Polyline(
+                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                            strokeWidth: 4.0,
+                            color: lineColor, // Selected route is colored
+                          );
+                        }).whereType<Polyline>(),
+                    ],
+                  ),
+                  Stack(
+                    children: [
+                      // Add Info Boxes on Routes
+                      for (var i = 0; i < _routesWithPoints.entries.length; i++) 
+                        if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
+                          Builder(
+                            builder: (context) {
+                              var entry = _routesWithPoints.entries.elementAt(i);
+                              var routePoints = entry.value;
+                              var midPointIndex = routePoints.length ~/ 2;
 
-                              return [
-                                _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'highProbability')} ${translatedSpecies.join(', ')}",
-                                  Colors.red,
-                                  context,
-                                ),
-                                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-                              ];
-                            } else if (hasMediumRisk) {
-                              // Collect species for medium-risk points
-                              Set<String> speciesList = {};
-                              for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                                if (point['raster_value'] > 0.3 && point['raster_value'] <= 0.5) {
-                                  speciesList.addAll(List<String>.from(point['species']));
-                                }
-                              }
-                              
-                              // Translate species names
-                              List<String> translatedSpecies = speciesList.map(
-                                (species) => LanguageConfig.getLocalizedString(languageCode, species)
-                              ).toList();
+                              // Get midpoint coordinates
+                              LatLng midPoint = routePoints[midPointIndex]['latlng'];
 
-                              return [
-                                _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
-                                  Colors.orange,
-                                  context,
-                                ),
-                                SizedBox(height: MediaQuery.of(context).size.height * 0.02),
-                              ];
-                            }
-                            return [];
-                          }(),
-                        if (_routesWithPoints.length > 1)
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), // Dynamic padding
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  children: [
-                                    Text(
-                                      _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
-                                    ),
-                                    SizedBox(height: MediaQuery.of(context).size.height * 0.01), // Dynamic spacing
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          final keys = _routesWithPoints.keys.toList();
-                                          int currentIndex = keys.indexOf(_selectedRouteKey);
-                                          _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                                        });
-                                        print(" key: $_selectedRouteKey");
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      ),
-                                      child: Text(LanguageConfig.getLocalizedString(languageCode, 'switchRoute'), style: const TextStyle(fontSize: 18.0)),
-                                    ),
-                                  ],
-                                ),
-                                Column(
-                                  children: [
-                                    Text(
-                                      _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
-                                    ),
-                                    SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        if (_routesWithPoints.containsKey(_selectedRouteKey)) {
-                                          List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-          
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => NavigationPage(
-                                                _routesWithPoints,
-                                                _selectedRouteKey,
-                                                selectedRoute,
-                                                _distances,
-                                                _times,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                                      ),
-                                      child: Text(LanguageConfig.getLocalizedString(languageCode, 'start'), style: const TextStyle(fontSize: 18.0)),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Align(
-                            alignment: Alignment.bottomCenter,
-                            child: Container(
-                              height: MediaQuery.of(context).size.height * 0.15, // Dynamic height
-                              width: double.infinity,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.rectangle,
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(30.0)),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                              // Compute dynamic offset to avoid overlap
+                              double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
+                              double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
+                              double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
+
+                              // Ensure selected route's box is more visible
+                              bool isSelectedRoute = entry.key == _selectedRouteKey;
+                              bool isAdjustedRoute = entry.key == 'adjustedRoute'; // Check if it's the adjusted route
+                              Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
+                              Color textColor = isSelectedRoute ? Colors.white : Colors.black;
+
+                              return Positioned(
+                                left: screenX,
+                                top: screenY,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: boxColor,
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      if (isAdjustedRoute) // Show an icon for the adjusted route
+                                        const Icon(Icons.star, color: Colors.yellow, size: 15),
+
                                       Text(
-                                        _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                        style: const TextStyle(fontSize: 25.0, color: Colors.black),
-                                      ),
-                                      SizedBox(width: MediaQuery.of(context).size.width * 0.1), // Dynamic width
-                                      Text(
-                                        _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                        style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                        "${_times[entry.key]}",
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
+                                ),
+                              );
+                            },
+                          ),
+                    ],
+                  ),
+            Positioned(
+              top: 40.0,
+              left: 10.0,
+              right: 10.0,
+              child: Column(
+                children: [
+                  if (_isFetchingRoute)       // Esta fetching a route E Nao tem a route
+                  LinearProgressIndicator(
+                    value: null, // Indeterminate progress
+                    backgroundColor: Colors.grey[200],
+                    color: Colors.blue,
+                  ),  // Nao esta fetching a route E ja tem a route
+                  TextField(
+                    controller: _addressController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(50.0),
+                      ),
+                      labelText: LanguageConfig.getLocalizedString(languageCode, 'enterDestination'),
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          navigationBarKey.currentState?.toggleNavigationBar(true);
+        
+                          // Reset the map state and UI elements
+                          setState(() {
+                            _cancelFetchingRoute = true; // Cancel the route-fetching process
+                            _routesWithPoints.clear();
+                            destinationSelected = false;
+                            selectedDestination = "";
+                            _destinationLocation = null;
+                            _addressController.text = "";
+                            _suggestions.clear();
+                            setDestVis = true;
+                            _isFetchingRoute = false;
+                          });
+                          // Center the map on the user's current location
+                          if (_currentLocation != null) {
+                            _mapController.move(
+                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                              // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                              // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              13.0, // Adjust zoom level as needed
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                  if (_suggestions.isNotEmpty && !destinationSelected)
+                    Container(
+                      color: Colors.white,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _suggestions.length,
+                        itemBuilder: (context, index) {
+                          // Assuming _suggestions holds a list of maps with name, city, and country
+                          final suggestion = _suggestions[index];
+                          return 
+                          ListTile(
+                            title: Text(
+                              suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'), // Default value for null case
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(
+                              (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
+                                  ? '${suggestion['city']}, ${suggestion['country']}' // City and country
+                                  : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')), //  Handle null country
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            onTap: () {
+                              // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag
+                              _addressController.text = suggestion['name'];
+                              FocusScope.of(context).unfocus(); // Dismiss the keyboard
+                              setState(() {
+                                _suggestions.clear();
+                                destinationSelected = true;
+                                selectedDestination = _addressController.text;
+                              });
+                            }
+                          );
+                        },
+                      ),
+                    ),
+                  if(_routesWithPoints.isEmpty && setDestVis)
+                  ElevatedButton(
+                    onPressed: () {
+                      _setDestination();
+                      setState(() {
+                        setDestVis = false;
+                      });
+                    },
+                    child: Text(LanguageConfig.getLocalizedString(languageCode, 'setDestination')),
+                  ),
+                ],
+              ),
+            ),
+            //button when 
+            if (_routesWithPoints.isNotEmpty)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: _boxHeight, // Adjusted height for messages
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.rectangle,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(30.0),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Risk message with dynamic spacing
+                      if (_routesWithPoints[_selectedRouteKey] != null)
+                        ...() {
+                          bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
+                              .any((point) => point['raster_value'] > 0.5);
+                          bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
+                              .any((point) => point['raster_value'] > 0.3 && point['raster_value'] <= 0.5);
+        
+                          if (hasHighRisk) {
+                            // Collect species for high-risk points
+                            Set<String> speciesList = {};
+                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
+                              if (point['raster_value'] > 0.5) {
+                                speciesList.addAll(List<String>.from(point['species']));
+                              }
+                            }
+                            
+                            // Translate species names
+                            List<String> translatedSpecies = speciesList.map(
+                              (species) => LanguageConfig.getLocalizedString(languageCode, species)
+                            ).toList();
+
+                            return [
+                              _buildRiskMessage(
+                                "${LanguageConfig.getLocalizedString(languageCode, 'highProbability')} ${translatedSpecies.join(', ')}",
+                                Colors.red,
+                                context,
+                              ),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                            ];
+                          } else if (hasMediumRisk) {
+                            // Collect species for medium-risk points
+                            Set<String> speciesList = {};
+                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
+                              if (point['raster_value'] > 0.3 && point['raster_value'] <= 0.5) {
+                                speciesList.addAll(List<String>.from(point['species']));
+                              }
+                            }
+                            
+                            // Translate species names
+                            List<String> translatedSpecies = speciesList.map(
+                              (species) => LanguageConfig.getLocalizedString(languageCode, species)
+                            ).toList();
+
+                            return [
+                              _buildRiskMessage(
+                                "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
+                                Colors.orange,
+                                context,
+                              ),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                            ];
+                          }
+                          return [];
+                        }(),
+                      if (_routesWithPoints.length > 1)
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), // Dynamic padding
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                children: [
+                                  Text(
+                                    _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                  ),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01), // Dynamic spacing
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        final keys = _routesWithPoints.keys.toList();
+                                        int currentIndex = keys.indexOf(_selectedRouteKey);
+                                        _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                      });
+                                      print(" key: $_selectedRouteKey");
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    ),
+                                    child: Text(LanguageConfig.getLocalizedString(languageCode, 'switchRoute'), style: const TextStyle(fontSize: 18.0)),
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                  ),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01),
                                   ElevatedButton(
                                     onPressed: () {
                                       if (_routesWithPoints.containsKey(_selectedRouteKey)) {
                                         List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-          
+        
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -825,19 +768,76 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                         );
                                       }
                                     },
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                                    ),
                                     child: Text(LanguageConfig.getLocalizedString(languageCode, 'start'), style: const TextStyle(fontSize: 18.0)),
                                   ),
                                 ],
                               ),
+                            ],
+                          ),
+                        )
+                      else
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.15, // Dynamic height
+                            width: double.infinity,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.rectangle,
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(30.0)),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    ),
+                                    SizedBox(width: MediaQuery.of(context).size.width * 0.1), // Dynamic width
+                                    Text(
+                                      _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (_routesWithPoints.containsKey(_selectedRouteKey)) {
+                                      List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
+        
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => NavigationPage(
+                                            _routesWithPoints,
+                                            _selectedRouteKey,
+                                            selectedRoute,
+                                            _distances,
+                                            _times,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: Text(LanguageConfig.getLocalizedString(languageCode, 'start'), style: const TextStyle(fontSize: 18.0)),
+                                ),
+                              ],
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                 ),
-              ]),
-            ],
-          ),
+              ),
+            ]),
+          ],
         ),
       );
   }

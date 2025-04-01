@@ -202,15 +202,14 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
-   Future<void> checkNotificationPermissions() async {
-    // Check the current notification permission status
+  Future<void> checkNotificationPermissions() async {
+    await Future.delayed(const Duration(milliseconds: 500)); // Small delay to prevent race conditions
+
     PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
 
-    // Update the switch state based on the permission status
-    if (mounted) {  // Check if the widget is still in the tree
+    if (mounted) {  
       setState(() {
         notifications = (status == PermissionStatus.granted);
-        // print("notifications: $notifications");
       });
     }
   }
@@ -222,26 +221,35 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
       await NotificationPermissions.requestNotificationPermissions();
     } else if (status == PermissionStatus.granted) {
       if (Platform.isAndroid) {
-        const AndroidIntent intent = AndroidIntent(
-          action: 'android.settings.APP_NOTIFICATION_SETTINGS',
-          arguments: <String, dynamic>{
-            'android.provider.extra.APP_PACKAGE': 'com.example.safe_roads', 
-          },
-        );
-        await intent.launch();
+        try {
+          const AndroidIntent intent = AndroidIntent(
+            action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+            arguments: <String, dynamic>{
+              'android.provider.extra.APP_PACKAGE': 'com.example.safe_roads', 
+            },
+            flags: <int>[ // Ensures settings open separately
+              0x10000000, // FLAG_ACTIVITY_NEW_TASK
+            ],
+          );
+          await intent.launch();
+        } catch (e) {
+          print("Error launching Android notification settings: $e");
+        }
       } else if (Platform.isIOS) {
         var url = Uri.parse('app-settings:');
         if (await canLaunchUrl(url)) {
           await launchUrl(url);
         } else {
-          throw 'Could not launch $url';
+          print('Could not launch settings');
         }
       }
     }
 
-    // Check if the widget is mounted before calling setState()
+    // Use addPostFrameCallback to delay state update and prevent UI-related crashes
     if (mounted) {
-      checkNotificationPermissions();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        checkNotificationPermissions();
+      });
     }
   }
 

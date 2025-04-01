@@ -33,12 +33,12 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Set background message handler
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  
-  // Initialize notifications
+  // Initialize Notifications
   final Notifications notifications = Notifications();
   await notifications.setupNotificationChannels();
+  
+  // Explicitly request notification permissions
+  notifications.setupFirebaseMessaging(null, null); 
 
   // Initialize background service
   await initializeService();
@@ -50,8 +50,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NotificationPreferences()), 
       ], 
       child: MaterialApp(
-        initialRoute: '/navigation',
-        // initialRoute: '/welcome ',
+        initialRoute: '/welcome',
         routes: {
           '/': (context) => const Loading(),
           '/home': (context) => const MapPage(),

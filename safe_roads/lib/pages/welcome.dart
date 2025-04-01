@@ -16,7 +16,7 @@ class WelcomePage extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage("assets/IMG_8583.JPG"),
+                image: AssetImage("assets/background.jpg"),
                 fit: BoxFit.cover,
               ),
             ),
