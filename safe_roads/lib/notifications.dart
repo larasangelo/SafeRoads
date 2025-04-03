@@ -2,7 +2,11 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
 import 'dart:async';
+
+import 'package:safe_roads/models/user_preferences.dart';
 
 class Notifications {
   static final Notifications _instance = Notifications._internal();
@@ -139,6 +143,7 @@ class Notifications {
 
       overlayEntry = OverlayEntry(
         builder: (context) {
+        String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
           return StatefulBuilder(
             builder: (context, setState) {
               animationController = AnimationController(
@@ -234,9 +239,9 @@ class Notifications {
                                             backgroundColor: Colors.transparent, // Let animation show through
                                             shadowColor: Colors.transparent, // Remove unwanted shadow
                                           ),
-                                          child: const Text(
-                                            "Re-route",
-                                            style: TextStyle(
+                                          child: Text(
+                                            LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
+                                            style: const TextStyle(
                                                 fontSize: 18.0, color: Colors.white),
                                           ),
                                         ),
@@ -252,7 +257,7 @@ class Notifications {
                                     ignoreSwitchRoute?.call();
                                     overlayEntry.remove();
                                   },
-                                  child: const Text("Ignore", style: TextStyle(fontSize: 18.0)),
+                                  child: Text( LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'), style: const TextStyle(fontSize: 18.0)),
                                 ),
                               ],
                             ),
@@ -270,7 +275,7 @@ class Notifications {
                                     }
                                     overlayEntry.remove();
                                   },
-                                  child: const Text("Re-route", style: TextStyle(fontSize: 18.0)),
+                                  child: Text(LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'), style: const TextStyle(fontSize: 18.0)),
                                 ),
                                 // Animated "Ignore" button
                                 AnimatedBuilder(
@@ -314,9 +319,9 @@ class Notifications {
                                             backgroundColor: Colors.transparent, // Let animation show through
                                             shadowColor: Colors.transparent, // Remove unwanted shadow
                                           ),
-                                          child: const Text(
-                                            "Ignore",
-                                            style: TextStyle(
+                                          child: Text(
+                                            LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
+                                            style: const TextStyle(
                                                 fontSize: 18.0, color: Colors.white),
                                           ),
                                         ),

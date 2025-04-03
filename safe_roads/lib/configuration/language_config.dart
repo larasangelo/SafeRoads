@@ -105,7 +105,17 @@ class LanguageConfig {
       'sameTimeMsg': 'Switch route! It will take the same time but with less risk.',
       'changeRouteMsg': 'The alternative route has less risk. Consider changing the route.',
       'altRouteTitle': '🚧 Alternative Route Recommended!',
-      'destinationReached': 'Destination Reached!'
+      'destinationReached': 'Destination Reached!',
+      // Auth Controller
+      'allFields': 'All fields are required.',
+      'passNoMatch': 'Passwords do not match.',
+      'emailAndPassRequired': 'Email and Password are required.',
+      'error': 'Error',
+      // Profile Controller
+      'noUser': 'No user is currently signed in.',
+      // Notifications
+      'reRouteButton': 'Re-route',
+      'ignoreButton': 'Ignore',
     },
     'pt': {
       // About
@@ -212,7 +222,17 @@ class LanguageConfig {
       'sameTimeMsg': 'Mude de rota! Levará o mesmo tempo, mas com menos risco.',
       'changeRouteMsg': 'A rota alternativa tem menos risco. Considere mudar de rota.',
       'altRouteTitle': '🚧 Rota Alternativa Recomendada!',
-      'destinationReached': 'Destino Alcançado!'
+      'destinationReached': 'Destino Alcançado!',
+      // Auth Controller
+      "allFields": "Todos os campos são obrigatórios.",
+      "passNoMatch": "As senhas não coincidem.",
+      "emailAndPassRequired": "Email e senha são obrigatórios.",
+      "error": "Erro",
+      // Profile Controller
+      "noUser": "Nenhum usuário está atualmente conectado.",
+      // Notifications
+      "reRouteButton": "Redirecionar",
+      "ignoreButton": "Ignorar"
     },
     'es': {
       // About
@@ -319,7 +339,17 @@ class LanguageConfig {
       'sameTimeMsg': '¡Cambia de ruta! Tomará el mismo tiempo pero con menos riesgo.',
       'changeRouteMsg': 'La ruta alternativa tiene menos riesgo. Considera cambiar de ruta.',
       'altRouteTitle': '🚧 ¡Ruta Alternativa Recomendada!',
-      'destinationReached': '¡Destino Alcanzado!'
+      'destinationReached': '¡Destino Alcanzado!',
+      // Auth Controller
+      "allFields": "Todos los campos son obligatorios.",
+      "passNoMatch": "Las contraseñas no coinciden.",
+      "emailAndPassRequired": "Correo electrónico y contraseña son obligatorios.",
+      "error": "Error",
+      // Profile Controller
+      "noUser": "Ningún usuario ha iniciado sesión.",
+      // Notifications
+      "reRouteButton": "Redirigir",
+      "ignoreButton": "Ignorar"
     },
   };
 

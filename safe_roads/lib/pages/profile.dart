@@ -268,6 +268,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(

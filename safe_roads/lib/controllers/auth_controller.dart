@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/repositories/user_profile_repository.dart';
 import '../models/auth_model.dart';
 
@@ -13,14 +16,16 @@ class AuthController {
     required String email,
     required String password,
     required String confirmPassword,
-  }) async {
+  }) 
+  async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     if (username.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      _showErrorDialog(context, "All fields are required.");
+      _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'allFields'));
       return;
     }
 
     if (password != confirmPassword) {
-      _showErrorDialog(context, "Passwords do not match.");
+      _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'passNoMatch'));
       return;
     }
 
@@ -53,27 +58,28 @@ class AuthController {
   }
 
   // Login a user
-  Future<void> loginUser({
+  Future<bool> loginUser({
     required BuildContext context,
     required String email,
     required String password,
   }) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     if (email.isEmpty || password.isEmpty) {
-      _showErrorDialog(context, "Email and Password are required.");
-      return;
+      _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'emailAndPassRequired'));
+      return false; // Return false if fields are empty
     }
 
     try {
       await _authModel.loginUser(email: email, password: password);
 
-      // Navigate to the home page after successful login
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/navigation');
-      }
+      // Login successful
+      print("Login successful");
+      return true;
     } catch (e) {
       if (context.mounted) {
         _showErrorDialog(context, e.toString());
       }
+      return false; // Return false if login fails
     }
   }
 
@@ -83,10 +89,11 @@ class AuthController {
 
   // Show error dialog
   void _showErrorDialog(BuildContext context, String message) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Error"),
+        title: Text(LanguageConfig.getLocalizedString(languageCode, 'error')),
         content: Text(message),
         actions: [
           TextButton(

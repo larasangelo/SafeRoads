@@ -55,15 +55,16 @@ class ProfileController {
     required String country, 
     required String avatar,
   }) async {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     final User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-     _showErrorDialog(context, "No user is currently signed in.");
+     _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'noUser'));
       return;
     }
 
     if (username.isEmpty || email.isEmpty || country.isEmpty) {
-     _showErrorDialog(context, "All fields are required.");
+     _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'allFields'));
       return;
     }
 
@@ -99,7 +100,7 @@ class ProfileController {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
 
     if (user == null) {
-     _showErrorDialog(context, "No user is currently signed in.");
+     _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'noUser'));
       return;
     }
 
@@ -144,7 +145,7 @@ class ProfileController {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
 
     if (user == null) {
-      _showErrorDialog(context, "No user is currently signed in.");
+      _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'noUser'));
       return;
     }
 
@@ -179,10 +180,11 @@ class ProfileController {
 
 
   void _showErrorDialog(BuildContext context, String message) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Error"),
+        title: Text(LanguageConfig.getLocalizedString(languageCode, 'error')),
         content: Text(message),
         actions: [
           TextButton(

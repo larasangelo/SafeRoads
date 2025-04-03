@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/models/user_preferences.dart';
+import 'package:safe_roads/pages/loading.dart';
 import '../controllers/auth_controller.dart';
 
 class LoginPage extends StatefulWidget {
@@ -125,13 +126,32 @@ class _LoginPageState extends State<LoginPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        _authController.loginUser(
+                        // Navigate to loading screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const Loading()),
+                        );
+
+                        // Perform login
+                        bool loginSuccess = await _authController.loginUser(
                           context: context,
                           email: _emailController.text.trim(),
                           password: _passwordController.text.trim(),
                         );
+
+                        print("loginSuccess: $loginSuccess");
+
+                        // Ensure the widget is still mounted before navigation
+                        if (!context.mounted) return;
+
+                        // Navigate based on login result
+                        if (loginSuccess) {
+                          Navigator.pushReplacementNamed(context, '/navigation');
+                        } else {
+                          Navigator.pushReplacementNamed(context, '/login');
+                        }
                       }
                     },
                     style: ElevatedButton.styleFrom(
