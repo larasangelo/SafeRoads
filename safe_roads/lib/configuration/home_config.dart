@@ -9,7 +9,6 @@ class HomeConfig {
   static Map<String, List<Map<String, dynamic>>> defaultRoutesWithPoints = {};
   static Map<String, String> defaultDistances = {};
   static Map<String, String> defaultTimes = {};
-  static Map<String, bool> defaultHasRisk = {};
 
   static bool defaultDestinationSelected = false;
   static bool defaultSetDestVis = true;

@@ -34,7 +34,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   String? selectedDestination = HomeConfig.defaultSelectedDestination;
   Map<String, String> _distances = HomeConfig.defaultDistances;
   Map<String, String> _times = HomeConfig.defaultTimes;
-  Map<String, bool> _hasRisk = HomeConfig.defaultHasRisk;
   bool setDestVis = HomeConfig.defaultSetDestVis;
   bool _isFetchingRoute = HomeConfig.defaultIsFetchingRoute;
   bool _cancelFetchingRoute = HomeConfig.defaultCancelFetchingRoute;
@@ -79,11 +78,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -155,13 +154,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _times = times;
           _isFetchingRoute = false; // Hide the progress bar
           _selectedRouteKey = _routesWithPoints.keys.first;
-          _hasRisk = hasRisk;
 
-          // Dynamically set box height
-          double screenHeight = MediaQuery.of(context).size.height;
-          _boxHeight = _hasRisk[_selectedRouteKey] == true 
-              ? screenHeight * HomeConfig.adjustedRiskBoxHeight  // Adjust for risk message
-              : screenHeight * HomeConfig.defaultRiskBoxHeight; // Default height
+          // // Dynamically set box height
+          // double screenHeight = MediaQuery.of(context).size.height;
+          // _boxHeight = _hasRisk[_selectedRouteKey] == true 
+          //     ? screenHeight * HomeConfig.adjustedRiskBoxHeight  // Adjust for risk message
+          //     : screenHeight * HomeConfig.defaultRiskBoxHeight; // Default height
+
+          // print("_hasRisk[_selectedRouteKey], ${_hasRisk[_selectedRouteKey]}");
         });
 
         // print("_boxHeight, $_boxHeight");
@@ -278,11 +278,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
 
@@ -417,11 +417,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        // point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                         child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
                       ),
                     ],
@@ -578,11 +578,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -658,26 +658,31 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Risk message with dynamic spacing
                       if (_routesWithPoints[_selectedRouteKey] != null)
                         ...() {
                           bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
                               .any((point) => point['raster_value'] > 0.5);
                           bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
                               .any((point) => point['raster_value'] > 0.3 && point['raster_value'] <= 0.5);
-        
+
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            setState(() {
+                              _boxHeight = (hasHighRisk || hasMediumRisk)
+                                  ? MediaQuery.of(context).size.height * HomeConfig.adjustedRiskBoxHeight
+                                  : MediaQuery.of(context).size.height * HomeConfig.defaultRiskBoxHeight;
+                            });
+                          });
+
                           if (hasHighRisk) {
-                            // Collect species for high-risk points
                             Set<String> speciesList = {};
                             for (var point in _routesWithPoints[_selectedRouteKey]!) {
                               if (point['raster_value'] > 0.5) {
                                 speciesList.addAll(List<String>.from(point['species']));
                               }
                             }
-                            
-                            // Translate species names
+
                             List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species)
+                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
                             ).toList();
 
                             return [
@@ -689,17 +694,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                             ];
                           } else if (hasMediumRisk) {
-                            // Collect species for medium-risk points
                             Set<String> speciesList = {};
                             for (var point in _routesWithPoints[_selectedRouteKey]!) {
                               if (point['raster_value'] > 0.3 && point['raster_value'] <= 0.5) {
                                 speciesList.addAll(List<String>.from(point['species']));
                               }
                             }
-                            
-                            // Translate species names
+
                             List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species)
+                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
                             ).toList();
 
                             return [
