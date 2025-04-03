@@ -19,7 +19,7 @@ class Profile extends StatefulWidget {
   State<Profile> createState() => _ProfileState();
 }
 
-class _ProfileState extends State<Profile> with WidgetsBindingObserver {
+class _ProfileState extends State<Profile> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin{
   final ProfileController _profileController = ProfileController();
   final AuthController _authController = AuthController();
 
@@ -44,6 +44,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   List<Object?> selectedSpecies = ProfileConfig.defaultSelectedSpecies;
   String selectedLanguage = ProfileConfig.defaultLanguage;
 
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {

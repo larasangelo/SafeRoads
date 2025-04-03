@@ -686,10 +686,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             ).toList();
 
                             return [
-                              _buildRiskMessage(
-                                "${LanguageConfig.getLocalizedString(languageCode, 'highProbability')} ${translatedSpecies.join(', ')}",
-                                Colors.red,
-                                context,
+                              Flexible(
+                                child: _buildRiskMessage(
+                                  "${LanguageConfig.getLocalizedString(languageCode, 'highProbability')} ${translatedSpecies.join(', ')}",
+                                  Colors.red,
+                                  context,
+                                ),
                               ),
                               SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                             ];
@@ -706,10 +708,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             ).toList();
 
                             return [
-                              _buildRiskMessage(
-                                "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
-                                Colors.orange,
-                                context,
+                              Flexible(
+                                child: _buildRiskMessage(
+                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
+                                  Colors.orange,
+                                  context,
+                                ),
                               ),
                               SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                             ];

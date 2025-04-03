@@ -126,8 +126,12 @@ class _NavigationPageState extends State<NavigationPage> {
           });
 
           if (isFirstLocationUpdate) {
-            _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
-            isFirstLocationUpdate = false;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (currentPosition != null) {
+                _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
+                isFirstLocationUpdate = false;
+              }
+            });
           }
         }
 
