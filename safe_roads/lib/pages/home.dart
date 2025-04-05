@@ -154,17 +154,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _times = times;
           _isFetchingRoute = false; // Hide the progress bar
           _selectedRouteKey = _routesWithPoints.keys.first;
-
-          // // Dynamically set box height
-          // double screenHeight = MediaQuery.of(context).size.height;
-          // _boxHeight = _hasRisk[_selectedRouteKey] == true 
-          //     ? screenHeight * HomeConfig.adjustedRiskBoxHeight  // Adjust for risk message
-          //     : screenHeight * HomeConfig.defaultRiskBoxHeight; // Default height
-
-          // print("_hasRisk[_selectedRouteKey], ${_hasRisk[_selectedRouteKey]}");
         });
-
-        // print("_boxHeight, $_boxHeight");
 
         // Adjust map view to fit all routes
         if (routesWithPoints.isNotEmpty) {
@@ -391,7 +381,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
-    // String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
 
     return 
@@ -550,6 +539,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   ),  // Nao esta fetching a route E ja tem a route
                   TextField(
                     controller: _addressController,
+                    readOnly: destinationSelected, 
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(50.0),
