@@ -24,6 +24,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -37,22 +40,22 @@ class _LoginPageState extends State<LoginPage> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(screenWidth * 0.06), 
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20.0), 
+                SizedBox(height: screenHeight * 0.03), 
                 // Welcome Text
                 Text(
                   LanguageConfig.getLocalizedString(languageCode, 'welcome'),
-                  style: const TextStyle(
-                    fontSize: 28.0,
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.08,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 40.0),
+                SizedBox(height: screenHeight * 0.05),
                 // Email Input
                 TextFormField(
                   controller: _emailController,
@@ -72,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20.0),
+                SizedBox(height: screenHeight * 0.025),
                 // Password Input with Toggle Visibility
                 TextFormField(
                   controller: _passwordController,
@@ -102,26 +105,26 @@ class _LoginPageState extends State<LoginPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 10.0),
+                SizedBox(height: screenHeight * 0.015),
                 // Forgot Password Link
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/forgot-password'); // Navigate to forgot password page
-                    },
-                    child: Text(
-                      LanguageConfig.getLocalizedString(languageCode, 'forgotPass'),
-                      style: const TextStyle(
-                        color: Colors.blue,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30.0),
+                // Align(
+                //   alignment: Alignment.centerRight,
+                //   child: GestureDetector(
+                //     onTap: () {
+                //       Navigator.pushNamed(context, '/forgot-password'); // Navigate to forgot password page
+                //     },
+                //     child: Text(
+                //       LanguageConfig.getLocalizedString(languageCode, 'forgotPass'),
+                //       style: TextStyle(
+                //         color: Colors.blue,
+                //         fontSize: screenWidth * 0.04, 
+                //         fontWeight: FontWeight.bold,
+                //         decoration: TextDecoration.underline,
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                SizedBox(height: screenHeight * 0.03),
                 // Login Button
                 SizedBox(
                   width: double.infinity,
@@ -156,18 +159,18 @@ class _LoginPageState extends State<LoginPage> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                     ),
                     child: Text(
                       LanguageConfig.getLocalizedString(languageCode, 'login'),
-                      style: const TextStyle(fontSize: 18, color: Colors.white),
+                      style: TextStyle(fontSize: screenWidth * 0.05, color: Colors.white), 
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0), 
+                SizedBox(height: screenHeight * 0.025), 
                 // Register Now Text
                 Center(
                   child: GestureDetector(
@@ -177,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: RichText(
                       text: TextSpan(
                         text: LanguageConfig.getLocalizedString(languageCode, 'noAccount'),
-                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        style: TextStyle(color: Colors.black, fontSize: screenWidth * 0.04), 
                         children: [
                           TextSpan(
                             text: LanguageConfig.getLocalizedString(languageCode, 'registerNow'),

@@ -122,9 +122,12 @@ class LanguageConfig {
     },
     'pt': {
       // About
-      'why': 'Por quê',
+      'why': 'Porquê',
+      'whyBody': 'A expansão das estradas e dos sistemas de tráfego a nível global representa desafios significativos para a biodiversidade. Embora as estradas ofereçam benefícios para os seres humanos, também contribuem para uma crise crescente da biodiversidade, fragmentando ecossistemas, alterando paisagens naturais e criando “efeitos de barreira” que dificultam o movimento da vida selvagem. Um dos impactos mais imediatos das estradas sobre os animais é a elevada mortalidade causada por colisões com veículos, colocando muitas espécies em risco.\nPara enfrentar este problema, a aplicação móvel SafeRoads oferece uma plataforma que visualiza um modelo preditivo de risco de atropelamento de fauna. O sistema integra uma funcionalidade de navegação que avalia a probabilidade de presença de animais ao longo de segmentos rodoviários, alerta os utilizadores e recomenda rotas mais seguras para mitigar o risco de colisões com a vida selvagem (WVCs).',
       'how': 'Como',
+      'howBody': 'A aplicação móvel SafeRoads acede aos resultados de um modelo preditivo de risco de atropelamento, atualizado diariamente. Este modelo avalia a probabilidade de ocorrência de atropelamentos com base em fatores como o uso do solo envolvente, condições meteorológicas, estação do ano e hora do dia. A aplicação visualiza esta informação através de uma interface intuitiva, fornecendo perceções dinâmicas sobre o risco de atropelamento em diferentes segmentos rodoviários. Ao notificar os condutores sobre zonas de elevado risco e sugerir rotas alternativas, o SafeRoads pretende reduzir a ocorrência de atropelamentos, de forma semelhante a como o Waze ou o Google Maps redirecionam o tráfego com base nas condições da estrada.',
       'who': 'Quem',
+      'whoBody': 'Este trabalho foi desenvolvido no âmbito do projeto académico SafeRoads, por Lara Ângelo (LASIGE), Fernando Ascensão (CE3C), Ana Paula Afonso (LASIGE) e Carlos Duarte (LASIGE). O projeto é propriedade exclusiva da Faculdade de Ciências da Universidade de Lisboa.',
       // Profile & Edit Profile w/ Snackbars
       'username': 'Carregando...',
       'country': 'Carregando...',
@@ -240,8 +243,11 @@ class LanguageConfig {
     'es': {
       // About
       'why': 'Por qué',
+      'whyBody': 'La expansión de carreteras y sistemas de tráfico a nivel mundial representa desafíos significativos para la biodiversidad. Aunque las carreteras ofrecen beneficios para los humanos, también contribuyen a una creciente crisis de biodiversidad al fragmentar ecosistemas, alterar paisajes naturales y crear “efectos barrera” que dificultan el movimiento de la fauna. Uno de los impactos más inmediatos es la alta mortalidad de animales causada por colisiones con vehículos, lo que pone en peligro a muchas especies.\nPara abordar este problema, la aplicación móvil SafeRoads proporciona una plataforma que visualiza un modelo predictivo del riesgo de atropellos de fauna. El sistema integra una función de navegación que evalúa la probabilidad de presencia de animales en los tramos de carretera, alerta a los usuarios y recomienda rutas más seguras para mitigar el riesgo de colisiones con fauna silvestre (WVCs).',
       'how': 'Cómo',
-      'who': 'Quién',
+      'howBody': 'La aplicación móvil SafeRoads accede a los resultados de un modelo predictivo de riesgo de atropello, actualizado diariamente. Este modelo evalúa la probabilidad de atropello en función de condiciones como el uso del suelo, el clima, la estación del año y la hora del día. La aplicación visualiza esta información a través de una interfaz fácil de usar, proporcionando información dinámica sobre el riesgo de atropello en distintos tramos de carretera. Al notificar a los conductores sobre zonas de alto riesgo y sugerir rutas alternativas, SafeRoads pretende reducir la incidencia de atropellos, de forma similar a cómo Waze o Google Maps redirigen según el tráfico.',
+      'who': 'Quiénes',
+      'whoBody': 'Este trabajo fue realizado como parte del proyecto académico SafeRoads, desarrollado por Lara Ângelo (LASIGE), Fernando Ascensão (CE3C), Ana Paula Afonso (LASIGE) y Carlos Duarte (LASIGE). El proyecto es propiedad exclusiva de la Facultad de Ciencias de la Universidad de Lisboa.',
       // Profile & Edit Profile w/ Snackbars
       'username': 'Cargando...',
       'country': 'Cargando...',

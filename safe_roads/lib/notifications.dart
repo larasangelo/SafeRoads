@@ -143,29 +143,30 @@ class Notifications {
 
       overlayEntry = OverlayEntry(
         builder: (context) {
-        String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+          final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
+          String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+
           return StatefulBuilder(
             builder: (context, setState) {
               animationController = AnimationController(
-                vsync: Navigator.of(context), // Ensures smooth animations
-                duration: const Duration(seconds: 6), // Full duration
+                vsync: Navigator.of(context),
+                duration: const Duration(seconds: 6),
               );
 
-              animationController.forward(); // Start animation immediately
+              animationController.forward();
 
               return Positioned(
-                top: showButton
-                    ? MediaQuery.of(context).size.height * 0.1
-                    : MediaQuery.of(context).size.height * 0.65,
-                left: MediaQuery.of(context).size.width * 0.01,
-                right: MediaQuery.of(context).size.width * 0.01,
+                top: showButton ? screenHeight * 0.1 : screenHeight * 0.65,
+                left: screenWidth * 0.01,
+                right: screenWidth * 0.01,
                 child: Material(
                   color: Colors.transparent,
                   child: Container(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(screenWidth * 0.04),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12.0),
+                      borderRadius: BorderRadius.circular(screenWidth * 0.03),
                       boxShadow: const [
                         BoxShadow(
                           color: Colors.black26,
@@ -179,37 +180,36 @@ class Notifications {
                       children: [
                         Text(
                           message.notification?.title ?? 'Notification',
-                          style: const TextStyle(
-                            fontSize: 18.0,
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.05,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 8.0),
+                        SizedBox(height: screenHeight * 0.01),
                         Text(
                           message.notification?.body ?? '',
-                          style: const TextStyle(fontSize: 16.0),
+                          style: TextStyle(fontSize: screenWidth * 0.04),
                           textAlign: TextAlign.center,
                         ),
                         if (showButton) ...[
-                          // If changeRoute is true, apply animation to "Re-route" button
                           if (changeRoute)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Animated "Re-route" button
                                 AnimatedBuilder(
                                   animation: animationController,
                                   builder: (context, child) {
                                     return Stack(
                                       alignment: Alignment.center,
                                       children: [
-                                        // Animated Background on "Re-route"
                                         ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                              maxWidth: 120, maxHeight: 40), // Set a reasonable width
+                                          constraints: BoxConstraints(
+                                            maxWidth: screenWidth * 0.4,
+                                            maxHeight: screenHeight * 0.06,
+                                          ),
                                           child: Container(
-                                            height: 50, // Match button height
+                                            height: screenHeight * 0.06,
                                             decoration: BoxDecoration(
                                               borderRadius: BorderRadius.circular(50),
                                               gradient: LinearGradient(
@@ -217,79 +217,78 @@ class Notifications {
                                                   Colors.pinkAccent.withOpacity(0.5),
                                                   Colors.purple.withOpacity(0.9)
                                                 ],
-                                                stops: [
-                                                  0.0,
-                                                  animationController.value
-                                                ], // Progress effect from left to right
+                                                stops: [0.0, animationController.value],
                                                 begin: Alignment.centerLeft,
                                                 end: Alignment.centerRight,
                                               ),
                                             ),
                                           ),
                                         ),
-                                        // The actual "Re-route" button with text ABOVE the animation
                                         ElevatedButton(
                                           onPressed: () {
                                             isInteracted = true;
-                                            animationController.stop(); // Stop animation
+                                            animationController.stop();
                                             onSwitchRoute?.call();
                                             overlayEntry.remove();
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent, // Let animation show through
-                                            shadowColor: Colors.transparent, // Remove unwanted shadow
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
                                           ),
                                           child: Text(
                                             LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
-                                            style: const TextStyle(
-                                                fontSize: 18.0, color: Colors.white),
+                                            style: TextStyle(
+                                              fontSize: screenWidth * 0.045,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ],
                                     );
                                   },
                                 ),
-                                // "Ignore" button
                                 ElevatedButton(
                                   onPressed: () {
                                     isInteracted = true;
-                                    animationController.stop(); // Stop animation
+                                    animationController.stop();
                                     ignoreSwitchRoute?.call();
                                     overlayEntry.remove();
                                   },
-                                  child: Text( LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'), style: const TextStyle(fontSize: 18.0)),
+                                  child: Text(
+                                    LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
+                                    style: TextStyle(fontSize: screenWidth * 0.045),
+                                  ),
                                 ),
                               ],
                             ),
-                          // If changeRoute is false, apply animation to "Ignore" button
                           if (!changeRoute)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // "Re-route" button
                                 ElevatedButton(
                                   onPressed: () {
                                     isInteracted = true;
-                                    if (onSwitchRoute != null) {
-                                      onSwitchRoute!();
-                                    }
+                                    onSwitchRoute?.call();
                                     overlayEntry.remove();
                                   },
-                                  child: Text(LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'), style: const TextStyle(fontSize: 18.0)),
+                                  child: Text(
+                                    LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
+                                    style: TextStyle(fontSize: screenWidth * 0.045),
+                                  ),
                                 ),
-                                // Animated "Ignore" button
                                 AnimatedBuilder(
                                   animation: animationController,
                                   builder: (context, child) {
                                     return Stack(
                                       alignment: Alignment.center,
                                       children: [
-                                        // Animated Background on "Ignore"
                                         ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                              maxWidth: 120, maxHeight: 40), // Set a reasonable width
+                                          constraints: BoxConstraints(
+                                            maxWidth: screenWidth * 0.4,
+                                            maxHeight: screenHeight * 0.06,
+                                          ),
                                           child: Container(
-                                            height: 50, // Match button height
+                                            height: screenHeight * 0.06,
                                             decoration: BoxDecoration(
                                               borderRadius: BorderRadius.circular(50),
                                               gradient: LinearGradient(
@@ -297,32 +296,30 @@ class Notifications {
                                                   Colors.pinkAccent.withOpacity(0.5),
                                                   Colors.purple.withOpacity(0.9)
                                                 ],
-                                                stops: [
-                                                  0.0,
-                                                  animationController.value
-                                                ], // Progress effect from left to right
+                                                stops: [0.0, animationController.value],
                                                 begin: Alignment.centerLeft,
                                                 end: Alignment.centerRight,
                                               ),
                                             ),
                                           ),
                                         ),
-                                        // The actual "Ignore" button with text ABOVE the animation
                                         ElevatedButton(
                                           onPressed: () {
                                             isInteracted = true;
-                                            animationController.stop(); // Stop animation
+                                            animationController.stop();
                                             ignoreSwitchRoute?.call();
                                             overlayEntry.remove();
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent, // Let animation show through
-                                            shadowColor: Colors.transparent, // Remove unwanted shadow
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
                                           ),
                                           child: Text(
                                             LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
-                                            style: const TextStyle(
-                                                fontSize: 18.0, color: Colors.white),
+                                            style: TextStyle(
+                                              fontSize: screenWidth * 0.045,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ],

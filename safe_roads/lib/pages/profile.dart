@@ -269,44 +269,49 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    // Get screen size to adjust layout
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(screenWidth * 0.04), 
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   CircleAvatar(
-                    radius: 60,
+                    radius: screenWidth * 0.15,
                     backgroundImage: AssetImage(avatar),
                   ),
-                  const SizedBox(width: 16.0),
+                  SizedBox(width: screenWidth * 0.04), 
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         username,
-                        style: const TextStyle(fontSize: 20.0),
+                        style: TextStyle(fontSize: screenWidth * 0.05), 
                       ),
                       Text(
                         country,
-                        style: const TextStyle(color: Colors.grey),
+                        style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.04), 
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 24.0),
+              SizedBox(height: screenHeight * 0.03), 
               // buildProgressSection(),
               // const SizedBox(height: 24.0),
               // buildStatisticsSection(),
               // const SizedBox(height: 16.0),
               buildPreferencesSection(),
-              const SizedBox(height: 16.0),
+              SizedBox(height: screenHeight * 0.02), 
               buildSpeciesGrid(),
-              const SizedBox(height: 16.0),
+              SizedBox(height: screenHeight * 0.02), 
               buildSettingsSection(context),
             ],
           ),
@@ -322,11 +327,17 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text("Lvl $level"),
-            Text("$distance/$targetDistance km"),
+            Text(
+              "Lvl $level",
+              style: TextStyle(fontSize: MediaQuery.of(context).size.width * 0.04), 
+            ),
+            Text(
+              "$distance/$targetDistance km",
+              style: TextStyle(fontSize: MediaQuery.of(context).size.width * 0.04), 
+            ),
           ],
         ),
-        const SizedBox(height: 8.0),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
         LinearProgressIndicator(
           value: distance / targetDistance,
           backgroundColor: Colors.grey[300],
@@ -341,20 +352,37 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(LanguageConfig.getLocalizedString(selectedLanguage, 'statistics'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
+        Text(
+          LanguageConfig.getLocalizedString(selectedLanguage, 'statistics'),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: MediaQuery.of(context).size.width * 0.05, 
+          ),
+        ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            _buildStatisticCard("$totalKm", LanguageConfig.getLocalizedString(selectedLanguage, 'totalKm'), Icons.flash_on),
-            _buildStatisticCard("$places", LanguageConfig.getLocalizedString(selectedLanguage, 'places'), Icons.map),
+            _buildStatisticCard(
+              "$totalKm",
+              LanguageConfig.getLocalizedString(selectedLanguage, 'totalKm'),
+              Icons.flash_on,
+            ),
+            _buildStatisticCard(
+              "$places",
+              LanguageConfig.getLocalizedString(selectedLanguage, 'places'),
+              Icons.map,
+            ),
           ],
         ),
-        const SizedBox(height: 16.0),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () {},
-            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'viewRouteHistory')),
+            child: Text(
+              LanguageConfig.getLocalizedString(selectedLanguage, 'viewRouteHistory'),
+              style: TextStyle(fontSize: MediaQuery.of(context).size.width * 0.04), 
+            ),
           ),
         ),
       ],
@@ -365,8 +393,14 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(LanguageConfig.getLocalizedString(selectedLanguage, 'preferences'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
-        const SizedBox(height: 8.0),
+        Text(
+          LanguageConfig.getLocalizedString(selectedLanguage, 'preferences'),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: MediaQuery.of(context).size.width * 0.05, 
+          ),
+        ),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
         buildPreferenceSwitches(),
       ],
     );
@@ -381,59 +415,64 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),
             blurRadius: 6.0,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          _buildSwitchTile(LanguageConfig.getLocalizedString(selectedLanguage, 'allowNotifications'), notifications, (bool newValue) async {
-            await handleNotificationPermission();
-            await checkNotificationPermissions();
-            updatePreference("notifications", notifications);
-          }),
+          _buildSwitchTile(
+            LanguageConfig.getLocalizedString(selectedLanguage, 'allowNotifications'),
+            notifications,
+            (bool newValue) async {
+              await handleNotificationPermission();
+              await checkNotificationPermissions();
+              updatePreference("notifications", notifications);
+            },
+          ),
           const Divider(),
-          _buildSwitchTile(LanguageConfig.getLocalizedString(selectedLanguage, 'onlyLowRisk'), lowRisk, (bool newValue) {
-            updateLowRisk(newValue);
-            setState(() {
-              lowRisk = newValue;
-            });
-            updatePreference("lowRisk", newValue);
-          }),
+          _buildSwitchTile(
+            LanguageConfig.getLocalizedString(selectedLanguage, 'onlyLowRisk'),
+            lowRisk,
+            (bool newValue) {
+              updateLowRisk(newValue);
+              setState(() {
+                lowRisk = newValue;
+              });
+              updatePreference("lowRisk", newValue);
+            },
+          ),
           const Divider(),
-          _buildSwitchTile(LanguageConfig.getLocalizedString(selectedLanguage, 'changeRoute'), changeRoute, (bool newValue) {
-            updateChangeRoute(newValue);
-            setState(() {
-              changeRoute = newValue;
-            });
-            updatePreference("changeRoute", newValue);
-          }),
+          _buildSwitchTile(
+            LanguageConfig.getLocalizedString(selectedLanguage, 'changeRoute'),
+            changeRoute,
+            (bool newValue) {
+              updateChangeRoute(newValue);
+              setState(() {
+                changeRoute = newValue;
+              });
+              updatePreference("changeRoute", newValue);
+            },
+          ),
           const Divider(),
           buildRiskNotificationDropdown(),
           const Divider(),
           buildRerouteNotificationDropdown(),
           const Divider(),
           buildLanguageDropdown(),
-          // const Divider(),
-          // _buildSwitchTile("Allow tolls", tolls, (bool newValue) {
-          //   setState(() {
-          //     tolls = newValue;
-          //   });
-          //   updatePreference("tolls", newValue);
-          // }),
-          // const Divider(),
-          // buildMeasureDropdown(),
         ],
       ),
     );
   }
 
-
-  buildMeasureDropdown() {
+  Widget buildMeasureDropdown() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.02), 
       child: ListTile(
-        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'unitMeasure')),
+        title: Text(
+          LanguageConfig.getLocalizedString(selectedLanguage, 'unitMeasure'),
+          style: TextStyle(fontSize: MediaQuery.of(context).size.width * 0.04), 
+        ),
         trailing: DropdownButton<String>(
           value: measure,
           items: const [
@@ -452,8 +491,11 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
   }
 
   buildRiskNotificationDropdown() {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
+      padding: EdgeInsets.only(bottom: screenHeight * 0.02), 
       child: ListTile(
         onTap: () {
           Navigator.push(
@@ -475,7 +517,10 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
             ),
           );
         },
-        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'riskAlertDistance')),
+        title: Text(
+          LanguageConfig.getLocalizedString(selectedLanguage, 'riskAlertDistance'),
+          style: TextStyle(fontSize: screenWidth * 0.04), 
+        ),
         trailing: DropdownButton<String>(
           value: riskAlertDistance,
           items: const [
@@ -496,8 +541,11 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
   }
 
   buildRerouteNotificationDropdown() {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
+      padding: EdgeInsets.only(bottom: screenHeight * 0.02), 
       child: ListTile(
         onTap: () {
           Navigator.push(
@@ -519,7 +567,10 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
             ),
           );
         },
-        title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'reRouteAlertDistance')),
+        title: Text(
+          LanguageConfig.getLocalizedString(selectedLanguage, 'reRouteAlertDistance'),
+          style: TextStyle(fontSize: screenWidth * 0.04), 
+        ),
         trailing: DropdownButton<String>(
           value: rerouteAlertDistance,
           items: const [
@@ -540,13 +591,18 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
   }
 
   Widget buildLanguageDropdown() {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
+      padding: EdgeInsets.only(bottom: screenHeight * 0.02), 
       child: ListTile(
         title: Row(
           children: [
-            Text(LanguageConfig.getLocalizedString(selectedLanguage, 'language')),
-            // const SizedBox(width: 5), // Small spacing between text and icon
+            Text(
+              LanguageConfig.getLocalizedString(selectedLanguage, 'language'),
+              style: TextStyle(fontSize: screenWidth * 0.04), 
+            ),
           ],
         ),
         trailing: DropdownButton<String>(
@@ -570,20 +626,27 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
 
   Widget buildSpeciesGrid() {
     final selectedSpecies = context.watch<UserPreferences>().selectedSpecies; // Watch provider state
+    double screenWidth = MediaQuery.of(context).size.width;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           LanguageConfig.getLocalizedString(selectedLanguage, 'speciesForAlerts'),
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: screenWidth * 0.05, 
+          ),
         ),
         Wrap(
-          spacing: 8.0,
+          spacing: screenWidth * 0.02, 
           children: speciesOptions.map((species) {
             bool isSelected = selectedSpecies.contains(species["key"]);
             return ChoiceChip(
-              label: Text(LanguageConfig.getLocalizedString(selectedLanguage, species['key'])),
+              label: Text(
+                LanguageConfig.getLocalizedString(selectedLanguage, species['key']),
+                style: TextStyle(fontSize: screenWidth * 0.035), 
+              ),
               avatar: Icon(
                 species["icon"],
                 color: isSelected ? Colors.white : Colors.black,
@@ -607,11 +670,20 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
   }
 
   Widget buildSettingsSection(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(LanguageConfig.getLocalizedString(selectedLanguage, 'settings'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
-        const SizedBox(height: 8.0),
+        Text(
+          LanguageConfig.getLocalizedString(selectedLanguage, 'settings'),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: screenWidth * 0.05, 
+          ),
+        ),
+        SizedBox(height: screenHeight * 0.01), 
         buildSettingsOptions(context),
       ],
     );
@@ -626,50 +698,83 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),
             blurRadius: 6.0,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          buildSettingsItem(LanguageConfig.getLocalizedString(selectedLanguage, 'editProfile'), Icons.chevron_right, () async {
-            final result = await Navigator.pushNamed(context, '/editProfile');
-            if (result == true) {
-              fetchUserProfile();
-            }
-          }),
-          const Divider(),
-          buildSettingsItem(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'), null, _showSignOutConfirmation, color: Colors.red),
-          const Divider(),
-          buildSettingsItem(LanguageConfig.getLocalizedString(selectedLanguage, 'deleteAccount'), null, () => _showDeleteAccountDialog(), color: Colors.red,)
+          buildSettingsItem(
+            LanguageConfig.getLocalizedString(selectedLanguage, 'editProfile'),
+            Icons.chevron_right,
+            () async {
+              final result = await Navigator.pushNamed(context, '/editProfile');
+              if (result == true) {
+                fetchUserProfile();
+              }
+            },
+          ),
+          Divider(),
+          buildSettingsItem(
+            LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'),
+            null,
+            _showSignOutConfirmation,
+            color: Colors.red,
+          ),
+          Divider(),
+          buildSettingsItem(
+            LanguageConfig.getLocalizedString(selectedLanguage, 'deleteAccount'),
+            null,
+            () => _showDeleteAccountDialog(),
+            color: Colors.red,
+          ),
         ],
       ),
     );
   }
 
   Widget buildSettingsItem(String title, IconData? icon, VoidCallback onTap, {Color? color}) {
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return ListTile(
-      title: Text(title, style: TextStyle(color: color)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: color,
+          fontSize: screenWidth * 0.04,  
+        ),
+      ),
       trailing: icon != null ? Icon(icon) : null,
       onTap: onTap,
     );
   }
 
   Widget _buildStatisticCard(String value, String label, IconData icon) {
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Card(
       elevation: 2.0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(screenWidth * 0.04), 
         child: Row(
           children: [
-            Icon(icon, color: Colors.orange, size: 45.0),
-            const SizedBox(width: 8.0),
+            Icon(icon, color: Colors.orange, size: screenWidth * 0.1),
+            SizedBox(width: screenWidth * 0.02), 
             Column(
               children: [
-                Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18.0)),
-                const SizedBox(height: 4.0),
-                Text(label, style: const TextStyle(color: Colors.grey)),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: screenWidth * 0.045, 
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.01), 
+                Text(
+                  label,
+                  style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.035), 
+                ),
               ],
             ),
           ],
@@ -679,8 +784,15 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
   }
 
   Widget _buildSwitchTile(String title, bool value, ValueChanged<bool> onChanged) {
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return SwitchListTile(
-      title: Text(title),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: screenWidth * 0.04,  
+        ),
+      ),
       value: value,
       onChanged: onChanged,
     );

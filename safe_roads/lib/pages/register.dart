@@ -24,6 +24,9 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -37,21 +40,22 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(screenWidth * 0.06), 
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20.0),
+                SizedBox(height: screenHeight * 0.02), 
                 Text(
                   LanguageConfig.getLocalizedString(languageCode, 'helloRegister'), 
-                  style: const TextStyle(
-                    fontSize: 28.0,
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.08, 
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 40.0),
+                SizedBox(height: screenHeight * 0.04), 
+                // Username Field
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
@@ -63,7 +67,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     fillColor: Colors.grey[200],
                   ),
                 ),
-                const SizedBox(height: 20.0),
+                SizedBox(height: screenHeight * 0.02), 
+                // Email Field
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -76,7 +81,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
-                const SizedBox(height: 20.0),
+                SizedBox(height: screenHeight * 0.02), 
+                // Password Field
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
@@ -89,7 +95,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   obscureText: true,
                 ),
-                const SizedBox(height: 20.0),
+                SizedBox(height: screenHeight * 0.02), 
+                // Confirm Password Field
                 TextFormField(
                   controller: _confirmPasswordController,
                   decoration: InputDecoration(
@@ -102,7 +109,8 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   obscureText: true,
                 ),
-                const SizedBox(height: 30.0),
+                SizedBox(height: screenHeight * 0.03), 
+                // Register Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -117,18 +125,22 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                     ),
                     child: Text(
                       LanguageConfig.getLocalizedString(languageCode, 'register'),
-                      style: const TextStyle(fontSize: 18, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.05, 
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20.0), 
+                SizedBox(height: screenHeight * 0.02), 
+                // Login Now Text
                 Center(
                   child: GestureDetector(
                     onTap: () {
@@ -137,14 +149,18 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: RichText(
                       text: TextSpan(
                         text: LanguageConfig.getLocalizedString(languageCode, 'accountAlready'),
-                        style: const TextStyle(color: Colors.black, fontSize: 16),
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: screenWidth * 0.04, 
+                        ),
                         children: [
                           TextSpan(
                             text: LanguageConfig.getLocalizedString(languageCode, 'loginNow'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.blue,
                               fontWeight: FontWeight.bold,
                               decoration: TextDecoration.underline,
+                              fontSize: screenWidth * 0.04, 
                             ),
                           ),
                         ],

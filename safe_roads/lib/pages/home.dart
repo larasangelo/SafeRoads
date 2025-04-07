@@ -79,10 +79,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       if (_currentLocation != null) {
         _mapController.move(
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -269,10 +269,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         if (_currentLocation != null) {
           await _fetchRoute(
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
+            // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
 
@@ -407,11 +407,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     markers: [
                       Marker(
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        // point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                        child: const Icon(Icons.location_pin, color: Colors.blue, size: 40),
+                        point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        child: Icon(Icons.location_pin, color: Colors.black, size: MediaQuery.of(context).size.width * 0.11),
                       ),
                     ],
                   ),
@@ -420,7 +420,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     markers: [
                       Marker(
                         point: _destinationLocation!,
-                        child: const Icon(Icons.location_pin, color: Colors.red, size: 40),
+                        child: Icon(Icons.location_pin, color: Colors.red, size: MediaQuery.of(context).size.width * 0.11),
                       ),
                     ],
                   ),
@@ -497,11 +497,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
                               Color textColor = isSelectedRoute ? Colors.white : Colors.black;
 
+                              // MediaQuery for dynamic sizing based on screen size
+                              double iconSize = MediaQuery.of(context).size.width * 0.04; 
+                              double padding = MediaQuery.of(context).size.width * 0.022; 
+                              double fontSize = MediaQuery.of(context).size.width * 0.032; 
+
                               return Positioned(
                                 left: screenX,
                                 top: screenY,
                                 child: Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(padding),
                                   decoration: BoxDecoration(
                                     color: boxColor,
                                     borderRadius: BorderRadius.circular(10),
@@ -511,11 +516,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       if (isAdjustedRoute) // Show an icon for the adjusted route
-                                        const Icon(Icons.star, color: Colors.yellow, size: 15),
+                                        Icon(Icons.star, color: Colors.yellow, size: iconSize),
 
                                       Text(
                                         "${_times[entry.key]}",
-                                        style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: fontSize),
                                       ),
                                     ],
                                   ),
@@ -526,20 +531,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     ],
                   ),
             Positioned(
-              top: 40.0,
-              left: 10.0,
-              right: 10.0,
+              top: MediaQuery.of(context).size.height * 0.05, 
+              left: MediaQuery.of(context).size.width * 0.025, 
+              right: MediaQuery.of(context).size.width * 0.025, 
               child: Column(
                 children: [
-                  if (_isFetchingRoute)       // Esta fetching a route E Nao tem a route
-                  LinearProgressIndicator(
-                    value: null, // Indeterminate progress
-                    backgroundColor: Colors.grey[200],
-                    color: Colors.blue,
-                  ),  // Nao esta fetching a route E ja tem a route
+             
                   TextField(
                     controller: _addressController,
-                    readOnly: destinationSelected, 
+                    readOnly: destinationSelected,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(50.0),
@@ -547,12 +547,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       labelText: LanguageConfig.getLocalizedString(languageCode, 'enterDestination'),
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: Icon(Icons.search, size: MediaQuery.of(context).size.width * 0.06), 
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: Icon(Icons.close, size: MediaQuery.of(context).size.width * 0.06), 
                         onPressed: () {
                           navigationBarKey.currentState?.toggleNavigationBar(true);
-        
+
                           // Reset the map state and UI elements
                           setState(() {
                             _cancelFetchingRoute = true; // Cancel the route-fetching process
@@ -565,14 +565,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             setDestVis = true;
                             _isFetchingRoute = false;
                           });
+
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
                               // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                              // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                              // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                              // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                              // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                              LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -580,6 +581,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       ),
                     ),
                   ),
+                  if (_isFetchingRoute) // Fetching a route and doesn't have a route
+                    LinearProgressIndicator(
+                      value: null, // Indeterminate progress
+                      backgroundColor: Colors.grey[200],
+                      color: Colors.black,
+                    ), 
                   const SizedBox(height: 8.0),
                   if (_suggestions.isNotEmpty && !destinationSelected)
                     Container(
@@ -588,19 +595,22 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         shrinkWrap: true,
                         itemCount: _suggestions.length,
                         itemBuilder: (context, index) {
-                          // Assuming _suggestions holds a list of maps with name, city, and country
                           final suggestion = _suggestions[index];
-                          return 
-                          ListTile(
+                          return ListTile(
                             title: Text(
-                              suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'), // Default value for null case
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: MediaQuery.of(context).size.width * 0.045, 
+                              ),
                             ),
                             subtitle: Text(
                               (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
-                                  ? '${suggestion['city']}, ${suggestion['country']}' // City and country
-                                  : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')), //  Handle null country
-                              style: const TextStyle(fontSize: 12),
+                                  ? '${suggestion['city']}, ${suggestion['country']}'
+                                  : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')),
+                              style: TextStyle(
+                                fontSize: MediaQuery.of(context).size.width * 0.035, 
+                              ),
                             ),
                             onTap: () {
                               // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag
@@ -611,27 +621,34 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 destinationSelected = true;
                                 selectedDestination = _addressController.text;
                               });
-                            }
+                            },
                           );
                         },
                       ),
                     ),
-                  if(_routesWithPoints.isEmpty && setDestVis)
-                  ElevatedButton(
-                    onPressed: () {
-                      _setDestination();
-                      setState(() {
-                        setDestVis = false;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                  if (_routesWithPoints.isEmpty && setDestVis)
+                    ElevatedButton(
+                      onPressed: () {
+                        _setDestination();
+                        setState(() {
+                          setDestVis = false;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        padding: EdgeInsets.symmetric(
+                          vertical: MediaQuery.of(context).size.height * 0.02, 
+                          horizontal: MediaQuery.of(context).size.width * 0.05, 
+                        ),
+                      ),
+                      child: Text(
+                        LanguageConfig.getLocalizedString(languageCode, 'setDestination'),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: MediaQuery.of(context).size.width * 0.035, 
+                        ),
+                      ),
                     ),
-                    child: Text(
-                      LanguageConfig.getLocalizedString(languageCode, 'setDestination'), 
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -642,7 +659,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: _boxHeight, // Adjusted height for messages
+                  height: _boxHeight,
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
                     color: Colors.white,
@@ -689,7 +706,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
                             ];
                           } else if (hasMediumRisk) {
                             Set<String> speciesList = {};
@@ -711,14 +728,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
                             ];
                           }
                           return [];
                         }(),
                       if (_routesWithPoints.length > 1)
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), // Dynamic padding
+                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), 
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -726,9 +743,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 children: [
                                   Text(
                                     _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    style: TextStyle(
+                                      fontSize: MediaQuery.of(context).size.width * 0.065, 
+                                      color: Colors.black,
+                                    ),
                                   ),
-                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01), // Dynamic spacing
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01), 
                                   ElevatedButton(
                                     onPressed: () {
                                       setState(() {
@@ -743,7 +763,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     ),
                                     child: Text(
                                       LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
-                                      style: const TextStyle(fontSize: 18.0, color: Colors.white)
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.of(context).size.width * 0.05, 
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -752,14 +775,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 children: [
                                   Text(
                                     _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                    style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                    style: TextStyle(
+                                      fontSize: MediaQuery.of(context).size.width * 0.065, 
+                                      color: Colors.black,
+                                    ),
                                   ),
                                   SizedBox(height: MediaQuery.of(context).size.height * 0.01),
                                   ElevatedButton(
                                     onPressed: () {
                                       if (_routesWithPoints.containsKey(_selectedRouteKey)) {
                                         List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-        
+
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -775,13 +801,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: (_selectedRouteKey == "defaultRoute")
-                                          ? Colors.red
-                                          : Colors.green,
+                                      backgroundColor: (_selectedRouteKey == "defaultRoute") ? Colors.red : Colors.green,
                                     ),
                                     child: Text(
                                       LanguageConfig.getLocalizedString(languageCode, 'start'),
-                                      style: const TextStyle(fontSize: 18.0, color: Colors.white)
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.of(context).size.width * 0.05, 
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -793,7 +820,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         Align(
                           alignment: Alignment.bottomCenter,
                           child: Container(
-                            height: MediaQuery.of(context).size.height * 0.15, // Dynamic height
+                            height: MediaQuery.of(context).size.height * 0.15, 
                             width: double.infinity,
                             decoration: const BoxDecoration(
                               color: Colors.white,
@@ -808,21 +835,27 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   children: [
                                     Text(
                                       _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.of(context).size.width * 0.065, 
+                                        color: Colors.black,
+                                      ),
                                     ),
-                                    SizedBox(width: MediaQuery.of(context).size.width * 0.1), // Dynamic width
+                                    SizedBox(width: MediaQuery.of(context).size.width * 0.1), 
                                     Text(
                                       _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                      style: const TextStyle(fontSize: 25.0, color: Colors.black),
+                                      style: TextStyle(
+                                        fontSize: MediaQuery.of(context).size.width * 0.065, 
+                                        color: Colors.black,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), // Dynamic spacing
+                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
                                 ElevatedButton(
                                   onPressed: () {
                                     if (_routesWithPoints.containsKey(_selectedRouteKey)) {
                                       List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-        
+
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -838,11 +871,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     }
                                   },
                                   style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                    ),
+                                    backgroundColor: Colors.black,
+                                  ),
                                   child: Text(
                                     LanguageConfig.getLocalizedString(languageCode, 'start'),
-                                    style: const TextStyle(fontSize: 18.0, color: Colors.white),
+                                    style: TextStyle(
+                                      fontSize: MediaQuery.of(context).size.width * 0.05, 
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],

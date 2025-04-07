@@ -786,159 +786,160 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   Widget build(BuildContext context) {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-    return 
-      Scaffold(
-        body: SafeArea(
-          child: Stack(
-            children: [
-              if (currentPosition != null)
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: currentPosition ?? _getLatLngFromMap(routeCoordinates.first), 
-                  initialZoom: NavigationConfig.cameraZoom,
-                  initialRotation: bearing, // Set initial rotation
+    
+    // Get screen size to adjust layout
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          if (currentPosition != null)
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: currentPosition ?? _getLatLngFromMap(routeCoordinates.first),
+                initialZoom: NavigationConfig.cameraZoom,
+                initialRotation: bearing, // Set initial rotation
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  subdomains: const ['a', 'b', 'c'],
                 ),
-                children: [
-                  TileLayer(
-                    urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                    subdomains: const ['a', 'b', 'c'],
-                  ),
-                  PolylineLayer(
-                    polylines: List.generate(routeCoordinates.length - 1, (index) {
-                      final current = routeCoordinates[index];
-                      final next = routeCoordinates[index + 1];
+                PolylineLayer(
+                  polylines: List.generate(routeCoordinates.length - 1, (index) {
+                    final current = routeCoordinates[index];
+                    final next = routeCoordinates[index + 1];
 
-                      if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+                    if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
 
-                      // Determine color based on raster value
-                      Color lineColor;
-                      if (current['raster_value'] != null) {
-                        if (current['raster_value'] > NavigationConfig.highRisk) {
-                          lineColor = Colors.red; // High risk
-                        } else if (current['raster_value'] > NavigationConfig.mediumRisk) {
-                          lineColor = Colors.orange; // Medium risk
-                        } else {
-                          lineColor = Colors.purple; // Default color
-                        }
+                    // Determine color based on raster value
+                    Color lineColor;
+                    if (current['raster_value'] != null) {
+                      if (current['raster_value'] > NavigationConfig.highRisk) {
+                        lineColor = Colors.red; 
+                      } else if (current['raster_value'] > NavigationConfig.mediumRisk) {
+                        lineColor = Colors.orange; 
                       } else {
-                        lineColor = Colors.purple; // Fallback color if raster_value is missing
+                        lineColor = Colors.purple; 
                       }
+                    } else {
+                      lineColor = Colors.purple; 
+                    }
 
-                      return Polyline(
-                        points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                        strokeWidth: 8.0,
-                        color: lineColor,
-                      );
-                    }).whereType<Polyline>().toList(), // Filters out null values
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      if (currentPosition != null)
-                        Marker(
-                          point: currentPosition!,
-                          child: const Icon(
-                            Icons.my_location, 
-                            color: Colors.red,
-                            size: 40,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-              Positioned(
-                top: 20,
-                right: 20,
-                child: IconButton(
-                  icon: const Icon(Icons.close, size: 40),
-                  onPressed: () {
-                    // Navigator.of(context, rootNavigator: true).pop();
-                    Navigator.pop(context); //TEST!!!!
-                  }
-                )
-              ),
-              if(!_destinationReached)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: 120,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.rectangle,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        estimatedArrivalTime,
-                        style: const TextStyle(
-                          fontSize: 30.0,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            widget.distances[selectedRouteKey]!,
-                            style: const TextStyle(
-                              fontSize: 22.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          const SizedBox(width: 30),
-                          Text(
-                            widget.times[selectedRouteKey]!,
-                            style: const TextStyle(
-                              fontSize: 22.0,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                    return Polyline(
+                      points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+                      strokeWidth: 8.0,
+                      color: lineColor,
+                    );
+                  }).whereType<Polyline>().toList(), 
                 ),
-              ),
-              if(_destinationReached)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: 120,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.rectangle,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        LanguageConfig.getLocalizedString(languageCode, 'destinationReached'),
-                        style: const TextStyle(
-                          fontSize: 30.0,
-                          fontWeight: FontWeight.bold,
+                MarkerLayer(
+                  markers: [
+                    if (currentPosition != null)
+                      Marker(
+                        point: currentPosition!,
+                        child: Icon(
+                          Icons.my_location,
                           color: Colors.black,
+                          size: screenWidth * 0.09, 
                         ),
                       ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
+          Positioned(
+            top: screenHeight * 0.05, 
+            right: screenWidth * 0.05,
+            child: IconButton(
+              icon: Icon(Icons.close, size: screenWidth * 0.1), 
+              onPressed: () {
+                Navigator.pop(context); 
+              },
+            ),
           ),
-        ),
-      );
+          if (!_destinationReached)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: screenHeight * 0.15, 
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.rectangle,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      estimatedArrivalTime,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.08, 
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.distances[selectedRouteKey]!,
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.06, 
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        SizedBox(width: screenWidth * 0.08),
+                        Text(
+                          widget.times[selectedRouteKey]!,
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.06, 
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: screenHeight * 0.02), 
+                  ],
+                ),
+              ),
+            ),
+          if (_destinationReached)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: screenHeight * 0.15, 
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.rectangle,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      LanguageConfig.getLocalizedString(languageCode, 'destinationReached'),
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.08, 
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.02), 
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

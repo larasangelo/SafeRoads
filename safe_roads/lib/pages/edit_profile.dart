@@ -36,7 +36,7 @@ class _EditProfileState extends State<EditProfile> {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final profileData = await _profileController.fetchUserProfile();
-      print(profileData);
+      // print(profileData);
       setState(() {
         username = profileData['username']!;
         email = profileData['email']!;
@@ -154,9 +154,47 @@ class _EditProfileState extends State<EditProfile> {
     );
   }
 
-  @override
+  Widget buildLabel(String text, double fontSize) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(text, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w500)),
+    );
+  }
+
+  Widget buildTextField(
+    TextEditingController? controller,
+    String label,
+    double fontSize, {
+    bool obscure = false,
+    bool enabled = true,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      enabled: enabled,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: fontSize),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
+        filled: true,
+        fillColor: Colors.grey[200],
+      ),
+    );
+  }
+
+ @override
   Widget build(BuildContext context) {
-    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    final languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    final horizontalPadding = screenWidth * 0.06;
+    final spacing = screenHeight * 0.025;
+    final avatarRadius = screenWidth * 0.15;
+    final iconSize = screenWidth * 0.06;
+    final fontSize = screenWidth * 0.045;
+    final buttonFontSize = screenWidth * 0.05;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(LanguageConfig.getLocalizedString(languageCode, 'editProfile')),
@@ -168,18 +206,18 @@ class _EditProfileState extends State<EditProfile> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(horizontalPadding),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 20.0),
+                SizedBox(height: spacing),
                 Center(
                   child: Stack(
                     children: [
                       CircleAvatar(
-                        radius: 60,
+                        radius: avatarRadius,
                         backgroundImage: AssetImage(selectedImage),
                       ),
                       Positioned(
@@ -192,99 +230,44 @@ class _EditProfileState extends State<EditProfile> {
                               color: Colors.black,
                               shape: BoxShape.circle,
                             ),
-                            padding: const EdgeInsets.all(8.0),
-                            child: const Icon(
-                              Icons.edit,
-                              color: Colors.white,
-                            ),
+                            padding: EdgeInsets.all(iconSize * 0.4),
+                            child: Icon(Icons.edit, color: Colors.white, size: iconSize),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 40.0),
-                Text(LanguageConfig.getLocalizedString(languageCode, 'enterUsername'), style: const TextStyle(fontSize: 18.0)),
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: username,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                  ),
-                ),
-                const SizedBox(height: 20.0),
-                Text(LanguageConfig.getLocalizedString(languageCode, 'enterEmail'), style: const TextStyle(fontSize: 18.0)),
-                TextFormField(
-                  enabled: false,
-                  decoration: InputDecoration(
-                    labelText: email,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                  ),
-                ),
-                const SizedBox(height: 20.0),
-                Text(LanguageConfig.getLocalizedString(languageCode, 'enterCountry'), style: const TextStyle(fontSize: 18.0)),
-                TextFormField(
-                  controller: _countryController,
-                  decoration: InputDecoration(
-                    labelText: country,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                  ),
-                ),
-                const SizedBox(height: 20.0),
-                Text(LanguageConfig.getLocalizedString(languageCode, 'currentPass'), style: const TextStyle(fontSize: 18.0)),
-                TextFormField(
-                  controller: _currentPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: LanguageConfig.getLocalizedString(languageCode, 'enterCurrent'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                  ),
-                ),
-                const SizedBox(height: 20.0),
-                Text(LanguageConfig.getLocalizedString(languageCode, 'newPass'), style: const TextStyle(fontSize: 18.0)),
-                TextFormField(
-                  controller: _newPasswordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: LanguageConfig.getLocalizedString(languageCode, 'enterNew'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                  ),
-                ),
-                const SizedBox(height: 30.0),
+                SizedBox(height: spacing * 2),
+                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterUsername'), fontSize),
+                buildTextField(_usernameController, username, fontSize),
+                SizedBox(height: spacing),
+                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterEmail'), fontSize),
+                buildTextField(null, email, fontSize, enabled: false),
+                SizedBox(height: spacing),
+                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterCountry'), fontSize),
+                buildTextField(_countryController, country, fontSize),
+                SizedBox(height: spacing),
+                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'currentPass'), fontSize),
+                buildTextField(_currentPasswordController, LanguageConfig.getLocalizedString(languageCode, 'enterCurrent'), fontSize, obscure: true),
+                SizedBox(height: spacing),
+                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'newPass'), fontSize),
+                buildTextField(_newPasswordController, LanguageConfig.getLocalizedString(languageCode, 'enterNew'), fontSize, obscure: true),
+                SizedBox(height: spacing * 1.5),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: updateProfile,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      padding: EdgeInsets.symmetric(vertical: spacing),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                     ),
                     child: Text(
                       LanguageConfig.getLocalizedString(languageCode, 'update'),
-                      style: const TextStyle(fontSize: 18, color: Colors.white),
+                      style: TextStyle(fontSize: buttonFontSize, color: Colors.white),
                     ),
                   ),
                 ),

@@ -9,6 +9,9 @@ class WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -21,64 +24,83 @@ class WelcomePage extends StatelessWidget {
               ),
             ),
           ),
-          // Buttons at the bottom
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.all(40.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Login Button
-                  SizedBox(
-                    width: double.infinity, // Full width
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/login'); // Navigate to login page
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                      ),
-                      child: Text(
-                        LanguageConfig.getLocalizedString(languageCode, 'login'),
-                        style: const TextStyle(fontSize: 18, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Register Button
-                  SizedBox(
-                    width: double.infinity, // Full width
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/register'); // Navigate to register page
-                      },
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                        side: const BorderSide(
-                          width: 1,
-                          color: Colors.black,
-                          style: BorderStyle.solid,
-                        ),
-                      ),
-                      child: Text(
-                        LanguageConfig.getLocalizedString(languageCode, 'register'),
-                        style: const TextStyle(fontSize: 18, color: Colors.black),
-                      ),
-                    ),
-                  ),
-                ],
+          // Column for logo and buttons
+          Column(
+            children: [
+              SizedBox(height: screenHeight * 0.15), 
+
+              // SafeRoads Logo in the lower-middle
+              Center(
+                child: Image.asset(
+                  'assets/SafeRoads_logo.png',  
+                  width: screenWidth * 1,  
+                  height: screenHeight * 0.5, 
+                ),
               ),
-            ),
-          )
+              // Buttons at the bottom
+              const Spacer(),
+              Padding(
+                padding: EdgeInsets.all(screenWidth * 0.06), 
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity, 
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/login'); // Navigate to login page
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                        ),
+                        child: Text(
+                          LanguageConfig.getLocalizedString(languageCode, 'login'),
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.05, // Dynamic font size
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.015), // Dynamic spacing
+                    // Register Button
+                    SizedBox(
+                      width: double.infinity, // Full width
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/register'); // Navigate to register page
+                        },
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          side: const BorderSide(
+                            width: 1,
+                            color: Colors.black,
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: Text(
+                          LanguageConfig.getLocalizedString(languageCode, 'register'),
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.05, 
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
