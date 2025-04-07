@@ -3,8 +3,11 @@ class LanguageConfig {
     'en': {
       // About
       'why': 'Why',
+      'whyBody': 'The expansion of roads and traffic systems globally presents significant challenges to biodiversity. While roads offer benefits to humans, they also contribute to a growing biodiversity crisis by fragmenting ecosystems, altering natural landscapes, and creating "barrier effects" that impede wildlife movement. One of the most immediate impacts of roads on wildlife is the high mortality caused by collisions with vehicles, endangering many species. \nTo address this issue, the SafeRoads mobile application provides a platform to visualize a predictive model of roadkill risk. The system integrates a navigation feature that assesses the likelihood of animal presence along road segments, alerts users, and recommends safer routes to mitigate the risk of Wildlife-Vehicle Collisions (WVCs).',
       'how': 'How',
+      'howBody': 'The SafeRoads mobile application accesses the results from a predictive, daily updated roadkill risk machine learning model. This model assesses roadkill probability based on conditions such as surrounding land use, weather, season, and time of day. The application visualizes this information through a user-friendly platform, providing dynamic roadkill risk insights across different road segments. By notifying drivers of high-risk areas and suggesting alternative routes, SafeRoads aims to reduce the incidence of roadkill, similar to how navigation tools like Waze or Google Maps re-route based on traffic conditions.',
       'who': 'Who',
+      'whoBody': 'This work was conducted as part of the academic project SafeRoads, developed by Lara Ângelo (LASIGE), Fernando Ascensão (CE3C), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE). The project is entirely owned by the Faculty of Sciences, University of Lisbon.',
       // Profile & Edit Profile w/ Snackbars
       'username': 'Loading...',
       'country': 'Loading...',
