@@ -25,7 +25,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    'channel_id_1',
+    'Default Notifications',
+    importance: Importance.high,
+    priority: Priority.high,
+    playSound: true,
+    icon: '@mipmap/ic_launcher',
+  );
+
+  const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+
+  await flutterLocalNotificationsPlugin.show(
+    0,
+    message.notification?.title ?? 'SafeRoads',
+    message.notification?.body ?? 'You have a new notification',
+    platformDetails,
+  );
 }
 
 void main() async {
@@ -33,6 +52,8 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Initialize Notifications
   final Notifications notifications = Notifications();
