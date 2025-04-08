@@ -21,8 +21,17 @@ class NavigationPage extends StatefulWidget {
   final List<Map<String, dynamic>> routeCoordinates;
   final Map<String, String> distances;
   final Map<String, String> times;
+  final LatLng? initialPosition;
 
-  const NavigationPage(this.routesWithPoints, this.selectedRouteKey, this.routeCoordinates, this.distances, this.times, {super.key});
+  const NavigationPage(
+    this.routesWithPoints,
+    this.selectedRouteKey,
+    this.routeCoordinates,
+    this.distances,
+    this.times, {
+    this.initialPosition,
+    super.key,
+  });
 
   @override
   State<NavigationPage> createState() => _NavigationPageState();
@@ -110,6 +119,9 @@ class _NavigationPageState extends State<NavigationPage> {
     _notifications.ignoreSwitchRoute = keepDefaultRoute;
 
     _initializeLocation();
+    if (widget.initialPosition != null) {
+      currentPosition = widget.initialPosition;
+    }
 
     _calculateArrivalTime(widget.times[selectedRouteKey] ?? NavigationConfig.defaultTime);
 
@@ -160,8 +172,8 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   Future<void> _initializeLocation() async {
-    bool serviceEnabled;
-    PermissionStatus permissionGranted;
+    // bool serviceEnabled;
+    // PermissionStatus permissionGranted;
 
     final notificationPreferences = Provider.of<NotificationPreferences>(context, listen: false);
     StreamSubscription<RemoteMessage>? messageSubscription = notificationPreferences.messageSubscription; 
@@ -170,28 +182,28 @@ class _NavigationPageState extends State<NavigationPage> {
     updateMessageSubscription(result!);
 
     // Check if location services are enabled
-    serviceEnabled = await location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await location.requestService();
-      if (!serviceEnabled) {
-        return;
-      }
-    }
+    // serviceEnabled = await location.serviceEnabled();
+    // if (!serviceEnabled) {
+    //   serviceEnabled = await location.requestService();
+    //   if (!serviceEnabled) {
+    //     return;
+    //   }
+    // }
 
-    // Check if permission is granted
-    permissionGranted = await location.hasPermission();
-    if (permissionGranted == PermissionStatus.denied) {
-      permissionGranted = await location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
+    // // Check if permission is granted
+    // permissionGranted = await location.hasPermission();
+    // if (permissionGranted == PermissionStatus.denied) {
+    //   permissionGranted = await location.requestPermission();
+    //   if (permissionGranted != PermissionStatus.granted) {
+    //     return;
+    //   }
+    // }
 
-    // Get the initial location
-    final initialLocation = await location.getLocation();
-    setState(() {
-      currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
-    });
+    // // Get the initial location
+    // final initialLocation = await location.getLocation();
+    // setState(() {
+    //   currentPosition = LatLng(initialLocation.latitude!, initialLocation.longitude!);
+    // });
 
     // -------------------- TESTE NO DISPOSITIVO FÍSICO ------------------------
   //   String title = "🚨 TESTE!";
@@ -199,8 +211,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
   //   try {
   //     final response = await http.post(
-  //     Uri.parse('http://192.168.1.82:3000/send'),
-  //  //  Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
+      // Uri.parse('http://192.168.1.82:3000/send'),
+   //  Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
   //       headers: {"Content-Type": "application/json"},
   //       body: jsonEncode({
   //         "fcmToken": _notifications.fcmToken,
@@ -262,8 +274,8 @@ class _NavigationPageState extends State<NavigationPage> {
   Future<void> _sendPositionToServer(double lat, double lon) async {
     try {
       await http.post(
-        Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.120.62:3000/update-position'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/update-position'),
+        Uri.parse('http://10.101.121.183:3000/update-position'),    // Para testar na uni
 
         body: {
           // 'userId': '123', // Example user ID
@@ -551,8 +563,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -597,8 +609,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -629,8 +641,8 @@ class _NavigationPageState extends State<NavigationPage> {
 
     try {
       await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -734,8 +746,8 @@ class _NavigationPageState extends State<NavigationPage> {
       }
 
       await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.62:3000/send'),    // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/send'),
+        Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,

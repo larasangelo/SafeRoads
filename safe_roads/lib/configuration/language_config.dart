@@ -119,6 +119,8 @@ class LanguageConfig {
       // Notifications
       'reRouteButton': 'Re-route',
       'ignoreButton': 'Ignore',
+      // Loading Navigation
+      'loadingNavigation': 'Loading your route'
     },
     'pt': {
       // About
@@ -238,7 +240,9 @@ class LanguageConfig {
       "noUser": "Nenhum usuário está atualmente conectado.",
       // Notifications
       "reRouteButton": "Redirecionar",
-      "ignoreButton": "Ignorar"
+      "ignoreButton": "Ignorar",
+      // Loading Navigation
+      'loadingNavigation': 'A carregar o seu trajeto...'
     },
     'es': {
       // About
@@ -358,7 +362,9 @@ class LanguageConfig {
       "noUser": "Ningún usuario ha iniciado sesión.",
       // Notifications
       "reRouteButton": "Redirigir",
-      "ignoreButton": "Ignorar"
+      "ignoreButton": "Ignorar",
+      // Loading Navigation
+      'loadingNavigation': 'Cargando tu ruta...'
     },
   };
 

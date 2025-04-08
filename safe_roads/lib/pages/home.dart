@@ -10,7 +10,8 @@ import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/user_preferences.dart';
-import 'package:safe_roads/pages/navigation.dart';
+import 'package:safe_roads/pages/loading_navigation.dart';
+// import 'package:safe_roads/pages/navigation.dart';
 import 'package:provider/provider.dart';
 
 class MapPage extends StatefulWidget {
@@ -106,8 +107,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       print("HOME selectedSpecies: $selectedSpecies");
 
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://10.101.120.62:3000/route'), // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/route'),
+        Uri.parse('http://10.101.121.183:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -179,8 +180,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/geocode'),
-        // Uri.parse('http://10.101.120.62:3000/geocode'), // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/geocode'),
+        Uri.parse('http://10.101.121.183:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -229,8 +230,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://10.101.120.62:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+        // Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+        Uri.parse('http://10.101.121.183:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
       if (response.statusCode == 200) {
@@ -789,7 +790,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => NavigationPage(
+                                            builder: (context) => LoadingNavigationPage(
                                               _routesWithPoints,
                                               _selectedRouteKey,
                                               selectedRoute,
@@ -859,7 +860,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => NavigationPage(
+                                          builder: (context) => LoadingNavigationPage(
                                             _routesWithPoints,
                                             _selectedRouteKey,
                                             selectedRoute,
@@ -881,6 +882,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     ),
                                   ),
                                 ),
+
                               ],
                             ),
                           ),

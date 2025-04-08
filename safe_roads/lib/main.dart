@@ -98,7 +98,7 @@ Future<void> initializeService() async {
 
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'my_foreground', // id
-    'MY FOREGROUND SERVICE', // title
+    'SafeRoads Foreground Service', // title
     description: 'This channel is used for important notifications.', // description
     importance: Importance.low, // importance must be at low or higher level
   );
@@ -126,7 +126,7 @@ Future<void> initializeService() async {
       autoStart: true,
       isForegroundMode: true,
       notificationChannelId: 'my_foreground',
-      initialNotificationTitle: 'SAFEROADS SERVICE',
+      initialNotificationTitle: 'SafeRoads Service',
       initialNotificationContent: 'Initializing',
       foregroundServiceNotificationId: 888,
       foregroundServiceTypes: [AndroidForegroundType.location],
