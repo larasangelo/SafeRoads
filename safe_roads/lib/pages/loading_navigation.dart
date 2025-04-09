@@ -9,6 +9,7 @@ class LoadingNavigationPage extends StatefulWidget {
   final List<Map<String, dynamic>> routeCoordinates;
   final Map<String, String> distances;
   final Map<String, String> times;
+  final String? formattedTime;
 
   const LoadingNavigationPage(
     this.routesWithPoints,
@@ -16,6 +17,7 @@ class LoadingNavigationPage extends StatefulWidget {
     this.routeCoordinates,
     this.distances,
     this.times,
+    this.formattedTime,
     {super.key}
   );
 
@@ -50,10 +52,12 @@ class _LoadingNavigationPageState extends State<LoadingNavigationPage> {
       permissionGranted = await location.requestPermission();
       if (permissionGranted != PermissionStatus.granted) return;
     }
-
+    
     // Initial location
     final loc = await location.getLocation();
     currentPosition = LatLng(loc.latitude!, loc.longitude!);
+
+    print("formattedTime: ${widget.formattedTime}");
 
     // Wait 3 extra seconds to simulate map load (optional)
     await Future.delayed(const Duration(seconds: 3));
@@ -68,6 +72,7 @@ class _LoadingNavigationPageState extends State<LoadingNavigationPage> {
           widget.routeCoordinates,
           widget.distances,
           widget.times,
+          widget.formattedTime,
           initialPosition: currentPosition, // Pass the position
         ),
       ),

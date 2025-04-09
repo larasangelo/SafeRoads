@@ -381,10 +381,56 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     return y + (height * offsetYFactor * zoomFactor); // Adjust offset dynamically
   }
 
+  String? calculateArrivalTime(String travelTime) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    try {
+      DateTime now = DateTime.now();
+      int totalMinutes = 0;
+
+      // Define regex to capture time units like "4 min" or "1h 30min"
+      final regex = RegExp(r'(\d+)\s*(h|min)');
+      final matches = regex.allMatches(travelTime);
+
+      for (final match in matches) {
+        int value = int.tryParse(match.group(1)!) ?? 0; 
+        String unit = match.group(2)!.toLowerCase(); 
+
+        if (unit == 'h') {
+          totalMinutes += value * 60; 
+        } else if (unit == 'min') {
+          totalMinutes += value; 
+        }
+      }
+
+      if (totalMinutes == 0) {
+        print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
+        return null;
+      }
+
+      DateTime arrivalTime = now.add(Duration(minutes: totalMinutes));
+
+      // Format the time in 24-hour format (e.g., 13:45)
+      String formattedTime = "${arrivalTime.hour.toString().padLeft(2, '0')}:${arrivalTime.minute.toString().padLeft(2, '0')}";
+
+      return formattedTime;
+    } catch (e) {
+      print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
+
+    // ✅ Get the travel time string
+    final selectedTime = _times[_selectedRouteKey];
+
+    // ✅ Calculate arrival time once here
+    final String? arrivalTime = selectedTime != null
+        ? calculateArrivalTime(selectedTime)
+        : null;
 
     return 
       Scaffold(
@@ -413,8 +459,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                        child: Icon(Icons.location_pin, color: Colors.black, size: MediaQuery.of(context).size.width * 0.11),
+                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        child: Image(
+                          image: const AssetImage("assets/icons/pin.png"),
+                          width: MediaQuery.of(context).size.width * 0.11,
+                        ),
                       ),
                     ],
                   ),
@@ -423,7 +472,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     markers: [
                       Marker(
                         point: _destinationLocation!,
-                        child: Icon(Icons.location_pin, color: Colors.red, size: MediaQuery.of(context).size.width * 0.11),
+                        child: Image(
+                          image: const AssetImage("assets/icons/pin_final.png"),
+                          width: MediaQuery.of(context).size.width * 0.11, 
+                          height: MediaQuery.of(context).size.width * 0.11,
+                        ),
                       ),
                     ],
                   ),
@@ -449,7 +502,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           Polyline(
                             points: points,
                             strokeWidth: 8.0,
-                            color: Colors.grey[800]!.withOpacity(0.9),
+                            color: Colors.grey[800]!.withOpacity(0.7),
                           ),
                           // Main polyline
                           Polyline(
@@ -607,7 +660,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -740,7 +793,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
                             ];
                           } else if (hasMediumRisk) {
                             Set<String> speciesList = {};
@@ -762,59 +815,132 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
                             ];
                           }
                           return [];
                         }(),
-                      if (_routesWithPoints.length > 1)
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1), 
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      if (_routesWithPoints.isNotEmpty)
+                       Center(
+                         child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.05),
+                          child: Column(
                             children: [
-                              Column(
+                              // MAIN ROW: Left image column + Right route info column
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,  // Align content at the start of the row
                                 children: [
-                                  Text(
-                                    _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                    style: TextStyle(
-                                      fontSize: MediaQuery.of(context).size.width * 0.065, 
-                                      color: Colors.black,
+                                  // LEFT COLUMN - Image (centered)
+                                  SizedBox(
+                                    width: MediaQuery.of(context).size.width * 0.16,  // Width of the image column
+                                    child: Center(
+                                      child: Image(
+                                        image: _selectedRouteKey == 'adjustedRoute'
+                                            ? const AssetImage("assets/icons/frog_green.png")
+                                            : (_routesWithPoints.containsKey('adjustedRoute')
+                                                ? const AssetImage("assets/icons/frog_orange.png")
+                                                : const AssetImage("assets/icons/frog_green.png")),
+                                        width: MediaQuery.of(context).size.width * 0.14,  // Adjust image size
+                                      ),
                                     ),
                                   ),
-                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01), 
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        final keys = _routesWithPoints.keys.toList();
-                                        int currentIndex = keys.indexOf(_selectedRouteKey);
-                                        _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                                      });
-                                      print(" key: $_selectedRouteKey");
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                    ),
-                                    child: Text(
-                                      LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
-                                      style: TextStyle(
-                                        fontSize: MediaQuery.of(context).size.width * 0.05, 
-                                        color: Colors.white,
-                                      ),
+                         
+                                  SizedBox(width: MediaQuery.of(context).size.width * 0.03), // Space between the image and text columns
+                         
+                                  // RIGHT COLUMN - Route Info
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Arrival Time
+                                        Text(
+                                          "${LanguageConfig.getLocalizedString(languageCode, 'arrivalTime')} ${calculateArrivalTime(_times[_selectedRouteKey]!) ?? LanguageConfig.getLocalizedString(languageCode, 'unknown')}",
+                                          style: TextStyle(
+                                            fontSize: MediaQuery.of(context).size.width * 0.045,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                         
+                                        const SizedBox(height: 4),
+                         
+                                        // Comment below arrival time
+                                        Text(
+                                          _selectedRouteKey == 'adjustedRoute'
+                                              ? LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill')
+                                              : (_routesWithPoints.containsKey('adjustedRoute')
+                                                  ? LanguageConfig.getLocalizedString(languageCode, 'notBestOption')
+                                                  : LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill')),
+                                          style: TextStyle(
+                                            fontSize: MediaQuery.of(context).size.width * 0.035,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                         
+                                        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+                         
+                                        // Distance + Duration row
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.center,  // Ensure texts align vertically
+                                          children: [
+                                            Text(
+                                              _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                              style: TextStyle(
+                                                fontSize: MediaQuery.of(context).size.width * 0.04,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),  
+                                            const SizedBox(
+                                              height: 15,  // Divider height
+                                              child: VerticalDivider(
+                                                color: Colors.grey,  // Divider color
+                                                width: 1,  // Divider width
+                                                thickness: 1,  // Divider thickness
+                                                indent: 0,  // Optional, adjust the distance from the top
+                                                endIndent: 0,  // Optional, adjust the distance from the bottom
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),  // Adds space between the divider and the next text
+                                            Text(
+                                              _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                              style: TextStyle(
+                                                fontSize: MediaQuery.of(context).size.width * 0.04,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                              Column(
+                         
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                         
+                              // BOTTOM ROW: Conditional Switch + Start buttons
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  Text(
-                                    _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                    style: TextStyle(
-                                      fontSize: MediaQuery.of(context).size.width * 0.065, 
-                                      color: Colors.black,
+                                  // Conditionally display the Switch Route Button if 'adjustedRoute' exists
+                                  if (_routesWithPoints.containsKey('adjustedRoute'))
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          final keys = _routesWithPoints.keys.toList();
+                                          int currentIndex = keys.indexOf(_selectedRouteKey);
+                                          _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                        });
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                                      child: Text(
+                                        LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
+                                        style: TextStyle(
+                                          fontSize: MediaQuery.of(context).size.width * 0.045,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+
+                                  // Always show the Start Button
                                   ElevatedButton(
                                     onPressed: () {
                                       if (_routesWithPoints.containsKey(_selectedRouteKey)) {
@@ -829,18 +955,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                               selectedRoute,
                                               _distances,
                                               _times,
+                                              arrivalTime,
                                             ),
                                           ),
                                         );
                                       }
                                     },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.black,
-                                    ),
+                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
                                     child: Text(
                                       LanguageConfig.getLocalizedString(languageCode, 'start'),
                                       style: TextStyle(
-                                        fontSize: MediaQuery.of(context).size.width * 0.05, 
+                                        fontSize: MediaQuery.of(context).size.width * 0.045,
                                         color: Colors.white,
                                       ),
                                     ),
@@ -849,78 +974,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               ),
                             ],
                           ),
-                        )
-                      else
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Container(
-                            height: MediaQuery.of(context).size.height * 0.15, 
-                            width: double.infinity,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.rectangle,
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(30.0)),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                      style: TextStyle(
-                                        fontSize: MediaQuery.of(context).size.width * 0.065, 
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    SizedBox(width: MediaQuery.of(context).size.width * 0.1), 
-                                    Text(
-                                      _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                      style: TextStyle(
-                                        fontSize: MediaQuery.of(context).size.width * 0.065, 
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (_routesWithPoints.containsKey(_selectedRouteKey)) {
-                                      List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => LoadingNavigationPage(
-                                            _routesWithPoints,
-                                            _selectedRouteKey,
-                                            selectedRoute,
-                                            _distances,
-                                            _times,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black,
-                                  ),
-                                  child: Text(
-                                    LanguageConfig.getLocalizedString(languageCode, 'start'),
-                                    style: TextStyle(
-                                      fontSize: MediaQuery.of(context).size.width * 0.05, 
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-
-                              ],
-                            ),
-                          ),
                         ),
-                    ],
+                       )
+                    ]
                   ),
                 ),
               ),
@@ -935,18 +991,21 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
   double screenWidth = MediaQuery.of(context).size.width;
 
   return Padding(
-    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06), 
+    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05), 
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.warning, color: color, size: screenWidth * 0.08), 
-        SizedBox(width: screenWidth * 0.04), 
+        Image(
+          image: const AssetImage("assets/icons/warning.png"),
+          width: MediaQuery.of(context).size.width * 0.14,
+        ),
+        SizedBox(width: screenWidth * 0.05), 
         Expanded(
           child: Text(
             text,
             textAlign: TextAlign.left,
             style: TextStyle(
-              fontSize: screenWidth * 0.06, 
+              fontSize: screenWidth * 0.05, 
               fontWeight: FontWeight.bold,
               color: color,
             ),

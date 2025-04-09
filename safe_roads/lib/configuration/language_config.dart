@@ -70,6 +70,9 @@ class LanguageConfig {
       'unknown': 'Unknown',
       'switchRoute': 'Switch Route',
       'start': 'Start',
+      'arrivalTime': 'Arrival at',
+      'bestToAvoidRoadkill': '⭐ This route is the best option to avoid roadkill',
+      'notBestOption': 'This route may increase the risk of causing roadkill',
       // Login
       'welcome': 'Welcome back!\nGlad to see you, Again!',
       'inputEmail': 'Enter your email',
@@ -192,6 +195,9 @@ class LanguageConfig {
       "mediumProbability": "Média probabilidade de encontrar",
       "unknown": "Desconhecido",
       "switchRoute": "Alterar rota",
+      'arrivalTime': 'Chegada às',
+      'bestToAvoidRoadkill': '⭐ Esta rota é a melhor opção para evitar atropelamentos de animais.',
+      'notBestOption': 'Esta rota pode aumentar o risco de causar atropelamentos de animais.',
       // Login
       "start": "Iniciar",
       'welcome': 'Bem-vindo de volta!\nQue bom vê-lo novamente!',
@@ -316,6 +322,9 @@ class LanguageConfig {
       "unknown": "Desconocido",
       "switchRoute": "Cambiar ruta",
       "start": "Iniciar",
+      'arrivalTime': 'Llegada a',
+      'bestToAvoidRoadkill': '⭐ Esta ruta es la mejor opción para evitar atropellos de animales.',
+      'notBestOption': 'Esta ruta puede aumentar el riesgo de causar atropellos de animales.',
       // Login
       'welcome': '¡Bienvenido de nuevo!\n¡Qué bueno verte otra vez!',
       'inputEmail': 'Ingresa tu correo electrónico',

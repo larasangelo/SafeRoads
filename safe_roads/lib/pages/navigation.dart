@@ -21,6 +21,7 @@ class NavigationPage extends StatefulWidget {
   final List<Map<String, dynamic>> routeCoordinates;
   final Map<String, String> distances;
   final Map<String, String> times;
+  final String? formattedTime;
   final LatLng? initialPosition;
 
   const NavigationPage(
@@ -28,7 +29,8 @@ class NavigationPage extends StatefulWidget {
     this.selectedRouteKey,
     this.routeCoordinates,
     this.distances,
-    this.times, {
+    this.times, 
+    this.formattedTime, {
     this.initialPosition,
     super.key,
   });
@@ -131,7 +133,11 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       currentPosition = widget.initialPosition;
     }
 
-    _calculateArrivalTime(widget.times[selectedRouteKey] ?? NavigationConfig.defaultTime);
+    // String? formattedTime = calculateArrivalTime(widget.times[selectedRouteKey] ?? NavigationConfig.defaultTime);
+
+    // setState(() {
+    //   estimatedArrivalTime = formattedTime!;
+    // });
 
     locationSubscription = location.onLocationChanged.listen((LocationData loc) async {
       if (loc.latitude != null && loc.longitude != null) {
@@ -232,44 +238,43 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     // ------------------------------------------------------------------------
   }
 
-  void _calculateArrivalTime(String travelTime) {
-    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-    try {
-      DateTime now = DateTime.now();
-      int totalMinutes = 0;
+  // String? calculateArrivalTime(String travelTime) {
+  //   String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+  //   try {
+  //     DateTime now = DateTime.now();
+  //     int totalMinutes = 0;
 
-      // Define regex to capture time units like "4 min" or "1h 30min"
-      final regex = RegExp(r'(\d+)\s*(h|min)');
-      final matches = regex.allMatches(travelTime);
+  //     // Define regex to capture time units like "4 min" or "1h 30min"
+  //     final regex = RegExp(r'(\d+)\s*(h|min)');
+  //     final matches = regex.allMatches(travelTime);
 
-      for (final match in matches) {
-        int value = int.tryParse(match.group(1)!) ?? 0; 
-        String unit = match.group(2)!.toLowerCase(); 
+  //     for (final match in matches) {
+  //       int value = int.tryParse(match.group(1)!) ?? 0; 
+  //       String unit = match.group(2)!.toLowerCase(); 
 
-        if (unit == 'h') {
-          totalMinutes += value * 60; 
-        } else if (unit == 'min') {
-          totalMinutes += value; 
-        }
-      }
+  //       if (unit == 'h') {
+  //         totalMinutes += value * 60; 
+  //       } else if (unit == 'min') {
+  //         totalMinutes += value; 
+  //       }
+  //     }
 
-      if (totalMinutes == 0) {
-        print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
-        return;
-      }
+  //     if (totalMinutes == 0) {
+  //       print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
+  //       return null;
+  //     }
 
-      DateTime arrivalTime = now.add(Duration(minutes: totalMinutes));
+  //     DateTime arrivalTime = now.add(Duration(minutes: totalMinutes));
 
-      // Format the time in 24-hour format (e.g., 13:45)
-      String formattedTime = "${arrivalTime.hour.toString().padLeft(2, '0')}:${arrivalTime.minute.toString().padLeft(2, '0')}";
+  //     // Format the time in 24-hour format (e.g., 13:45)
+  //     String formattedTime = "${arrivalTime.hour.toString().padLeft(2, '0')}:${arrivalTime.minute.toString().padLeft(2, '0')}";
 
-      setState(() {
-        estimatedArrivalTime = formattedTime;
-      });
-    } catch (e) {
-      print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
-    }
-  }
+  //     return formattedTime;
+  //   } catch (e) {
+  //     print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
+  //   }
+  //   return null;
+  // }
 
   Future<void> _sendPositionToServer(double lat, double lon) async {
     try {
@@ -889,7 +894,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      estimatedArrivalTime,
+                      widget.formattedTime ?? "",
                       style: TextStyle(
                         fontSize: screenWidth * 0.08, 
                         fontWeight: FontWeight.bold,
