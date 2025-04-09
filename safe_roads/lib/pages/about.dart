@@ -38,7 +38,7 @@ class About extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.only(bottom: verticalSpacing),
                     child: Image.asset(
-                      'assets/SafeRoads_logo.png',
+                      'assets/logos/SafeRoads_logo.png',
                       height: logoHeight,
                       fit: BoxFit.contain,
                     ),
@@ -99,19 +99,19 @@ class About extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset(
-                        'assets/FCUL_logo.png',
+                        'assets/logos/FCUL_logo.png',
                         height: bottomLogoHeight,
                         fit: BoxFit.contain,
                       ),
                       SizedBox(width: logoSpacing),
                       Image.asset(
-                        'assets/lasige_logo.png',
+                        'assets/logos/lasige_logo.png',
                         height: bottomLogoHeight,
                         fit: BoxFit.contain,
                       ),
                       SizedBox(width: logoSpacing),
                       Image.asset(
-                        'assets/ce3c_logo_black.png',
+                        'assets/logos/ce3c_logo_black.png',
                         height: bottomLogoHeight,
                         fit: BoxFit.contain,
                       ),

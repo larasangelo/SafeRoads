@@ -42,6 +42,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Map<String, dynamic> userPreferences = HomeConfig.defaultUserPreferences;
   String _selectedRouteKey = HomeConfig.defaultRouteKey;
   double _boxHeight = HomeConfig.defaultBoxHeight;
+  double mediumRisk = HomeConfig.mediumRisk;
+  double highRisk = HomeConfig.highRisk;
 
   @override
   bool get wantKeepAlive => true;
@@ -80,10 +82,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       if (_currentLocation != null) {
         _mapController.move(
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -270,10 +272,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         if (_currentLocation != null) {
           await _fetchRoute(
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
+            // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
 
@@ -408,10 +410,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     markers: [
                       Marker(
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        // point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        point: LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                         child: Icon(Icons.location_pin, color: Colors.black, size: MediaQuery.of(context).size.width * 0.11),
                       ),
                     ],
@@ -428,49 +430,80 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
-                      // First, draw unselected routes (gray)
                       ..._routesWithPoints.entries.expand<Polyline>((entry) {
-                        if (entry.key == _selectedRouteKey) return []; // Skip selected route for now
-        
-                        final List<Map<String, dynamic>> routePoints = entry.value;
+                        if (entry.key == _selectedRouteKey) return [];
+
+                        final routePoints = entry.value;
                         if (routePoints.length < 2) return [];
-        
-                        return List.generate(routePoints.length - 1, (index) {
-                          final current = routePoints[index];
-                          final next = routePoints[index + 1];
-        
-                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
-        
-                          return Polyline(
-                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
+
+                        // Extract LatLng points safely
+                        final points = routePoints
+                          .where((point) => point['latlng'] is LatLng)
+                          .map((point) => point['latlng'] as LatLng)
+                          .toList();
+
+                        if (points.length < 2) return [];
+
+                        return [
+                          // Border polyline
+                          Polyline(
+                            points: points,
+                            strokeWidth: 8.0,
+                            color: Colors.grey[800]!.withOpacity(0.9),
+                          ),
+                          // Main polyline
+                          Polyline(
+                            points: points,
                             strokeWidth: 4.0,
-                            color: Colors.grey.withOpacity(0.7), // Always gray for unselected routes
-                          );
-                        }).whereType<Polyline>(); // Remove null values
+                            color: Colors.grey.withOpacity(0.9),
+                          ),
+                        ];
                       }),
-        
-                      // Now, draw the selected route last (so it's on top)
-                      if (_routesWithPoints.containsKey(_selectedRouteKey))
-                        ..._routesWithPoints[_selectedRouteKey]!.sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1).map((current) {
-                          final next = _routesWithPoints[_selectedRouteKey]![_routesWithPoints[_selectedRouteKey]!.indexOf(current) + 1];
-        
-                          if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
-        
-                          Color lineColor;
-                          if (current['raster_value'] > 0.5) {
-                            lineColor = Colors.red;
-                          } else if (current['raster_value'] > 0.3) {
-                            lineColor = Colors.orange;
-                          } else {
-                            lineColor = Colors.purple;
-                          }
-        
-                          return Polyline(
-                            points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                            strokeWidth: 4.0,
-                            color: lineColor, // Selected route is colored
-                          );
-                        }).whereType<Polyline>(),
+                      // SELECTED ROUTE with dynamic color and unified border
+                      if (_routesWithPoints.containsKey(_selectedRouteKey)) ...[
+                        // Draw one thick, dark polyline underneath (the border)
+                        Polyline(
+                          points: _routesWithPoints[_selectedRouteKey]!
+                            .where((p) => p['latlng'] is LatLng)
+                            .map((p) => p['latlng'] as LatLng)
+                            .toList(),
+                          strokeWidth: 8.0,
+                          color: Colors.black.withOpacity(0.8), // Dark outline
+                        ),
+
+                        // Draw each colored segment on top
+                        ..._routesWithPoints[_selectedRouteKey]!
+                          .sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1)
+                          .asMap()
+                          .entries
+                          .where((entry) {
+                            final current = entry.value;
+                            final next = _routesWithPoints[_selectedRouteKey]![entry.key + 1];
+                            return current['latlng'] is LatLng && next['latlng'] is LatLng;
+                          })
+                          .map((entry) {
+                            final index = entry.key;
+                            final current = entry.value;
+                            final next = _routesWithPoints[_selectedRouteKey]![index + 1];
+
+                            final points = [current['latlng'] as LatLng, next['latlng'] as LatLng];
+
+                            Color lineColor;
+                            final raster = current['raster_value'];
+                            if (raster > highRisk) {
+                              lineColor = Colors.red;
+                            } else if (raster > mediumRisk) {
+                              lineColor = Colors.orange;
+                            } else {
+                              lineColor = Colors.purple;
+                            }
+                            return Polyline(
+                              points: points,
+                              strokeWidth: 4.0,
+                              color: lineColor,
+                            );
+                          })
+                      ],
                     ],
                   ),
                   Stack(
@@ -571,10 +604,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           if (_currentLocation != null) {
                             _mapController.move(
                               // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                              // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              // LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -602,7 +635,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: MediaQuery.of(context).size.width * 0.045, 
+                                fontSize: MediaQuery.of(context).size.width * 0.04, 
                               ),
                             ),
                             subtitle: Text(
@@ -610,7 +643,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   ? '${suggestion['city']}, ${suggestion['country']}'
                                   : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')),
                               style: TextStyle(
-                                fontSize: MediaQuery.of(context).size.width * 0.035, 
+                                fontSize: MediaQuery.of(context).size.width * 0.03, 
                               ),
                             ),
                             onTap: () {
@@ -675,9 +708,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       if (_routesWithPoints[_selectedRouteKey] != null)
                         ...() {
                           bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > 0.5);
+                              .any((point) => point['raster_value'] > highRisk);
                           bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > 0.3 && point['raster_value'] <= 0.5);
+                              .any((point) => point['raster_value'] > mediumRisk && point['raster_value'] <= highRisk);
 
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             setState(() {
@@ -690,7 +723,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           if (hasHighRisk) {
                             Set<String> speciesList = {};
                             for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > 0.5) {
+                              if (point['raster_value'] > highRisk) {
                                 speciesList.addAll(List<String>.from(point['species']));
                               }
                             }
@@ -712,7 +745,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           } else if (hasMediumRisk) {
                             Set<String> speciesList = {};
                             for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > 0.3 && point['raster_value'] <= 0.5) {
+                              if (point['raster_value'] > mediumRisk && point['raster_value'] <= highRisk) {
                                 speciesList.addAll(List<String>.from(point['species']));
                               }
                             }
@@ -802,7 +835,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: (_selectedRouteKey == "defaultRoute") ? Colors.red : Colors.green,
+                                      backgroundColor: Colors.black,
                                     ),
                                     child: Text(
                                       LanguageConfig.getLocalizedString(languageCode, 'start'),

@@ -32,7 +32,7 @@ class WelcomePage extends StatelessWidget {
               // SafeRoads Logo in the lower-middle
               Center(
                 child: Image.asset(
-                  'assets/SafeRoads_logo.png',  
+                  'assets/logos/SafeRoads_logo.png',  
                   width: screenWidth * 1,  
                   height: screenHeight * 0.5, 
                 ),

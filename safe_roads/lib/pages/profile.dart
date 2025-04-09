@@ -647,8 +647,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
                 LanguageConfig.getLocalizedString(selectedLanguage, species['key']),
                 style: TextStyle(fontSize: screenWidth * 0.035), 
               ),
-              avatar: Icon(
-                species["icon"],
+              avatar: ImageIcon(
+                (species["icon"] as ImageIcon).image,
                 color: isSelected ? Colors.white : Colors.black,
               ),
               selected: isSelected,

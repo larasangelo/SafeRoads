@@ -36,9 +36,9 @@ class ProfileConfig {
 
   // Species Options with Localization Support
   static const List<Map<String, dynamic>> speciesOptions = [
-    {"key": "amphibians", "icon": Icons.water},
-    {"key": "reptiles", "icon": Icons.grass},
-    {"key": "hedgehogs", "icon": Icons.pets},
+    {"key": "amphibians", "icon": ImageIcon(AssetImage("assets/icons/frog.png"))},
+    {"key": "reptiles", "icon": ImageIcon(AssetImage('assets/icons/snake.png'))},
+    {"key": "hedgehogs", "icon": ImageIcon(AssetImage('assets/icons/hedgehog.png'))},
   ];
 
   // Default Selected Species
