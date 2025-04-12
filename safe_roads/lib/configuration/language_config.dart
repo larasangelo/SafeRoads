@@ -7,7 +7,7 @@ class LanguageConfig {
       'how': 'How',
       'howBody': 'The SafeRoads mobile application accesses the results from a predictive, daily updated roadkill risk machine learning model. This model assesses roadkill probability based on conditions such as surrounding land use, weather, season, and time of day. The application visualizes this information through a user-friendly platform, providing dynamic roadkill risk insights across different road segments. By notifying drivers of high-risk areas and suggesting alternative routes, SafeRoads aims to reduce the incidence of roadkill, similar to how navigation tools like Waze or Google Maps re-route based on traffic conditions.',
       'who': 'Who',
-      'whoBody': 'This work was conducted as part of the academic project SafeRoads, developed by Lara Ângelo (LASIGE), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE) and Fernando Ascensão (ce3c) in collaboration with César Capinha (IGOT) and Rui Rebelo (ce3c). The project is entirely owned by the Faculty of Sciences, University of Lisbon.',
+      'whoBody': 'This work was conducted as part of the academic project SafeRoads, developed by Lara Ângelo (LASIGE), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE) and Fernando Ascensão (ce3c) in collaboration with César Capinha (IGOT) and Rui Rebelo (ce3c). The project is entirely owned by the Faculdade de Ciências, Universidade de Lisboa.',
       // Profile & Edit Profile w/ Snackbars
       'username': 'Loading...',
       'country': 'Loading...',
@@ -259,7 +259,7 @@ class LanguageConfig {
       'how': 'Cómo',
       'howBody': 'La aplicación móvil SafeRoads accede a los resultados de un modelo predictivo de riesgo de atropello, actualizado diariamente. Este modelo evalúa la probabilidad de atropello en función de condiciones como el uso del suelo, el clima, la estación del año y la hora del día. La aplicación visualiza esta información a través de una interfaz fácil de usar, proporcionando información dinámica sobre el riesgo de atropello en distintos tramos de carretera. Al notificar a los conductores sobre zonas de alto riesgo y sugerir rutas alternativas, SafeRoads pretende reducir la incidencia de atropellos, de forma similar a cómo Waze o Google Maps redirigen según el tráfico.',
       'who': 'Quiénes',
-      'whoBody': 'Este trabajo se llevó a cabo como parte del proyecto académico SafeRoads, desarrollado por Lara Ângelo (LASIGE), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE) y Fernando Ascensão (ce3c), en colaboración con César Capinha (IGOT) y Rui Rebelo (ce3c). El proyecto es propiedad exclusiva de la Facultad de Ciencias de la Universidad de Lisboa.',
+      'whoBody': 'Este trabajo se llevó a cabo como parte del proyecto académico SafeRoads, desarrollado por Lara Ângelo (LASIGE), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE) y Fernando Ascensão (ce3c), en colaboración con César Capinha (IGOT) y Rui Rebelo (ce3c). El proyecto es propiedad exclusiva de la Faculdade de Ciências de la Universidade de Lisboa.',
       // Profile & Edit Profile w/ Snackbars
       'username': 'Cargando...',
       'country': 'Cargando...',

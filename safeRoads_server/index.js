@@ -57,183 +57,97 @@ const getRasterValue = async (start) => {
 // Route computation function
 const getRoute = async (start, end, lowRisk, selectedSpecies) => {
   try {
-    // Get start and end nodes
+    // Get nearest node to start
     const startNodeQuery = `
-      SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${start.lon}, ${start.lat}), 4326)::geography) AS dist
-      FROM ways_vertices_pgr
-      ORDER BY dist ASC
+      SELECT id FROM ways_vertices_pgr
+      ORDER BY the_geom <-> ST_SetSRID(ST_Point(${start.lon}, ${start.lat}), 4326)
       LIMIT 1;
     `;
     const startNode = await pool.query(startNodeQuery);
-    // console.log("startNode", startNode.rows[0].id);
 
+    // Get nearest node to end
     const endNodeQuery = `
-      SELECT id, ST_Distance(the_geom::geography, ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)::geography) AS dist
-      FROM ways_vertices_pgr
-      ORDER BY dist ASC
+      SELECT id FROM ways_vertices_pgr
+      ORDER BY the_geom <-> ST_SetSRID(ST_Point(${end.lon}, ${end.lat}), 4326)
       LIMIT 1;
     `;
     const endNode = await pool.query(endNodeQuery);
-    // console.log("endNode", endNode.rows[0].id);
 
-    // Calculate bounding box
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; // Earth's radius in km
-      const dLat = (lat2 - lat1) * (Math.PI / 180);
-      const dLon = (lon2 - lon1) * (Math.PI / 180);
-    
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) *
-          Math.cos(lat2 * (Math.PI / 180)) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-    
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c; // Distance in km
-    }
-    
-    // Calculate distance between start and end
-    const distanceKm = calculateDistance(start.lat, start.lon, end.lat, end.lon);
-    
-    // Dynamically adjust bufferDistance
-    const baseBuffer = 0.02; // Minimum buffer for short distances
-    const maxBuffer = 1; // Maximum buffer for very large distances
-    const bufferDistance = Math.min(baseBuffer + distanceKm * 0.01, maxBuffer); // Scales with distance
-    
+    // Calculate dynamic buffer
+    const R = 6371;
+    const dLat = (end.lat - start.lat) * (Math.PI / 180);
+    const dLon = (end.lon - start.lon) * (Math.PI / 180);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(start.lat * (Math.PI / 180)) * Math.cos(end.lat * (Math.PI / 180)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distanceKm = R * c;
+    const bufferDistance = Math.min(0.02 + distanceKm * 0.01, 1);
+    console.log("bufferDistance", bufferDistance);
+
     const minLat = Math.min(start.lat, end.lat) - bufferDistance;
     const maxLat = Math.max(start.lat, end.lat) + bufferDistance;
     const minLon = Math.min(start.lon, end.lon) - bufferDistance;
     const maxLon = Math.max(start.lon, end.lon) + bufferDistance;
-    
-    console.log(`Dynamic Buffer Distance: ${bufferDistance}`);
-
-    // console.log("minLat", minLat);
-    // console.log("maxLat", maxLat);
-    // console.log("minLon", minLon);
-    // console.log("maxLon", maxLon);
 
     await pool.query("DROP TABLE IF EXISTS temp_ways;");
     console.log("Temporary table dropped.");
-    // Create a temporary table to store road segments and species info
-    const createTempTableQuery = `
-      CREATE TABLE temp_ways (
-        gid INTEGER,
-        source INTEGER,
-        target INTEGER,
-        cost DOUBLE PRECISION,
-        reverse_cost DOUBLE PRECISION,
-        the_geom GEOMETRY,
-        length_m DOUBLE PRECISION,
-        maxspeed_forward DOUBLE PRECISION,
-        maxspeed_backward DOUBLE PRECISION,
-        raster_value DOUBLE PRECISION DEFAULT NULL,
-        species TEXT[] DEFAULT '{}'
-      );
 
-      INSERT INTO temp_ways (gid, source, target, cost, reverse_cost, the_geom, length_m, maxspeed_forward, maxspeed_backward)
-      SELECT w.gid, w.source, w.target, w.cost, w.reverse_cost, w.the_geom, w.length_m,
-             w.maxspeed_forward, w.maxspeed_backward
-      FROM ways w
+    await pool.query(`
+      CREATE TEMP TABLE temp_ways AS
+      SELECT gid, source, target, the_geom, maxspeed_forward, maxspeed_backward, risk_value, species, cost, reverse_cost, length_m
+      FROM get_ways_with_risk($1)
       WHERE ST_Intersects(
-        w.the_geom,
+        the_geom,
         ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
       );
-    `;
-    await pool.query(createTempTableQuery);
-    console.log("Temporary table created with bounding box.");
+    `, [selectedSpecies.length > 0 ? selectedSpecies : null]);
 
-    // Update temp_ways with raster values and species lists
-    const updateTempTableWithRasterQuery = `
-      UPDATE temp_ways
-      SET
-          raster_value = subquery.raster_value,
-          species = subquery.species
-      FROM (
-          SELECT
-              w_inner.gid,
-              MAX(species_data.value) AS raster_value,
-              ARRAY_AGG(DISTINCT species_data.species_name) AS species  -- Store all species
-          FROM temp_ways w_inner
-          JOIN LATERAL (
-              ${selectedSpecies.map(species =>
-                  `SELECT '${species.replace(/'/g, "''")}' AS species_name,
-                  COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0) AS value
-                  FROM ${species.toLowerCase()} r_${species.toLowerCase()}
-                  WHERE ST_Intersects(r_${species.toLowerCase()}.rast, w_inner.the_geom)`
-              ).join(" UNION ALL ")}
-          ) AS species_data ON TRUE
-          GROUP BY w_inner.gid
-      ) AS subquery
-      WHERE temp_ways.gid = subquery.gid;
-    `;
-    await pool.query(updateTempTableWithRasterQuery);
-    console.log("Raster values and species info added to the temporary table.");
+    console.log("Temporary table created with bounding box and risk.");
 
-    // Step 3: Run the pgr_dijkstra query on the temp table
-    const routeQuery = `
+    // Run risk-aware route
+    const route = await pool.query(`
       SELECT *,
-            ST_AsGeoJSON(the_geom) AS geojson,
-            maxspeed_forward,
-            maxspeed_backward,
-            species
+        ST_AsGeoJSON(the_geom) AS geojson,
+        maxspeed_forward, maxspeed_backward, species, length_m
       FROM pgr_dijkstra(
-        'SELECT gid AS id, 
-                source, 
-                target,
-                cost * (1 + raster_value * 4) AS cost,
-                reverse_cost * (1 + raster_value * 4) AS reverse_cost
-        FROM temp_ways',
-        ${startNode.rows[0].id}, 
-        ${endNode.rows[0].id},
+        'SELECT gid AS id, source, target,
+                cost * (1 + COALESCE(risk_value, 0) * 4) AS cost,
+                reverse_cost * (1 + COALESCE(risk_value, 0) * 4) AS reverse_cost
+         FROM temp_ways',
+        ${startNode.rows[0].id}, ${endNode.rows[0].id},
         directed := true
       ) AS route
       JOIN temp_ways ON route.edge = temp_ways.gid
       ORDER BY route.seq;
-    `;
-    const route = await pool.query(routeQuery);
-    console.log('adjustedRoute', route);
+    `);
 
-    // Step 4: If the user doesn't want only the low-risk route, return the default route
+    console.log("Adjusted route fetched");
+
+    // Run default route if needed
     if (!lowRisk) {
-      console.log("Fetching default route.");
-      const routeDefault = `
+      const routeDefault = await pool.query(`
         SELECT *,
-        ST_AsGeoJSON(the_geom) AS geojson,
-        maxspeed_forward,
-        maxspeed_backward
+          ST_AsGeoJSON(the_geom) AS geojson,
+          maxspeed_forward, maxspeed_backward, length_m
         FROM pgr_dijkstra(
-          'SELECT gid AS id, source, target, cost, reverse_cost, maxspeed_forward, maxspeed_backward FROM temp_ways',
+          'SELECT gid AS id, source, target, cost, reverse_cost FROM temp_ways',
           ${startNode.rows[0].id}, ${endNode.rows[0].id},
           directed := true
         ) AS route
         JOIN temp_ways ON route.edge = temp_ways.gid
         ORDER BY route.seq;
-      `;
+      `);
 
-      const routeUnaware = await pool.query(routeDefault);
-      console.log("Default route fetched.");
+      console.log("Default route fetched");
 
-      // Clean up the temporary table
-      // await pool.query("DROP TABLE IF EXISTS temp_ways;");
-      // console.log("Temporary table dropped.");
-
-      return { 
-        adjustedRoute: route.rows.map(row => ({
-          ...row,
-          species: row.species || []  // Ensure species info is included
-        })), 
-        defaultRoute: routeUnaware.rows 
-      };
-    } else {
-      // await pool.query("DROP TABLE IF EXISTS temp_ways;");
-      return { 
-        adjustedRoute: route.rows.map(row => ({
-          ...row,
-          species: row.species || []  // Ensure species info is included
-        })) 
+      return {
+        adjustedRoute: route.rows.map(r => ({ ...r, species: r.species || [] })),
+        defaultRoute: routeDefault.rows
       };
     }
+
+    return {
+      adjustedRoute: route.rows.map(r => ({ ...r, species: r.species || [] }))
+    };
   } catch (err) {
     console.error(err);
   }
@@ -322,16 +236,13 @@ app.post("/route", async (req, res) => {
     const { start, end, lowRisk, selectedSpecies } = req.body;
     const routes = await getRoute(start, end, lowRisk, selectedSpecies);
 
-    // console.log('routes', routes);
+    console.log('Out of the getRoute function');
 
     let responseData = {};
     let allRoutes = {}; // Store routes for comparison
 
     for (const [key, route] of Object.entries(routes)) {
       if (!route || route.length === 0) {
-        console.log("key", key);
-        console.log("route", route);
-        // return res.status(404).json({ error: "Route not found" });
         console.log(`Skipping route: ${key}, no valid data found.`);
         continue; // Skip this route and continue with the next one
       }
@@ -378,7 +289,7 @@ app.post("/route", async (req, res) => {
 
           const processCoordinates = (coords) => {
             coords.forEach(([lon, lat]) => {
-              if (row.raster_value > 2) hasRisk = true;
+              if (row.risk_value > 2) hasRisk = true;
 
               const existingPointIndex = routePoints.findIndex(
                 (point) => point.lat === lat && point.lon === lon
@@ -388,11 +299,11 @@ app.post("/route", async (req, res) => {
                 // If same coordinate exists, keep the highest raster_value and merge species
                 routePoints[existingPointIndex].raster_value = Math.max(
                   routePoints[existingPointIndex].raster_value,
-                  row.raster_value
+                  row.risk_value
                 );
                 //merge species arrays
-                if(row.raster_value > 0.3 && row.species && row.species.length > 0){
-                    routePoints[existingPointIndex].species = [...new Set([...routePoints[existingPointIndex].species,...row.species])];
+                if(row.risk_value > 0.3 && row.species && row.species.length > 0){
+                  routePoints[existingPointIndex].species = [...new Set([...routePoints[existingPointIndex].species,...row.species])];
                 }
 
               } else {
@@ -400,8 +311,8 @@ app.post("/route", async (req, res) => {
                 routePoints.push({
                   lat,
                   lon,
-                  raster_value: row.raster_value,
-                  species: row.raster_value > 0.3 && row.species && row.species.length > 0 ? row.species : []
+                  raster_value: row.risk_value,
+                  species: row.risk_value > 0.3 && row.species && row.species.length > 0 ? row.species : []
                 });
               }
             });
@@ -459,14 +370,14 @@ app.post("/route", async (req, res) => {
       // Store route data for comparison
       allRoutes[key] = routePoints;
 
-      console.log(routePoints)
+      // console.log(routePoints)
 
-      // Store results in responseData, including hasRisk
+      // Store results in responseData, including hasRisk, distance, and time
       responseData[key] = {
         route: routePoints,
         distance: formattedDistance,
         time: formattedTime,
-        hasRisk, // Added risk flag
+        hasRisk,
       };
     }
 
@@ -486,7 +397,6 @@ app.post("/route", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // Test if we can get the raster_values for a single point
 app.post("/raster", async (req, res) => {

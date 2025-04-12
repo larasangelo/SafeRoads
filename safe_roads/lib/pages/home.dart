@@ -308,7 +308,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
     // Determine buffer dynamically based on the route's size
     double buffer = (latRange + lngRange) * 0.15; // 15% of total span
-    double bottomBuffer = buffer * 3; // Extra buffer at the bottom
+    double bottomBuffer = buffer * 4; // Extra buffer at the bottom
 
     return LatLngBounds(
       LatLng(minLat - bottomBuffer, minLng - buffer), // Bottom-left corner
@@ -424,10 +424,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     super.build(context); // Ensure the state is kept alive.
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
 
-    // ✅ Get the travel time string
     final selectedTime = _times[_selectedRouteKey];
 
-    // ✅ Calculate arrival time once here
     final String? arrivalTime = selectedTime != null
         ? calculateArrivalTime(selectedTime)
         : null;

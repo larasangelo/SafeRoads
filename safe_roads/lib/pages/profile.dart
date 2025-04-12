@@ -657,6 +657,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
                 if (selected) {
                   updatedSelection.add(species["key"]);
                 } else {
+                  if (updatedSelection.length <= 1) return;
                   updatedSelection.remove(species["key"]);
                 }
                 updatePreference("selectedSpecies", updatedSelection);
