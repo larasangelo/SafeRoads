@@ -749,6 +749,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.rectangle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey,
+                        spreadRadius: 5,
+                        blurRadius: 7,
+                        offset: Offset(0, 5), // changes position of shadow
+                      ),
+                    ],
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(30.0),
                     ),

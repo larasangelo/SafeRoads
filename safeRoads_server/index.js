@@ -91,17 +91,78 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
     await pool.query("DROP TABLE IF EXISTS temp_ways;");
     console.log("Temporary table dropped.");
 
-    await pool.query(`
-      CREATE TEMP TABLE temp_ways AS
-      SELECT gid, source, target, the_geom, maxspeed_forward, maxspeed_backward, risk_value, species, cost, reverse_cost, length_m
-      FROM get_ways_with_risk($1)
-      WHERE ST_Intersects(
-        the_geom,
-        ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
-      );
-    `, [selectedSpecies.length > 0 ? selectedSpecies : null]);
+    if(bufferDistance < 0.5){
+      console.log("bufferDistance:", bufferDistance, "< 0.5, entra no if");
 
-    console.log("Temporary table created with bounding box and risk.");
+      const createTempTableQuery = `
+       CREATE TABLE temp_ways (
+         gid INTEGER,
+         source INTEGER,
+         target INTEGER,
+         cost DOUBLE PRECISION,
+         reverse_cost DOUBLE PRECISION,
+         the_geom GEOMETRY,
+         length_m DOUBLE PRECISION,
+         maxspeed_forward DOUBLE PRECISION,
+         maxspeed_backward DOUBLE PRECISION,
+         risk_value DOUBLE PRECISION DEFAULT NULL,
+         species TEXT[] DEFAULT '{}'
+       );
+ 
+       INSERT INTO temp_ways (gid, source, target, cost, reverse_cost, the_geom, length_m, maxspeed_forward, maxspeed_backward)
+       SELECT w.gid, w.source, w.target, w.cost, w.reverse_cost, w.the_geom, w.length_m,
+              w.maxspeed_forward, w.maxspeed_backward
+       FROM ways w
+       WHERE ST_Intersects(
+         w.the_geom,
+         ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
+       );
+     `;
+      await pool.query(createTempTableQuery);
+      console.log("Temporary table created with bounding box.");
+  
+      // Update temp_ways with raster values and species lists
+      const updateTempTableWithRasterQuery = `
+        UPDATE temp_ways
+        SET
+            risk_value = subquery.risk_value,
+            species = subquery.species
+        FROM (
+            SELECT
+                w_inner.gid,
+                MAX(species_data.value) AS risk_value,
+                ARRAY_AGG(DISTINCT species_data.species_name) AS species  -- Store all species
+            FROM temp_ways w_inner
+            JOIN LATERAL (
+                ${selectedSpecies.map(species =>
+                    `SELECT '${species.replace(/'/g, "''")}' AS species_name,
+                    COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_Centroid(w_inner.the_geom)), 0) AS value
+                    FROM ${species.toLowerCase()} r_${species.toLowerCase()}
+                    WHERE ST_Intersects(r_${species.toLowerCase()}.rast, w_inner.the_geom)`
+                ).join(" UNION ALL ")}
+            ) AS species_data ON TRUE
+            GROUP BY w_inner.gid
+        ) AS subquery
+        WHERE temp_ways.gid = subquery.gid;
+      `;
+      await pool.query(updateTempTableWithRasterQuery);
+      console.log("Raster values and species info added to the temporary table.");
+
+    }else{
+      console.log("bufferDistance:", bufferDistance, "> 0.5, entra no else");
+
+      await pool.query(`
+        CREATE TEMP TABLE temp_ways AS
+        SELECT gid, source, target, the_geom, maxspeed_forward, maxspeed_backward, risk_value, species, cost, reverse_cost, length_m
+        FROM get_ways_with_risk($1)
+        WHERE ST_Intersects(
+          the_geom,
+          ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
+        );
+      `, [selectedSpecies.length > 0 ? selectedSpecies : null]);
+
+      console.log("Temporary table created with bounding box and risk.");
+    }
 
     // Run risk-aware route
     const route = await pool.query(`
@@ -112,7 +173,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
         'SELECT gid AS id, source, target,
                 cost * (1 + COALESCE(risk_value, 0) * 4) AS cost,
                 reverse_cost * (1 + COALESCE(risk_value, 0) * 4) AS reverse_cost
-         FROM temp_ways',
+        FROM temp_ways',
         ${startNode.rows[0].id}, ${endNode.rows[0].id},
         directed := true
       ) AS route
@@ -121,7 +182,7 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
     `);
 
     console.log("Adjusted route fetched");
-
+    
     // Run default route if needed
     if (!lowRisk) {
       const routeDefault = await pool.query(`
