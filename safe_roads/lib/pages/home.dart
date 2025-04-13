@@ -500,13 +500,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           Polyline(
                             points: points,
                             strokeWidth: 8.0,
-                            color: Colors.grey[800]!.withOpacity(0.7),
+                            color: Color.fromRGBO(171, 145, 242, 0.9)
                           ),
                           // Main polyline
                           Polyline(
                             points: points,
                             strokeWidth: 4.0,
-                            color: Colors.grey.withOpacity(0.9),
+                            color: Color.fromRGBO(211, 173, 253, 0.9),
                           ),
                         ];
                       }),
@@ -909,6 +909,32 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                       ],
                                     ),
                                   ),
+                                  SizedBox(width: MediaQuery.of(context).size.width * 0.03), 
+
+                                  // Conditionally display the Switch Route Button if 'adjustedRoute' exists
+                                  if (_routesWithPoints.containsKey('adjustedRoute'))
+                                    Column(
+                                      children: [
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              final keys = _routesWithPoints.keys.toList();
+                                              int currentIndex = keys.indexOf(_selectedRouteKey);
+                                              _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                            });
+                                          },
+                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                                          child: Text(
+                                            LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context).size.width * 0.040,
+                                              color: Colors.white,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                 ],
                               ),
                          
@@ -918,25 +944,25 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  // Conditionally display the Switch Route Button if 'adjustedRoute' exists
-                                  if (_routesWithPoints.containsKey('adjustedRoute'))
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          final keys = _routesWithPoints.keys.toList();
-                                          int currentIndex = keys.indexOf(_selectedRouteKey);
-                                          _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                                        });
-                                      },
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                                      child: Text(
-                                        LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
-                                        style: TextStyle(
-                                          fontSize: MediaQuery.of(context).size.width * 0.045,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
+                                  // // Conditionally display the Switch Route Button if 'adjustedRoute' exists
+                                  // if (_routesWithPoints.containsKey('adjustedRoute'))
+                                  //   ElevatedButton(
+                                  //     onPressed: () {
+                                  //       setState(() {
+                                  //         final keys = _routesWithPoints.keys.toList();
+                                  //         int currentIndex = keys.indexOf(_selectedRouteKey);
+                                  //         _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                  //       });
+                                  //     },
+                                  //     style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                                  //     child: Text(
+                                  //       LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
+                                  //       style: TextStyle(
+                                  //         fontSize: MediaQuery.of(context).size.width * 0.045,
+                                  //         color: Colors.white,
+                                  //       ),
+                                  //     ),
+                                  //   ),
 
                                   // Always show the Start Button
                                   ElevatedButton(
@@ -959,7 +985,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                         );
                                       }
                                     },
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                                     style: ElevatedButton.styleFrom(
+                                        backgroundColor: _selectedRouteKey == 'adjustedRoute' ||
+                                                !_routesWithPoints.containsKey('adjustedRoute')
+                                            ? Colors.green
+                                            : const Color.fromRGBO(224, 174, 41, 1),
+                                      ),
                                     child: Text(
                                       LanguageConfig.getLocalizedString(languageCode, 'start'),
                                       style: TextStyle(
