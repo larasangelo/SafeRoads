@@ -425,6 +425,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     return null;
   }
 
+  void _reCenter() {
+    if (_currentLocation != null) {
+      _mapController.move(
+        // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+        // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+        // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+        // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        _currentZoom,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Ensure the state is kept alive.
@@ -743,6 +756,28 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 ],
               ),
             ),
+            Positioned(
+              bottom: MediaQuery.of(context).size.width * 0.05,
+              right: MediaQuery.of(context).size.width * 0.05,
+              child: ElevatedButton(
+                onPressed: () {
+                  _reCenter();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  minimumSize: Size(MediaQuery.of(context).size.width * 0.15, MediaQuery.of(context).size.width * 0.15), // square-ish and small
+                  padding: EdgeInsets.zero, // no extra padding
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8), // slightly rounded square
+                  ),
+                ),
+                child: Icon(
+                  Icons.my_location,
+                  color: Colors.white,
+                  size: 24, // smaller icon
+                ),
+              ),
+            ),
             //button when 
             if (_routesWithPoints.isNotEmpty)
               Positioned(
@@ -958,26 +993,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  // // Conditionally display the Switch Route Button if 'adjustedRoute' exists
-                                  // if (_routesWithPoints.containsKey('adjustedRoute'))
-                                  //   ElevatedButton(
-                                  //     onPressed: () {
-                                  //       setState(() {
-                                  //         final keys = _routesWithPoints.keys.toList();
-                                  //         int currentIndex = keys.indexOf(_selectedRouteKey);
-                                  //         _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                                  //       });
-                                  //     },
-                                  //     style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                                  //     child: Text(
-                                  //       LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
-                                  //       style: TextStyle(
-                                  //         fontSize: MediaQuery.of(context).size.width * 0.045,
-                                  //         color: Colors.white,
-                                  //       ),
-                                  //     ),
-                                  //   ),
-
                                   // Always show the Start Button
                                   ElevatedButton(
                                     onPressed: () {

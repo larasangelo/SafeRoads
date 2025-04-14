@@ -56,6 +56,7 @@ dependencies:
   flutter_background_service: ^5.1.0
   shared_preferences: ^2.5.2
   permission_handler: ^12.0.0+1
+  flutter_launcher_icons: ^0.14.3
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +68,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logos/SafeRoads_laucher.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
