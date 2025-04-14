@@ -95,8 +95,9 @@ class About extends StatelessWidget {
 
                   // Bottom logos
                   SizedBox(height: verticalSpacing),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: screenWidth * 0.02, 
                     children: [
                       Image.asset(
                         'assets/logos/FCUL_logo.png',

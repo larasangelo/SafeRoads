@@ -51,7 +51,7 @@ class Notifications {
     }
 
     messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("Foreground message received: ${message.notification?.title}");
+      print("Foreground message received: ${message.data['title']}");
       WidgetsBinding.instance.addPostFrameCallback((_) {
         showForegroundNotification(message);
       });
@@ -112,8 +112,8 @@ class Notifications {
     if (message.notification != null) {
       flutterLocalNotificationsPlugin.show(
         0,
-        null, // message.notification!.title
-        null, // message.notification!.body
+        null, // message.data['title'] 
+        null, // message.data['body'] 
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'channel_id_1', // Must match the channel ID
@@ -147,6 +147,8 @@ class Notifications {
           final screenHeight = MediaQuery.of(context).size.height;
           String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
 
+          print("Estou a entrar no OverLay");
+
           return StatefulBuilder(
             builder: (context, setState) {
               animationController = AnimationController(
@@ -179,7 +181,7 @@ class Notifications {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          message.notification?.title ?? 'Notification',
+                          message.data['title'] ?? 'Notification',
                           style: TextStyle(
                             fontSize: screenWidth * 0.05,
                             fontWeight: FontWeight.bold,
@@ -188,7 +190,7 @@ class Notifications {
                         ),
                         SizedBox(height: screenHeight * 0.01),
                         Text(
-                          message.notification?.body ?? '',
+                          message.data['body']  ?? '',
                           style: TextStyle(fontSize: screenWidth * 0.04),
                           textAlign: TextAlign.center,
                         ),

@@ -33,7 +33,7 @@ class WelcomePage extends StatelessWidget {
               Center(
                 child: Image.asset(
                   'assets/logos/SafeRoads_logo.png',  
-                  width: screenWidth * 1,  
+                  width: screenWidth * 0.9,
                   height: screenHeight * 0.5, 
                 ),
               ),

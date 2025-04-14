@@ -159,7 +159,8 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
           the_geom,
           ST_MakeEnvelope(${minLon}, ${minLat}, ${maxLon}, ${maxLat}, 4326)
         );
-      `, [selectedSpecies.length > 0 ? selectedSpecies : null]);
+      `, 
+      [selectedSpecies.length > 0 ? selectedSpecies : null]);
 
       console.log("Temporary table created with bounding box and risk.");
     }
@@ -241,7 +242,7 @@ app.use(cors({ origin: "*" }));
 // Calls Firebase Cloud Messaging for Notifications
 app.post("/send", (req, res) => {
   // Timeout de 5 segundos para testar
-  // setTimeout( function () {
+  setTimeout( function () {
     const receivedToken = req.body.fcmToken;
     const receivedtitle = req.body.title;
     const receivedbody = req.body.body;
@@ -250,28 +251,31 @@ app.post("/send", (req, res) => {
 
     const message = {
       token: receivedToken,
-      notification: {
-        body: receivedbody,
-        title: receivedtitle,
-      },
       data: {
+        title: receivedtitle,
+        body: receivedbody,
         button: receivedButton,
-        changeRoute: receivedChangeRoute
+        changeRoute: receivedChangeRoute,
       },
       android: {
+        priority: "high",
         notification: {
           sound: "default"
         }
       },
       apns: {
+        headers: {
+          "apns-priority": "10"
+        },
         payload: {
           aps: {
+            contentAvailable: true,
             sound: "default"
           }
         }
       }
     };
-
+    
     getMessaging()
       .send(message)
       .then((response) => {
@@ -287,8 +291,8 @@ app.post("/send", (req, res) => {
         console.log("Error sending message:", error);
       });
 
-  //   }, 5000
-  // )
+    }, 5000
+  )
 });
 
 //Calls the getRoute function to get the routes (optimal and default or just optimal)
@@ -431,7 +435,7 @@ app.post("/route", async (req, res) => {
       // Store route data for comparison
       allRoutes[key] = routePoints;
 
-      // console.log(routePoints)
+      console.log(routePoints)
 
       // Store results in responseData, including hasRisk, distance, and time
       responseData[key] = {

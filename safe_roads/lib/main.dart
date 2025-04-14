@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/firebase_options.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
@@ -20,6 +21,8 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+
+StreamSubscription<RemoteMessage>? foregroundSubscription;
 
 // For Background Messaging
 @pragma('vm:entry-point')
@@ -41,8 +44,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   await flutterLocalNotificationsPlugin.show(
     0,
-    message.notification?.title ?? 'SafeRoads',
-    message.notification?.body ?? 'You have a new notification',
+    message.data['title'] ?? 'SafeRoads',
+    message.data['body'] ?? 'You have a new notification',
     platformDetails,
   );
 }
@@ -55,12 +58,12 @@ void main() async {
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Initialize Notifications
+  // Notifications setup
   final Notifications notifications = Notifications();
   await notifications.setupNotificationChannels();
   
-  // Explicitly request notification permissions
-  notifications.setupFirebaseMessaging(null, null); 
+  // Explicitly request permissions
+  await requestLocationPermissions();
 
   // Initialize background service
   await initializeService();
@@ -73,8 +76,8 @@ void main() async {
       ], 
       child: MaterialApp(
         theme: monochromeTheme,
-        // initialRoute: '/welcome',
-        initialRoute: '/navigation',
+        initialRoute: '/welcome',
+        // initialRoute: '/navigation',
         routes: {
           '/': (context) => const Loading(),
           '/home': (context) => const MapPage(),
@@ -137,6 +140,29 @@ Future<void> initializeService() async {
       onBackground: onIosBackground,
     ),
   );
+  print("Passo pelo initializeService");
+}
+
+Future<void> requestLocationPermissions() async {
+  print("Entro no requestLocationPermissions");
+  final status1 = await Permission.locationWhenInUse.request();
+  final status2 = await Permission.location.request();
+  final status3 = await Permission.locationAlways.request();
+
+  if (status1.isGranted && status2.isGranted && status3.isGranted) {
+    print("All location permissions granted");
+  } else {
+    print("Some permissions denied");
+    print("WhenInUse: ${status1.isGranted}");
+    print("Location: ${status2.isGranted}");
+    print("Always: ${status3.isGranted}");
+
+    if (status3.isPermanentlyDenied) {
+      // Send user to app settings
+      print("LocationAlways is permanently denied. Open settings.");
+      await openAppSettings();
+    }
+  }
 }
 
 // Ios background function
@@ -161,9 +187,6 @@ void onStart(ServiceInstance service) async {
 
   SharedPreferences preferences = await SharedPreferences.getInstance();
   await preferences.setString("hello", "world");
-
-  // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-  //     FlutterLocalNotificationsPlugin();
 
   if (service is AndroidServiceInstance) {
     service.on('setAsForeground').listen((event) {
