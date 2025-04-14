@@ -242,7 +242,7 @@ app.use(cors({ origin: "*" }));
 // Calls Firebase Cloud Messaging for Notifications
 app.post("/send", (req, res) => {
   // Timeout de 5 segundos para testar
-  setTimeout( function () {
+  // setTimeout( function () {
     const receivedToken = req.body.fcmToken;
     const receivedtitle = req.body.title;
     const receivedbody = req.body.body;
@@ -286,8 +286,8 @@ app.post("/send", (req, res) => {
         console.log("Error sending message:", error);
       });
 
-    }, 5000
-  )
+  //   }, 5000
+  // )
 });
 
 //Calls the getRoute function to get the routes (optimal and default or just optimal)

@@ -427,14 +427,16 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   void _reCenter() {
     if (_currentLocation != null) {
-      _mapController.move(
+      _mapController.moveAndRotate(
         // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
         LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
         // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-        _currentZoom,
+        HomeConfig.defaultZoom, // initialZoom
+        0.0, // Reset rotation to 0 degrees
       );
+      // print("HomeConfig.defaultZoom: ${HomeConfig.defaultZoom}");
     }
   }
 
@@ -1048,13 +1050,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 Widget _buildRiskMessage(String text, Color color, BuildContext context) {
   double screenWidth = MediaQuery.of(context).size.width;
 
+  String imagePath = (color.value == Colors.red.value)
+    ? "assets/icons/warning_red.png"
+    : "assets/icons/warning_orange.png";
+
   return Padding(
     padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05), 
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image(
-          image: const AssetImage("assets/icons/warning.png"),
+          image: AssetImage(imagePath),
           width: MediaQuery.of(context).size.width * 0.14,
         ),
         SizedBox(width: screenWidth * 0.05), 

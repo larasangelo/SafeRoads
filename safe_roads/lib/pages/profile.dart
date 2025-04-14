@@ -277,7 +277,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(screenWidth * 0.04), 
+          padding: EdgeInsets.all(screenWidth * 0.05), 
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
