@@ -259,9 +259,6 @@ app.post("/send", (req, res) => {
       },
       android: {
         priority: "high",
-        notification: {
-          sound: "default"
-        }
       },
       apns: {
         headers: {
@@ -269,13 +266,12 @@ app.post("/send", (req, res) => {
         },
         payload: {
           aps: {
-            contentAvailable: true,
-            sound: "default"
+            contentAvailable: true, // This is important for background updates
           }
         }
       }
     };
-    
+
     getMessaging()
       .send(message)
       .then((response) => {
@@ -283,7 +279,6 @@ app.post("/send", (req, res) => {
           message: "Successfully sent message",
           token: receivedToken,
         });
-        // messageCounter++; // Increment counter
         console.log(`Successfully sent message: ${response}`);
       })
       .catch((error) => {
