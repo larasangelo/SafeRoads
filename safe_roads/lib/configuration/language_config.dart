@@ -83,6 +83,7 @@ class LanguageConfig {
       'login': 'Login',
       'noAccount': 'Don’t have an account? ',
       'registerNow': 'Register Now',
+      'loginFailed': 'Login failed. Please check your credentials.',
       // Register
       'helloRegister': 'Hello! \nRegister to get started',
       'pass': 'Password',
@@ -209,6 +210,7 @@ class LanguageConfig {
       'login': 'Entrar',
       'noAccount': 'Não tem uma conta? ',
       'registerNow': 'Cadastre-se agora',
+      'loginFailed': 'Login falhou. Verifique as suas credenciais.',
       // Register
       'helloRegister': 'Olá! \nCadastre-se para começar',
       'pass': 'Senha',
@@ -335,6 +337,7 @@ class LanguageConfig {
       'login': 'Iniciar sesión',
       'noAccount': '¿No tienes una cuenta? ',
       'registerNow': 'Regístrate ahora',
+      'loginFailed': 'Error al iniciar sesión. Verifique sus credenciales.',
       // Register
       'helloRegister': '¡Hola! \nRegístrate para empezar',
       'pass': 'Contraseña',

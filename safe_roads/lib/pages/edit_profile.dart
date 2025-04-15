@@ -111,7 +111,7 @@ class _EditProfileState extends State<EditProfile> {
               children: [
                 Text(
                   LanguageConfig.getLocalizedString(languageCode, 'selectProfile'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                 ),
                 const SizedBox(height: 16),
                 GridView.builder(
@@ -177,7 +177,7 @@ class _EditProfileState extends State<EditProfile> {
         labelStyle: TextStyle(fontSize: fontSize),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
         filled: true,
-        fillColor: Colors.grey[200],
+        // fillColor: Colors.grey[200],
       ),
     );
   }
@@ -197,11 +197,13 @@ class _EditProfileState extends State<EditProfile> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(LanguageConfig.getLocalizedString(languageCode, 'editProfile')),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Theme.of(context).colorScheme.primary, // This sets the back arrow color
+        title: Text(
+          LanguageConfig.getLocalizedString(languageCode, 'editProfile'),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -226,12 +228,12 @@ class _EditProfileState extends State<EditProfile> {
                         child: GestureDetector(
                           onTap: _showImagePicker,
                           child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.black,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
                               shape: BoxShape.circle,
                             ),
                             padding: EdgeInsets.all(iconSize * 0.4),
-                            child: Icon(Icons.edit, color: Colors.white, size: iconSize),
+                            child: Icon(Icons.edit, size: iconSize, color: Theme.of(context).colorScheme.onPrimary),
                           ),
                         ),
                       ),
@@ -259,7 +261,7 @@ class _EditProfileState extends State<EditProfile> {
                   child: ElevatedButton(
                     onPressed: updateProfile,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: EdgeInsets.symmetric(vertical: spacing),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
@@ -267,7 +269,7 @@ class _EditProfileState extends State<EditProfile> {
                     ),
                     child: Text(
                       LanguageConfig.getLocalizedString(languageCode, 'update'),
-                      style: TextStyle(fontSize: buttonFontSize, color: Colors.white),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: buttonFontSize),
                     ),
                   ),
                 ),

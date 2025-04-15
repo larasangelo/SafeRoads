@@ -77,7 +77,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
                   label: LanguageConfig.getLocalizedString(languageCode, 'profile'),
                 ),
               ],
-              backgroundColor: Colors.white,
+              // backgroundColor: Theme.of(context).colorScheme.onPrimary,
               elevation: 3,
             )
           : null,

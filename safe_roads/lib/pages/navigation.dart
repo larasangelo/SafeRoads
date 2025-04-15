@@ -224,7 +224,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
             "fcmToken": _notifications.fcmToken,
             "title": title,
             "body": body,
-            "button": "false",
+            "button": "true",
             "changeRoute": "false"
           }),
         );
@@ -872,7 +872,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
             top: screenHeight * 0.05, 
             right: screenWidth * 0.05,
             child: IconButton(
-              icon: Icon(Icons.close, size: screenWidth * 0.1), 
+              icon: Icon(Icons.close, size: screenWidth * 0.1, color: Colors.black,), 
               onPressed: () {
                 Navigator.pop(context); 
               },
@@ -886,8 +886,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
               child: Container(
                 height: screenHeight * 0.15, 
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  // color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   shape: BoxShape.rectangle,
                 ),
                 child: Column(
@@ -898,7 +899,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                       style: TextStyle(
                         fontSize: screenWidth * 0.08, 
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        // color: Colors.black,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     Row(
@@ -909,7 +911,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                           style: TextStyle(
                             fontSize: screenWidth * 0.06, 
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            // color: Colors.black,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         SizedBox(width: screenWidth * 0.08),
@@ -918,7 +921,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                           style: TextStyle(
                             fontSize: screenWidth * 0.06, 
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            // color: Colors.black,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ],
@@ -936,8 +940,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
               child: Container(
                 height: screenHeight * 0.15, 
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  // color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   shape: BoxShape.rectangle,
                 ),
                 child: Column(
@@ -948,7 +953,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                       style: TextStyle(
                         fontSize: screenWidth * 0.08, 
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        // color: Colors.black,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.02), 

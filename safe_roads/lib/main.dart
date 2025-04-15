@@ -75,7 +75,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NotificationPreferences()), 
       ], 
       child: MaterialApp(
-        theme: monochromeTheme,
+        theme: monochromeTheme,           // Light theme
+        darkTheme: monochromeDarkTheme,   // Dark theme
+        themeMode: ThemeMode.system,      // Respect device setting
         initialRoute: '/welcome',
         // initialRoute: '/navigation',
         routes: {

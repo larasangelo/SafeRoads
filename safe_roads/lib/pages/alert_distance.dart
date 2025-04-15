@@ -41,7 +41,15 @@ class _AlertDistancePageState extends State<AlertDistancePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title, style: TextStyle(fontSize: titleFontSize)),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Theme.of(context).colorScheme.primary, // This sets the back arrow color
+        title: Text(
+          widget.title,
+          style: TextStyle(
+            fontSize: titleFontSize,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
       ),
       body: Padding(
         padding: EdgeInsets.all(horizontalPadding),

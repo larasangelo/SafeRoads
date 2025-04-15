@@ -340,8 +340,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
         LinearProgressIndicator(
           value: distance / targetDistance,
-          backgroundColor: Colors.grey[300],
-          color: Theme.of(context).primaryColor,
+          // backgroundColor: Colors.grey[300],
+          // color: Theme.of(context).primaryColor,
           minHeight: 18.0,
         ),
       ],
@@ -410,7 +410,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.0),
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),
@@ -649,7 +649,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
               ),
               avatar: ImageIcon(
                 (species["icon"] as ImageIcon).image,
-                color: isSelected ? Colors.white : Colors.black,
+                // color: isSelected ? Colors.white : Colors.black,
               ),
               selected: isSelected,
               onSelected: (selected) async {
@@ -694,7 +694,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.0),
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),

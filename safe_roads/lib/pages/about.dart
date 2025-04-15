@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/about_config.dart';
 import 'package:safe_roads/configuration/language_config.dart';
@@ -24,6 +25,8 @@ class About extends StatelessWidget {
     final textPaddingBottom = screenHeight * AboutConfig.textBottomPaddingFactor;
     final logoSpacing = screenWidth * AboutConfig.logoSpacingFactor;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -37,8 +40,9 @@ class About extends StatelessWidget {
                   // Top Logo
                   Padding(
                     padding: EdgeInsets.only(bottom: verticalSpacing),
-                    child: Image.asset(
-                      'assets/logos/SafeRoads_logo.png',
+                    child: 
+                    Image.asset(
+                      isDark ? 'assets/logos/SafeRoads_logo_w.png' : 'assets/logos/SafeRoads_logo.png',
                       height: logoHeight,
                       fit: BoxFit.contain,
                     ),
@@ -51,10 +55,10 @@ class About extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(AboutConfig.borderRadius),
-                          color: Colors.white,
-                          boxShadow: [
+                          color: Theme.of(context).colorScheme.surface,
+                          boxShadow: const [
                             BoxShadow(
-                              color: Colors.grey.withOpacity(0.3),
+                              // color: Colors.grey.withOpacity(0.3),
                               blurRadius: AboutConfig.boxShadowBlur,
                               offset: AboutConfig.boxShadowOffset,
                             ),
@@ -99,23 +103,47 @@ class About extends StatelessWidget {
                     alignment: WrapAlignment.center,
                     spacing: screenWidth * 0.02, 
                     children: [
-                      Image.asset(
-                        'assets/logos/FCUL_logo.png',
+                      SvgPicture.asset(
+                        'assets/logos/FCUL_logo.svg',
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.onSurface,
+                          BlendMode.srcIn,
+                        ),
                         height: bottomLogoHeight,
-                        fit: BoxFit.contain,
                       ),
+                      // Image.asset(
+                      //   'assets/logos/FCUL_logo.png',
+                      //   height: bottomLogoHeight,
+                      //   fit: BoxFit.contain,
+                      // ),
                       SizedBox(width: logoSpacing),
-                      Image.asset(
-                        'assets/logos/lasige_logo.png',
+                      SvgPicture.asset(
+                        'assets/logos/lasige_logo.svg',
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.onSurface,
+                          BlendMode.srcIn,
+                        ),
                         height: bottomLogoHeight,
-                        fit: BoxFit.contain,
                       ),
+                      // Image.asset(
+                      //   'assets/logos/lasige_logo.png',
+                      //   height: bottomLogoHeight,
+                      //   fit: BoxFit.contain,
+                      // ),
                       SizedBox(width: logoSpacing),
-                      Image.asset(
-                        'assets/logos/ce3c_logo_black.png',
+                      SvgPicture.asset(
+                        'assets/logos/ce3c_logo_black.svg',
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.onSurface,
+                          BlendMode.srcIn,
+                        ),
                         height: bottomLogoHeight,
-                        fit: BoxFit.contain,
                       ),
+                      // Image.asset(
+                      //   'assets/logos/ce3c_logo_black.png',
+                      //   height: bottomLogoHeight,
+                      //   fit: BoxFit.contain,
+                      // ),
                     ],
                   ),
                   SizedBox(height: verticalSpacing * 0.8),

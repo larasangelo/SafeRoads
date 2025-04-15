@@ -32,7 +32,7 @@ class _RegisterPageState extends State<RegisterPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.primary),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -64,7 +64,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    // fillColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
                 SizedBox(height: screenHeight * 0.02), 
@@ -77,7 +77,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    // fillColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -91,7 +91,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    // fillColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                   obscureText: true,
                 ),
@@ -105,7 +105,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    // fillColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                   obscureText: true,
                 ),
@@ -124,7 +124,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
@@ -134,7 +134,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       LanguageConfig.getLocalizedString(languageCode, 'register'),
                       style: TextStyle(
                         fontSize: screenWidth * 0.05, 
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -150,7 +150,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       text: TextSpan(
                         text: LanguageConfig.getLocalizedString(languageCode, 'accountAlready'),
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: screenWidth * 0.04, 
                         ),
                         children: [

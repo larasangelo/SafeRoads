@@ -166,7 +166,8 @@ class Notifications {
                 child: Container(
                   padding: EdgeInsets.all(screenWidth * 0.04),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    // color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     borderRadius: BorderRadius.circular(screenWidth * 0.03),
                     boxShadow: const [
                       BoxShadow(
@@ -212,6 +213,7 @@ class Notifications {
                                         child: Container(
                                           height: screenHeight * 0.06,
                                           decoration: BoxDecoration(
+                                            border: Border.all(color: Colors.white),
                                             borderRadius: BorderRadius.circular(50),
                                             gradient: LinearGradient(
                                               colors: [
@@ -255,9 +257,12 @@ class Notifications {
                                   ignoreSwitchRoute?.call();
                                   overlayEntry.remove();
                                 },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).colorScheme.primary
+                                ),
                                 child: Text(
                                   LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
-                                  style: TextStyle(fontSize: screenWidth * 0.045),
+                                  style: TextStyle(fontSize: screenWidth * 0.045, color: Theme.of(context).colorScheme.onPrimary),
                                 ),
                               ),
                             ],
@@ -272,9 +277,12 @@ class Notifications {
                                   onSwitchRoute?.call();
                                   overlayEntry.remove();
                                 },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).colorScheme.primary
+                                ),
                                 child: Text(
                                   LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
-                                  style: TextStyle(fontSize: screenWidth * 0.045),
+                                  style: TextStyle(fontSize: screenWidth * 0.045, color: Theme.of(context).colorScheme.onPrimary),
                                 ),
                               ),
                               AnimatedBuilder(
@@ -291,11 +299,14 @@ class Notifications {
                                         child: Container(
                                           height: screenHeight * 0.06,
                                           decoration: BoxDecoration(
+                                            border: Border.all(color: Colors.white),
                                             borderRadius: BorderRadius.circular(50),
                                             gradient: LinearGradient(
                                               colors: [
-                                                Colors.pinkAccent.withOpacity(0.5),
-                                                Colors.purple.withOpacity(0.9)
+                                                // Colors.pinkAccent.withOpacity(0.5),
+                                                const Color.fromARGB(255, 62, 62, 62).withOpacity(0.5),
+                                                // Colors.purple.withOpacity(0.9)
+                                                Colors.black.withOpacity(0.9)
                                               ],
                                               stops: [0.0, animationController.value],
                                               begin: Alignment.centerLeft,

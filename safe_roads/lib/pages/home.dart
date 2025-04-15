@@ -652,7 +652,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       ),
                       labelText: LanguageConfig.getLocalizedString(languageCode, 'enterDestination'),
                       filled: true,
-                      fillColor: Colors.white,
+                      // fillColor: Colors.white,
                       prefixIcon: Icon(Icons.search, size: MediaQuery.of(context).size.width * 0.06), 
                       suffixIcon: IconButton(
                         icon: Icon(Icons.close, size: MediaQuery.of(context).size.width * 0.06), 
@@ -690,13 +690,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   if (_isFetchingRoute) // Fetching a route and doesn't have a route
                     LinearProgressIndicator(
                       value: null, // Indeterminate progress
-                      backgroundColor: Colors.grey[200],
-                      color: Colors.black,
+                      // backgroundColor: Colors.grey[200],
+                      // color: Colors.black,
                     ), 
                   const SizedBox(height: 8.0),
                   if (_suggestions.isNotEmpty && !destinationSelected)
                     Container(
-                      color: Colors.white,
+                      // color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       child: ListView.builder(
                         shrinkWrap: true,
                         itemCount: _suggestions.length,
@@ -789,8 +790,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 child: Container(
                   height: _boxHeight,
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    // color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     shape: BoxShape.rectangle,
                     boxShadow: [
                       BoxShadow(
@@ -974,12 +976,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                               _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
                                             });
                                           },
-                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                                          // style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
                                           child: Text(
                                             LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
                                             style: TextStyle(
                                               fontSize: MediaQuery.of(context).size.width * 0.040,
-                                              color: Colors.white,
+                                              // color: Colors.white,
                                             ),
                                             textAlign: TextAlign.center,
                                           ),

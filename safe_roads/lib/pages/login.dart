@@ -32,7 +32,7 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.primary),
           onPressed: () {
             Navigator.pushNamed(context, '/welcome'); // Navigate to Welcome page
           },
@@ -65,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    // fillColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -85,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(10.0),
                     ),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    // fillColor: Theme.of(context).colorScheme.onPrimary,
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -154,11 +154,18 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.pushReplacementNamed(context, '/navigation');
                         } else {
                           Navigator.pushReplacementNamed(context, '/login');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                LanguageConfig.getLocalizedString(languageCode, 'loginFailed'),
+                              ),
+                            ),
+                          );
                         }
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
@@ -166,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     child: Text(
                       LanguageConfig.getLocalizedString(languageCode, 'login'),
-                      style: TextStyle(fontSize: screenWidth * 0.05, color: Colors.white), 
+                      style: TextStyle(fontSize: screenWidth * 0.05, color: Theme.of(context).colorScheme.onPrimary), 
                     ),
                   ),
                 ),
@@ -180,7 +187,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: RichText(
                       text: TextSpan(
                         text: LanguageConfig.getLocalizedString(languageCode, 'noAccount'),
-                        style: TextStyle(color: Colors.black, fontSize: screenWidth * 0.04), 
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: screenWidth * 0.04), 
                         children: [
                           TextSpan(
                             text: LanguageConfig.getLocalizedString(languageCode, 'registerNow'),
