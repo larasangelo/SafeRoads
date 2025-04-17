@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
-import 'package:notification_permissions/notification_permissions.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/auth_controller.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
@@ -204,53 +204,43 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     }
   }
 
-  Future<void> checkNotificationPermissions() async {
-    await Future.delayed(const Duration(milliseconds: 500)); // Small delay to prevent race conditions
+  Future<void> handleNotificationPermission() async {
+    PermissionStatus status = await Permission.notification.status;
 
-    PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
+    if (status.isDenied || status.isRestricted || status.isPermanentlyDenied) {
+      await Permission.notification.request();
+    }
 
-    if (mounted) {  
-      setState(() {
-        notifications = (status == PermissionStatus.granted);
-      });
+    if (Platform.isAndroid) {
+      try {
+        final intent = AndroidIntent(
+          action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+          arguments: <String, dynamic>{
+            'android.provider.extra.APP_PACKAGE': 'com.example.safe_roads', 
+          },
+        );
+        await intent.launch();
+      } catch (e) {
+        print("Error launching Android notification settings: $e");
+      }
+    } else if (Platform.isIOS) {
+      final url = Uri.parse('app-settings:');
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        print('Could not launch iOS settings');
+      }
     }
   }
 
-  Future<void> handleNotificationPermission() async {
-    PermissionStatus status = await NotificationPermissions.getNotificationPermissionStatus();
+  Future<void> checkNotificationPermissions() async {
+    await Future.delayed(const Duration(milliseconds: 500)); // Small delay to prevent race conditions
 
-    if (status == PermissionStatus.denied || status == PermissionStatus.unknown) {
-      await NotificationPermissions.requestNotificationPermissions();
-    } else if (status == PermissionStatus.granted) {
-      if (Platform.isAndroid) {
-        try {
-          const AndroidIntent intent = AndroidIntent(
-            action: 'android.settings.APP_NOTIFICATION_SETTINGS',
-            arguments: <String, dynamic>{
-              'android.provider.extra.APP_PACKAGE': 'com.example.safe_roads', 
-            },
-            flags: <int>[ // Ensures settings open separately
-              0x10000000, // FLAG_ACTIVITY_NEW_TASK
-            ],
-          );
-          await intent.launch();
-        } catch (e) {
-          print("Error launching Android notification settings: $e");
-        }
-      } else if (Platform.isIOS) {
-        var url = Uri.parse('app-settings:');
-        if (await canLaunchUrl(url)) {
-          await launchUrl(url);
-        } else {
-          print('Could not launch settings');
-        }
-      }
-    }
+    PermissionStatus status = await Permission.notification.status;
 
-    // Use addPostFrameCallback to delay state update and prevent UI-related crashes
     if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        checkNotificationPermissions();
+      setState(() {
+        notifications = (status == PermissionStatus.granted);
       });
     }
   }

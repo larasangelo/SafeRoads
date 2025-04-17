@@ -88,10 +88,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       if (_currentLocation != null) {
         _mapController.move(
           // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+          // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -278,10 +278,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         if (_currentLocation != null) {
           await _fetchRoute(
             // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
+            // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
 
@@ -429,10 +429,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     if (_currentLocation != null) {
       _mapController.moveAndRotate(
         // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-        LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+        // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-        // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -475,10 +475,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     markers: [
                       Marker(
                         // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -676,10 +676,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           if (_currentLocation != null) {
                             _mapController.move(
                               // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                              // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -976,12 +976,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                               _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
                                             });
                                           },
-                                          // style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                                          style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
                                           child: Text(
                                             LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
                                             style: TextStyle(
                                               fontSize: MediaQuery.of(context).size.width * 0.040,
-                                              // color: Colors.white,
+                                              color: Theme.of(context).colorScheme.onPrimary,
                                             ),
                                             textAlign: TextAlign.center,
                                           ),
