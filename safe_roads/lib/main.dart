@@ -78,8 +78,8 @@ void main() async {
         theme: monochromeTheme,           // Light theme
         darkTheme: monochromeDarkTheme,   // Dark theme
         themeMode: ThemeMode.system,      // Respect device setting
-        initialRoute: '/welcome',
-        // initialRoute: '/navigation',
+        // initialRoute: '/welcome',
+        initialRoute: '/navigation',
         routes: {
           '/': (context) => const Loading(),
           '/home': (context) => const MapPage(),

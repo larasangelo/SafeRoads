@@ -207,7 +207,7 @@ class Notifications {
                                     children: [
                                       ConstrainedBox(
                                         constraints: BoxConstraints(
-                                          maxWidth: screenWidth * 0.4,
+                                          maxWidth: screenWidth * 0.3,
                                           maxHeight: screenHeight * 0.06,
                                         ),
                                         child: Container(
@@ -217,8 +217,8 @@ class Notifications {
                                             borderRadius: BorderRadius.circular(50),
                                             gradient: LinearGradient(
                                               colors: [
-                                                const Color.fromARGB(255, 62, 62, 62).withOpacity(0.5),
-                                                Colors.black.withOpacity(0.9)
+                                                const Color.fromARGB(255, 62, 62, 62).withValues(alpha: 0.5),
+                                                Colors.black.withValues(alpha: 0.9),
                                               ],
                                               stops: [0.0, animationController.value],
                                               begin: Alignment.centerLeft,
@@ -227,22 +227,32 @@ class Notifications {
                                           ),
                                         ),
                                       ),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          isInteracted = true;
-                                          animationController.stop();
-                                          onSwitchRoute?.call();
-                                          overlayEntry.remove();
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: screenWidth * 0.3,
+                                          maxHeight: screenHeight * 0.06,
                                         ),
-                                        child: Text(
-                                          LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
-                                          style: TextStyle(
-                                            fontSize: screenWidth * 0.045,
-                                            color: Colors.white,
+                                        child: ElevatedButton( //onSwitchRoute
+                                          onPressed: () {
+                                            if (isInteracted) return;
+
+                                            isInteracted = true;
+                                            animationController.stop();
+                                            onSwitchRoute?.call();
+                                            if (overlayEntry.mounted) {
+                                              overlayEntry.remove();
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
+                                          ),
+                                          child: Text(
+                                            LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
+                                            style: TextStyle(
+                                              fontSize: screenWidth * 0.045,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -250,19 +260,32 @@ class Notifications {
                                   );
                                 },
                               ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  isInteracted = true;
-                                  animationController.stop();
-                                  ignoreSwitchRoute?.call();
-                                  overlayEntry.remove();
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: screenWidth * 0.4,
+                                  maxHeight: screenHeight * 0.06,
                                 ),
-                                child: Text(
-                                  LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
-                                  style: TextStyle(fontSize: screenWidth * 0.045, color: Theme.of(context).colorScheme.onPrimary),
+                                child: ElevatedButton( //ignoreSwitchRoute
+                                  onPressed: () {
+                                    if (isInteracted) return;
+
+                                    isInteracted = true;
+                                    animationController.stop();
+                                    ignoreSwitchRoute?.call(); 
+                                    if (overlayEntry.mounted) {
+                                      overlayEntry.remove();
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                                  ),
+                                  child: Text(
+                                    LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.045,
+                                      color: Theme.of(context).colorScheme.onPrimary,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -271,18 +294,29 @@ class Notifications {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              ElevatedButton(
-                                onPressed: () {
-                                  isInteracted = true;
-                                  onSwitchRoute?.call();
-                                  overlayEntry.remove();
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary
+                              ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: screenWidth * 0.4,
+                                  maxHeight: screenHeight * 0.06,
                                 ),
-                                child: Text(
-                                  LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
-                                  style: TextStyle(fontSize: screenWidth * 0.045, color: Theme.of(context).colorScheme.onPrimary),
+                                child: ElevatedButton( //onSwitchRoute
+                                  onPressed: () {
+                                    if (isInteracted) return;
+
+                                    isInteracted = true;
+                                    animationController.stop();
+                                    onSwitchRoute?.call(); 
+                                    if (overlayEntry.mounted) {
+                                      overlayEntry.remove();
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).colorScheme.primary
+                                  ),
+                                  child: Text(
+                                    LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
+                                    style: TextStyle(fontSize: screenWidth * 0.045, color: Theme.of(context).colorScheme.onPrimary),
+                                  ),
                                 ),
                               ),
                               AnimatedBuilder(
@@ -304,9 +338,9 @@ class Notifications {
                                             gradient: LinearGradient(
                                               colors: [
                                                 // Colors.pinkAccent.withOpacity(0.5),
-                                                const Color.fromARGB(255, 62, 62, 62).withOpacity(0.5),
+                                                const Color.fromARGB(255, 62, 62, 62).withValues(alpha: 0.5),
                                                 // Colors.purple.withOpacity(0.9)
-                                                Colors.black.withOpacity(0.9)
+                                                Colors.black.withValues(alpha: 0.9)
                                               ],
                                               stops: [0.0, animationController.value],
                                               begin: Alignment.centerLeft,
@@ -315,22 +349,32 @@ class Notifications {
                                           ),
                                         ),
                                       ),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          isInteracted = true;
-                                          animationController.stop();
-                                          ignoreSwitchRoute?.call();
-                                          overlayEntry.remove();
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: screenWidth * 0.4,
+                                          maxHeight: screenHeight * 0.06,
                                         ),
-                                        child: Text(
-                                          LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
-                                          style: TextStyle(
-                                            fontSize: screenWidth * 0.045,
-                                            color: Colors.white,
+                                        child: ElevatedButton( //ignoreSwitchRoute
+                                          onPressed: () {
+                                            if (isInteracted) return;
+
+                                            isInteracted = true;
+                                            animationController.stop();
+                                            ignoreSwitchRoute?.call(); // OR onSwitchRoute?.call()
+                                            if (overlayEntry.mounted) {
+                                              overlayEntry.remove();
+                                            }
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            shadowColor: Colors.transparent,
+                                          ),
+                                          child: Text(
+                                            LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
+                                            style: TextStyle(
+                                              fontSize: screenWidth * 0.045,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -354,13 +398,16 @@ class Notifications {
     overlay.insert(overlayEntry);
 
     Future.delayed(const Duration(seconds: 5), () {
-      overlayEntry.remove();    
       if (!isInteracted) {
-        // Perform action based on changeRoute flag
-        if (changeRoute && onSwitchRoute != null) {
-          onSwitchRoute!();
-        } else if (!changeRoute && ignoreSwitchRoute != null) {
-          ignoreSwitchRoute!();
+        isInteracted = true; // Mark as handled
+        if (overlayEntry.mounted) {
+          overlayEntry.remove();
+        }
+
+        if (changeRoute) {
+          onSwitchRoute?.call();
+        } else {
+          ignoreSwitchRoute?.call();
         }
       }
     });

@@ -403,7 +403,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 6.0,
             offset: Offset(0, 4),
           ),
@@ -687,7 +687,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 6.0,
             offset: Offset(0, 4),
           ),

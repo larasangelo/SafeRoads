@@ -63,8 +63,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       });
     Future.delayed(Duration.zero, () async {
       final notifications = Notifications();
-      notifications.setContext(context); // Save the context
-      await notifications.setupFirebaseMessaging(context, null); // Set up FCM
+      if(mounted){ //TODO: TESTAR SE ELE CRIA BEM AS NOTIFICAÇÕES
+        notifications.setContext(context); // Save the context
+        await notifications.setupFirebaseMessaging(context, null); // Set up FCM
+      }
     });
   }
 
@@ -116,7 +118,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://10.101.121.183:3000/route'), // Para testar na uni
+        // Uri.parse('http://10.101.120.44:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -189,7 +191,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/geocode'),
-        // Uri.parse('http://10.101.121.183:3000/geocode'), // Para testar na uni
+        // Uri.parse('http://10.101.120.44:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -239,7 +241,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http.get(
         Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://10.101.121.183:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
+        // Uri.parse('http://10.101.120.44:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
       if (response.statusCode == 200) {
@@ -470,35 +472,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                   subdomains: const ['a', 'b', 'c'],
                 ),
-                if (_currentLocation != null)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                        // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                        // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                        child: Image(
-                          image: const AssetImage("assets/icons/pin.png"),
-                          width: MediaQuery.of(context).size.width * 0.11,
-                        ),
-                      ),
-                    ],
-                  ),
-                if (_destinationLocation != null)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: _destinationLocation!,
-                        child: Image(
-                          image: const AssetImage("assets/icons/pin_final.png"),
-                          width: MediaQuery.of(context).size.width * 0.11, 
-                          height: MediaQuery.of(context).size.width * 0.11,
-                        ),
-                      ),
-                    ],
-                  ),
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
@@ -540,7 +513,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             .map((p) => p['latlng'] as LatLng)
                             .toList(),
                           strokeWidth: 8.0,
-                          color: Colors.black.withOpacity(0.8), // Dark outline
+                          color: Colors.black.withValues(alpha: 0.8), // Dark outline
                         ),
 
                         // Draw each colored segment on top
@@ -578,6 +551,35 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       ],
                     ],
                   ),
+                  if (_currentLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
+                        // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                        // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
+                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        child: Image(
+                          image: const AssetImage("assets/icons/pin.png"),
+                          width: MediaQuery.of(context).size.width * 0.11,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_destinationLocation != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _destinationLocation!,
+                        child: Image(
+                          image: const AssetImage("assets/icons/pin_final.png"),
+                          width: MediaQuery.of(context).size.width * 0.11, 
+                          height: MediaQuery.of(context).size.width * 0.11,
+                        ),
+                      ),
+                    ],
+                  ),
                   Stack(
                     children: [
                       // Add Info Boxes on Routes
@@ -600,7 +602,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               // Ensure selected route's box is more visible
                               bool isSelectedRoute = entry.key == _selectedRouteKey;
                               bool isAdjustedRoute = entry.key == 'adjustedRoute'; // Check if it's the adjusted route
-                              Color boxColor = isSelectedRoute ? Colors.purple.withOpacity(0.8) : Colors.grey.withOpacity(0.6);
+                              Color boxColor = isSelectedRoute ? Colors.purple.withValues(alpha: 0.8) : Colors.grey.withValues(alpha: 0.6);
                               Color textColor = isSelectedRoute ? Colors.white : Colors.black;
 
                               // MediaQuery for dynamic sizing based on screen size
@@ -1052,7 +1054,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 Widget _buildRiskMessage(String text, Color color, BuildContext context) {
   double screenWidth = MediaQuery.of(context).size.width;
 
-  String imagePath = (color.value == Colors.red.value)
+  String imagePath = (color == Colors.red)
     ? "assets/icons/warning_red.png"
     : "assets/icons/warning_orange.png";
 

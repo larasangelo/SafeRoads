@@ -175,11 +175,11 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
             _destinationReached = true;
           });
 
-          if (_appLifecycleState != AppLifecycleState.resumed && !_destinationReachedNotif) {
+          if (_appLifecycleState != AppLifecycleState.resumed && !_destinationReachedNotif && mounted) { //TODO: VER SE MANDA A NOTIFICAÇÃO QUANDO CHEGA AO FIM
             String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
             await http.post(
               Uri.parse('http://192.168.1.82:3000/send'),
-              // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+              // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
               headers: {"Content-Type": "application/json"},
               body: jsonEncode({
                 "fcmToken": _notifications.fcmToken,
@@ -212,29 +212,29 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     updateMessageSubscription(result!);
 
     // -------------------- TESTE NO DISPOSITIVO FÍSICO ------------------------
-      String title = "🚨 TESTE!";
-      String body = "Isto é um teste para o dispositivo móvel.";
+    //   String title = "🚨 TESTE!";
+    //   String body = "Isto é um teste para o dispositivo móvel.";
 
-      try {
-        final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/send'),
-    // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "fcmToken": _notifications.fcmToken,
-            "title": title,
-            "body": body,
-            "button": "true",
-            "changeRoute": "false"
-          }),
-        );
+    //   try {
+    //     final response = await http.post(
+    //      // Uri.parse('http://192.168.1.82:3000/send'),
+    //      // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+    //       headers: {"Content-Type": "application/json"},
+    //       body: jsonEncode({
+    //         "fcmToken": _notifications.fcmToken,
+    //         "title": title,
+    //         "body": body,
+    //         "button": "true",
+    //         "changeRoute": "false"
+    //       }),
+    //     );
 
-        if (response.statusCode == 200) {
-          print("Risk alert sent successfully: $title");
-        }
-      } catch (e) {
-        print("Error sending risk alert: $e");
-      }
+    //     if (response.statusCode == 200) {
+    //       print("Risk alert sent successfully: $title");
+    //     }
+    //   } catch (e) {
+    //     print("Error sending risk alert: $e");
+    //   }
     // ------------------------------------------------------------------------
   }
 
@@ -276,22 +276,22 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   //   return null;
   // }
 
-  Future<void> _sendPositionToServer(double lat, double lon) async {
-    try {
-      await http.post(
-        Uri.parse('http://192.168.1.82:3000/update-position'),
-        // Uri.parse('http://10.101.121.183:3000/update-position'),    // Para testar na uni
+  // Future<void> _sendPositionToServer(double lat, double lon) async {
+  //   try {
+  //     await http.post(
+  //      // Uri.parse('http://192.168.1.82:3000/update-position'),
+  //      // Uri.parse('http://10.101.120.44:3000/update-position'),    // Para testar na uni
 
-        body: {
-          // 'userId': '123', // Example user ID
-          'lat': lat.toString(),
-          'lon': lon.toString(),
-        },
-      );
-    } catch (e) {
-      print("Error sending position: $e");
-    }
-  }
+  //       body: {
+  //         // 'userId': '123', // Example user ID
+  //         'lat': lat.toString(),
+  //         'lon': lon.toString(),
+  //       },
+  //     );
+  //   } catch (e) {
+  //     print("Error sending position: $e");
+  //   }
+  // }
   
   void _animateMarker(LatLng start, LatLng end) async {
     int steps = NavigationConfig.animationSteps; // Number of steps for smooth animation
@@ -417,7 +417,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       // We need to extract the species list for the current risk point
       // Find the segment that corresponds to the current risk point
       var segment = routeCoordinates.firstWhere(
-        (seg) => seg['latlng'] == riskPoint,
+        (seg) =>
+            seg['latlng'].latitude == riskPoint.latitude &&
+            seg['latlng'].longitude == riskPoint.longitude,
       );
 
       List<dynamic> speciesList = segment['species']; // Extract species list for the current risk point
@@ -569,7 +571,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -615,7 +617,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     try {
       final response = await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -647,7 +649,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     try {
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -752,7 +754,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.121.183:3000/send'),    // Para testar na uni
+        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -772,6 +774,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       keepRoute = false;
       selectedRouteKey = "adjustedRoute";
       routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
+      upcomingRisks.clear(); // Clear risks from the old route
+      detectedRiskZones.clear();
+      notifiedZones.clear(); // Optional depending on your logic
     });
 
     if (routeCoordinates.isNotEmpty) {

@@ -38,21 +38,21 @@ const closeDatabaseConnection = async () => {
 };
 
 //Function to test if we can get raster values for a single point
-const getRasterValue = async (start) => {
-  try{
-    const rasterValue = await pool.query(`
-      SELECT ST_VALUE(rast,1,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326)) AS raster_value
-      FROM public.raster_table
-      WHERE ST_Intersects(rast,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326));
-    `)
-    // 41.84083,-7.89093 // Test with an higher value
-    const value = rasterValue.rows[0]?.raster_value;
-    // console.log(value); 
-    return value;
-  } catch (err){
-    console.error(err);
-  }
-};
+// const getRasterValue = async (start) => {
+//   try{
+//     const rasterValue = await pool.query(`
+//       SELECT ST_VALUE(rast,1,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326)) AS raster_value
+//       FROM public.raster_table
+//       WHERE ST_Intersects(rast,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326));
+//     `)
+//     // 41.84083,-7.89093 // Test with an higher value
+//     const value = rasterValue.rows[0]?.raster_value;
+//     // console.log(value); 
+//     return value;
+//   } catch (err){
+//     console.error(err);
+//   }
+// };
 
 // Route computation function
 const getRoute = async (start, end, lowRisk, selectedSpecies) => {
@@ -459,17 +459,17 @@ app.post("/route", async (req, res) => {
 });
 
 // Test if we can get the raster_values for a single point
-app.post("/raster", async (req, res) => {
-  const {point} = req.body;
+// app.post("/raster", async (req, res) => {
+//   const {point} = req.body;
 
-  try {
-    const response = await getRasterValue(point);
-    res.status(200).json(response);
-  } catch (err) {
-    console.error("Error fetching search results:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-})
+//   try {
+//     const response = await getRasterValue(point);
+//     res.status(200).json(response);
+//   } catch (err) {
+//     console.error("Error fetching search results:", err);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// })
 
 
 // Helper function to calculate distance between two coordinates
