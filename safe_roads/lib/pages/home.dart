@@ -447,6 +447,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     super.build(context); // Ensure the state is kept alive.
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
 
+    final userPreferences = Provider.of<UserPreferences>(context, listen: false);
+    bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
+
     final selectedTime = _times[_selectedRouteKey];
 
     final String? arrivalTime = selectedTime != null
@@ -967,7 +970,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   SizedBox(width: MediaQuery.of(context).size.width * 0.03), 
 
                                   // Conditionally display the Switch Route Button if 'adjustedRoute' exists
-                                  if (_routesWithPoints.containsKey('adjustedRoute'))
+                                  if (_routesWithPoints.containsKey('adjustedRoute') && !lowRisk)
                                     Column(
                                       children: [
                                         ElevatedButton(
