@@ -5,83 +5,92 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'dart:async';
-
 import 'package:safe_roads/models/user_preferences.dart';
 
 class Notifications {
   static final Notifications _instance = Notifications._internal();
   factory Notifications() => _instance;
-  Notifications._internal();  // Singleton pattern
+  Notifications._internal(); // Singleton pattern
 
   BuildContext? _latestContext;
-  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();  // Defined once
+  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>(); // Defined once
 
-  // final NavigationService _navigationService = NavigationService();
+  String? fcmToken;
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  final AndroidInitializationSettings androidInitializationSettings =
+      const AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  // Set the context for notifications
+  VoidCallback? onSwitchRoute;
+  VoidCallback? ignoreSwitchRoute;
+
+  StreamSubscription<RemoteMessage>? _messageSubscription;
+  final Map<String, Timer> _debounceTimers = {}; // Debounce timers per notification type
+  final Duration _debounceDelay = const Duration(milliseconds: 500);
+
+  // Keep track of currently displayed overlay entries
+  final Set<OverlayEntry> _currentOverlays = {};
+
   void setContext(BuildContext context) {
     _latestContext = context;
   }
 
-  String? fcmToken;
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  final AndroidInitializationSettings androidInitializationSettings = const AndroidInitializationSettings('@mipmap/ic_launcher');
+  Future<StreamSubscription<RemoteMessage>?> setupFirebaseMessaging(
+      BuildContext? context,
+      StreamSubscription<RemoteMessage>? existingSubscription) async {
+    NotificationSettings settings =
+        await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      criticalAlert: true,
+      announcement: true,
+    );
 
-  // Callback function for navigation
-  VoidCallback? onSwitchRoute;
-  VoidCallback? ignoreSwitchRoute;
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print("Notification permission granted");
+      fcmToken = await FirebaseMessaging.instance.getToken();
+      print("FCM Token: $fcmToken");
 
-  Future<StreamSubscription<RemoteMessage>?> setupFirebaseMessaging(BuildContext? context, StreamSubscription<RemoteMessage>? messageSubscription) async {
-  NotificationSettings settings = await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-    criticalAlert: true, // For iOS to allow critical notifications
-    announcement: true,  // For accessibility-related announcements
-  );
+      if (existingSubscription != null) {
+        _messageSubscription = existingSubscription;
+        _messageSubscription?.resume();
+        return _messageSubscription;
+      }
 
-  if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-    print("Notification permission granted");
-    fcmToken = await FirebaseMessaging.instance.getToken();
-    print("FCM Token: $fcmToken");
-
-    if (messageSubscription != null) {
-      messageSubscription.resume(); 
-      return messageSubscription;
-    }
-
-    messageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("Foreground message received: ${message.data['title']}");
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showForegroundNotification(message);
+      _messageSubscription =
+          FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print(
+            "Foreground message received: ${message.data['title']} (Type: ${message.data['type']})");
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showForegroundNotification(message);
+        });
       });
-    });
 
-    return messageSubscription;
-  } else {
-    print("Notification permission denied");
+      return _messageSubscription;
+    } else {
+      print("Notification permission denied");
+    }
+    return null;
   }
-  return null;
-}
 
   Future<void> setupNotificationChannels() async {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'channel_id_1', // id
-      'High Importance Notifications', // name
+      'channel_id_1',
+      'High Importance Notifications',
       description: 'Channel for default notifications',
       importance: Importance.high,
       playSound: true,
-      // sound: RawResourceAndroidNotificationSound('notification'), // Ensure this matches a file in res/raw
     );
 
-    // Firebase local notification plugin
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
-    //Firebase messaging
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
@@ -92,7 +101,6 @@ class Notifications {
 
   void playNotificationSound() async {
     try {
-      // Play the sound from the asset
       await _audioPlayer.play(AssetSource('notification.mp3'));
       print("Notification sound is playing.");
       _audioPlayer.onPlayerComplete.listen((event) {
@@ -102,8 +110,29 @@ class Notifications {
       print("Error playing sound: $e");
     }
   }
-  
+
   void showForegroundNotification(RemoteMessage message) async {
+    final String? notificationType = message.data['type'];
+    if (notificationType == null) {
+      _displayOverlay(message); // Display if no type is specified
+      return;
+    }
+
+    if (_debounceTimers.containsKey(notificationType) &&
+        (_debounceTimers[notificationType]?.isActive ?? false)) {
+      print("Debouncing notification of type: $notificationType");
+      return;
+    }
+
+    _debounceTimers[notificationType] = Timer(_debounceDelay, () {
+      print(
+          "Executing showForegroundNotification for type: $notificationType at: ${DateTime.now().millisecondsSinceEpoch}");
+      _debounceTimers.remove(notificationType); // Allow next notification of this type after the delay
+      _displayOverlay(message);
+    });
+  }
+
+  void _displayOverlay(RemoteMessage message) async {
     if (_latestContext == null) {
       print("No valid context available to show notification.");
       return;
@@ -111,42 +140,40 @@ class Notifications {
 
     flutterLocalNotificationsPlugin.show(
       0,
-      null, // message.data['title'] 
-      null, // message.data['body'] 
+      null,
+      null,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'channel_id_1', // Must match the channel ID
+          'channel_id_1',
           'Default Notifications',
           importance: Importance.high,
           priority: Priority.high,
           playSound: true,
           icon: '@mipmap/ic_launcher',
-          visibility: NotificationVisibility.secret, // Hidden notification
-          showWhen: false, // Prevents the time from being shown
-          shortcutId: "silent_notification", //unique Id
+          visibility: NotificationVisibility.secret,
+          showWhen: false,
+          shortcutId: "silent_notification",
         ),
       ),
     );
     // playNotificationSound();
 
-    bool showButton = message.data['button'] == 'true'; 
+    bool showButton = message.data['button'] == 'true';
     bool changeRoute = message.data['changeRoute'] == 'true';
 
     final overlay = Overlay.of(_latestContext!, rootOverlay: true);
-
     late OverlayEntry overlayEntry;
-    bool isInteracted = false; 
-
-    // AnimationController for smooth progress transition
+    bool isInteracted = false;
     late AnimationController animationController;
 
     overlayEntry = OverlayEntry(
       builder: (context) {
         final screenWidth = MediaQuery.of(context).size.width;
         final screenHeight = MediaQuery.of(context).size.height;
-        String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+        String languageCode =
+            Provider.of<UserPreferences>(context, listen: false).languageCode;
 
-        print("Estou a entrar no OverLay");
+        print("Estou a entrar no OverLay (Type: ${message.data['type']})");
 
         return StatefulBuilder(
           builder: (context, setState) {
@@ -166,7 +193,6 @@ class Notifications {
                 child: Container(
                   padding: EdgeInsets.all(screenWidth * 0.04),
                   decoration: BoxDecoration(
-                    // color: Colors.white,
                     color: Theme.of(context).colorScheme.onPrimary,
                     borderRadius: BorderRadius.circular(screenWidth * 0.03),
                     boxShadow: const [
@@ -190,200 +216,85 @@ class Notifications {
                       ),
                       SizedBox(height: screenHeight * 0.01),
                       Text(
-                        message.data['body']  ?? '',
+                        message.data['body'] ?? '',
                         style: TextStyle(fontSize: screenWidth * 0.04),
                         textAlign: TextAlign.center,
                       ),
                       if (showButton) ...[
-                        if (changeRoute)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              AnimatedBuilder(
-                                animation: animationController,
-                                builder: (context, child) {
-                                  return Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth: screenWidth * 0.3,
-                                          maxHeight: screenHeight * 0.06,
-                                        ),
-                                        child: Container(
-                                          height: screenHeight * 0.06,
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.white),
-                                            borderRadius: BorderRadius.circular(50),
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                const Color.fromARGB(255, 62, 62, 62).withValues(alpha: 0.5),
-                                                Colors.black.withValues(alpha: 0.9),
-                                              ],
-                                              stops: [0.0, animationController.value],
-                                              begin: Alignment.centerLeft,
-                                              end: Alignment.centerRight,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth: screenWidth * 0.3,
-                                          maxHeight: screenHeight * 0.06,
-                                        ),
-                                        child: ElevatedButton( //onSwitchRoute
-                                          onPressed: () {
-                                            if (isInteracted) return;
-
-                                            isInteracted = true;
-                                            animationController.stop();
-                                            onSwitchRoute?.call();
-                                            if (overlayEntry.mounted) {
-                                              overlayEntry.remove();
-                                            }
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                          ),
-                                          child: Text(
-                                            LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
-                                            style: TextStyle(
-                                              fontSize: screenWidth * 0.045,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: screenWidth * 0.4,
-                                  maxHeight: screenHeight * 0.06,
-                                ),
-                                child: ElevatedButton( //ignoreSwitchRoute
-                                  onPressed: () {
-                                    if (isInteracted) return;
-
-                                    isInteracted = true;
-                                    animationController.stop();
-                                    ignoreSwitchRoute?.call(); 
-                                    if (overlayEntry.mounted) {
-                                      overlayEntry.remove();
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            changeRoute
+                                ? _buildAnimatedButton(
+                                    context,
+                                    screenWidth,
+                                    screenHeight,
+                                    languageCode,
+                                    'reRouteButton',
+                                    animationController,
+                                    () {
+                                      if (!isInteracted) {
+                                        isInteracted = true;
+                                        animationController.stop();
+                                        onSwitchRoute?.call();
+                                        _removeOverlay(overlayEntry);
+                                      }
+                                    },
+                                  )
+                                : _buildButton(
+                                    context,
+                                    screenWidth,
+                                    screenHeight,
+                                    languageCode,
+                                    'reRouteButton',
+                                    Theme.of(context).colorScheme.primary,
+                                    Theme.of(context).colorScheme.onPrimary,
+                                    () {
+                                      if (!isInteracted) {
+                                        isInteracted = true;
+                                        animationController.stop();
+                                        onSwitchRoute?.call();
+                                        _removeOverlay(overlayEntry);
+                                      }
+                                    },
                                   ),
-                                  child: Text(
-                                    LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
-                                    style: TextStyle(
-                                      fontSize: screenWidth * 0.045,
-                                      color: Theme.of(context).colorScheme.onPrimary,
-                                    ),
+                            !changeRoute
+                                ? _buildAnimatedButton(
+                                    context,
+                                    screenWidth,
+                                    screenHeight,
+                                    languageCode,
+                                    'ignoreButton',
+                                    animationController,
+                                    () {
+                                      if (!isInteracted) {
+                                        isInteracted = true;
+                                        animationController.stop();
+                                        ignoreSwitchRoute?.call();
+                                        _removeOverlay(overlayEntry);
+                                      }
+                                    },
+                                  )
+                                : _buildButton(
+                                    context,
+                                    screenWidth,
+                                    screenHeight,
+                                    languageCode,
+                                    'ignoreButton',
+                                    Theme.of(context).colorScheme.primary,
+                                    Theme.of(context).colorScheme.onPrimary,
+                                    () {
+                                      if (!isInteracted) {
+                                        isInteracted = true;
+                                        animationController.stop();
+                                        ignoreSwitchRoute?.call();
+                                        _removeOverlay(overlayEntry);
+                                      }
+                                    },
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        if (!changeRoute)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: screenWidth * 0.4,
-                                  maxHeight: screenHeight * 0.06,
-                                ),
-                                child: ElevatedButton( //onSwitchRoute
-                                  onPressed: () {
-                                    if (isInteracted) return;
+                          ],
+                        ),
 
-                                    isInteracted = true;
-                                    animationController.stop();
-                                    onSwitchRoute?.call(); 
-                                    if (overlayEntry.mounted) {
-                                      overlayEntry.remove();
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primary
-                                  ),
-                                  child: Text(
-                                    LanguageConfig.getLocalizedString(languageCode, 'reRouteButton'),
-                                    style: TextStyle(fontSize: screenWidth * 0.045, color: Theme.of(context).colorScheme.onPrimary),
-                                  ),
-                                ),
-                              ),
-                              AnimatedBuilder(
-                                animation: animationController,
-                                builder: (context, child) {
-                                  return Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth: screenWidth * 0.4,
-                                          maxHeight: screenHeight * 0.06,
-                                        ),
-                                        child: Container(
-                                          height: screenHeight * 0.06,
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.white),
-                                            borderRadius: BorderRadius.circular(50),
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                // Colors.pinkAccent.withOpacity(0.5),
-                                                const Color.fromARGB(255, 62, 62, 62).withValues(alpha: 0.5),
-                                                // Colors.purple.withOpacity(0.9)
-                                                Colors.black.withValues(alpha: 0.9)
-                                              ],
-                                              stops: [0.0, animationController.value],
-                                              begin: Alignment.centerLeft,
-                                              end: Alignment.centerRight,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxWidth: screenWidth * 0.4,
-                                          maxHeight: screenHeight * 0.06,
-                                        ),
-                                        child: ElevatedButton( //ignoreSwitchRoute
-                                          onPressed: () {
-                                            if (isInteracted) return;
-
-                                            isInteracted = true;
-                                            animationController.stop();
-                                            ignoreSwitchRoute?.call(); // OR onSwitchRoute?.call()
-                                            if (overlayEntry.mounted) {
-                                              overlayEntry.remove();
-                                            }
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            shadowColor: Colors.transparent,
-                                          ),
-                                          child: Text(
-                                            LanguageConfig.getLocalizedString(languageCode, 'ignoreButton'),
-                                            style: TextStyle(
-                                              fontSize: screenWidth * 0.045,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
                       ],
                     ],
                   ),
@@ -396,14 +307,12 @@ class Notifications {
     );
 
     overlay.insert(overlayEntry);
+    _currentOverlays.add(overlayEntry); // Keep track of the new overlay
 
     Future.delayed(const Duration(seconds: 5), () {
-      if (!isInteracted) {
-        isInteracted = true; // Mark as handled
-        if (overlayEntry.mounted) {
-          overlayEntry.remove();
-        }
-
+      if (_currentOverlays.contains(overlayEntry) && !isInteracted) {
+        isInteracted = true;
+        _removeOverlay(overlayEntry);
         if (changeRoute) {
           onSwitchRoute?.call();
         } else {
@@ -411,6 +320,100 @@ class Notifications {
         }
       }
     });
-    }
-}
+  }
 
+  void _removeOverlay(OverlayEntry entry) {
+    if (entry.mounted) {
+      entry.remove();
+    }
+    _currentOverlays.remove(entry);
+  }
+
+  Widget _buildAnimatedButton(
+    BuildContext context,
+    double screenWidth,
+    double screenHeight,
+    String languageCode,
+    String buttonKey,
+    AnimationController animationController,
+    VoidCallback onPressed,
+  ) {
+    const double buttonWidth = 0.3;
+    const double buttonHeight = 0.06;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+          maxWidth: screenWidth * buttonWidth,
+          maxHeight: screenHeight * buttonHeight),
+      child: Stack(
+        children: [
+          AnimatedBuilder(
+            animation: animationController,
+            builder: (context, child) {
+              return Container(
+                width: screenWidth * buttonWidth,
+                height: screenHeight * buttonHeight,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white),
+                  borderRadius: BorderRadius.circular(50),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color.fromARGB(255, 62, 62, 62).withOpacity(0.5),
+                      Colors.black.withOpacity(0.9),
+                    ],
+                    stops: [0.0, animationController.value],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
+              );
+            },
+          ),
+          SizedBox(
+            width: screenWidth * buttonWidth,
+            height: screenHeight * buttonHeight,
+            child: ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+              ),
+              child: Text(
+                LanguageConfig.getLocalizedString(languageCode, buttonKey),
+                style: TextStyle(fontSize: screenWidth * 0.045, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildButton(
+    BuildContext context,
+    double screenWidth,
+    double screenHeight,
+    String languageCode,
+    String buttonKey,
+    Color backgroundColor,
+    Color textColor,
+    VoidCallback onPressed,
+  ) {
+    const double buttonWidth = 0.3; // Use the same constants
+    const double buttonHeight = 0.06;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+          maxWidth: screenWidth * buttonWidth,
+          maxHeight: screenHeight * buttonHeight),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+            backgroundColor: backgroundColor, shadowColor: Colors.transparent),
+        child: Text(
+          LanguageConfig.getLocalizedString(languageCode, buttonKey),
+          style: TextStyle(fontSize: screenWidth * 0.045, color: textColor),
+        ),
+      ),
+    );
+  }
+}

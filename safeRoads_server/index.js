@@ -248,6 +248,7 @@ app.post("/send", (req, res) => {
     const receivedbody = req.body.body;
     const receivedButton = req.body.button;
     const receivedChangeRoute = req.body.changeRoute;
+    const receivedType = req.body.type;
 
     const message = {
       token: receivedToken,
@@ -256,6 +257,7 @@ app.post("/send", (req, res) => {
         body: receivedbody,
         button: receivedButton,
         changeRoute: receivedChangeRoute,
+        type: receivedType
       },
       android: {
         priority: "high",

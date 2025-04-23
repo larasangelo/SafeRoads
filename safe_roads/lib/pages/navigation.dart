@@ -578,7 +578,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
           "title": title,
           "body": body,
           "button": "false",
-          "changeRoute": "false"
+          "changeRoute": "false",
+          "type": "warning",
         }),
       );
 
@@ -624,7 +625,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
           "title": title,
           "body": body,
           "button": "false",
-          "changeRoute": "false"
+          "changeRoute": "false",
+          "type": "warning",
         }),
       );
 
@@ -751,7 +753,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         notificationBody =
           LanguageConfig.getLocalizedString(languageCode, 'changeRouteMsg');
       }
-
+      print("Vou enviar ReRouteNotification");
       await http.post(
         Uri.parse('http://192.168.1.82:3000/send'),
         // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
@@ -761,7 +763,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
           "title": LanguageConfig.getLocalizedString(languageCode, 'altRouteTitle'),
           "body": notificationBody,
           "button": "true",
-          "changeRoute": changeRoute.toString()
+          "changeRoute": changeRoute.toString(),
+          "type": "alternativeRoute",
         }),
       );
     } catch (e) {
