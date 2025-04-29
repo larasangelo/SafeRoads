@@ -213,29 +213,31 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     updateMessageSubscription(result!);
 
     // -------------------- TESTE NO DISPOSITIVO FÍSICO ------------------------
-    //   String title = "🚨 TESTE!";
-    //   String body = "Isto é um teste para o dispositivo móvel.";
+      print("Vou enviar a msg de TESTE");
+      String title = "🚨 TESTE!";
+      String body = "Isto é um teste para o dispositivo móvel.";
 
-    //   try {
-    //     final response = await http.post(
-    //      // Uri.parse('http://192.168.1.82:3000/send'),
-    //      // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
-    //       headers: {"Content-Type": "application/json"},
-    //       body: jsonEncode({
-    //         "fcmToken": _notifications.fcmToken,
-    //         "title": title,
-    //         "body": body,
-    //         "button": "true",
-    //         "changeRoute": "false"
-    //       }),
-    //     );
+      try {
+        final response = await http.post(
+          Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+         // Uri.parse('http://192.168.1.82:3000/send'),
+         // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            "fcmToken": _notifications.fcmToken,
+            "title": title,
+            "body": body,
+            "button": "true",
+            "changeRoute": "false"
+          }),
+        );
 
-    //     if (response.statusCode == 200) {
-    //       print("Risk alert sent successfully: $title");
-    //     }
-    //   } catch (e) {
-    //     print("Error sending risk alert: $e");
-    //   }
+        if (response.statusCode == 200) {
+          print("Risk alert sent successfully: $title");
+        }
+      } catch (e) {
+        print("Error sending risk alert: $e");
+      }
     // ------------------------------------------------------------------------
   }
 

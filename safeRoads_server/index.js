@@ -248,11 +248,11 @@ app.post("/send", (req, res) => {
     const message = {
       token: receivedToken,
       data: {
-        title: receivedtitle,
-        body: receivedbody,
-        button: receivedButton,
-        changeRoute: receivedChangeRoute,
-        type: receivedType
+        title: String(receivedtitle),
+        body: String(receivedbody),
+        button: String(receivedButton),
+        changeRoute: String(receivedChangeRoute),
+        type: String(receivedType || "")
       },
       android: {
         priority: "high",
