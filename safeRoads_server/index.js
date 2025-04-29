@@ -223,7 +223,7 @@ admin.initializeApp({
   credential: admin.credential.cert(
     JSON.parse(
       readFileSync(
-        path.join(__dirname, "flutter-saferoads-firebase-adminsdk-sekrk-712d669273.json"),
+        path.join(__dirname, process.env.GOOGLE_APPLICATION_CREDENTIALS),
         "utf8"
       )
     )
