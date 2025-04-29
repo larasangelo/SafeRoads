@@ -358,8 +358,8 @@ class Notifications {
                   borderRadius: BorderRadius.circular(50),
                   gradient: LinearGradient(
                     colors: [
-                      const Color.fromARGB(255, 62, 62, 62).withOpacity(0.5),
-                      Colors.black.withOpacity(0.9),
+                      const Color.fromARGB(255, 62, 62, 62).withValues(alpha:0.5),
+                      Colors.black.withValues(alpha:0.9),
                     ],
                     stops: [0.0, animationController.value],
                     begin: Alignment.centerLeft,

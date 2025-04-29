@@ -117,7 +117,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       print("HOME selectedSpecies: $selectedSpecies");
 
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/route'),
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
+        // Uri.parse('http://192.168.1.82:3000/route'),
         // Uri.parse('http://10.101.120.44:3000/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -190,7 +191,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.82:3000/geocode'),
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/geocode'),
+        // Uri.parse('http://192.168.1.82:3000/geocode'),
         // Uri.parse('http://10.101.120.44:3000/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
@@ -240,7 +242,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+        // Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
         // Uri.parse('http://10.101.120.44:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
       );
 
