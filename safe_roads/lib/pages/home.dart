@@ -12,7 +12,6 @@ import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/loading_navigation.dart';
-// import 'package:safe_roads/pages/navigation.dart';
 import 'package:provider/provider.dart';
 
 class MapPage extends StatefulWidget {
@@ -63,7 +62,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       });
     Future.delayed(Duration.zero, () async {
       final notifications = Notifications();
-      if(mounted){ //TODO: TESTAR SE ELE CRIA BEM AS NOTIFICAÇÕES
+      if(mounted){ 
         notifications.setContext(context); // Save the context
         await notifications.setupFirebaseMessaging(context, null); // Set up FCM
       }
@@ -89,11 +88,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -168,12 +167,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _selectedRouteKey = _routesWithPoints.keys.first;
         });
 
-        // Adjust map view to fit all routes
-        if (routesWithPoints.isNotEmpty) {
-          List<LatLng> allPoints = routesWithPoints.values.expand((list) => list.map((p) => p['latlng'] as LatLng)).toList();
-          LatLngBounds bounds = _calculateBounds(allPoints);
-          _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(25)));
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _adjustMapToBounds();
+        });
+
+        // // Adjust map view to fit all routes
+        // if (routesWithPoints.isNotEmpty) {
+        //   List<LatLng> allPoints = routesWithPoints.values.expand((list) => list.map((p) => p['latlng'] as LatLng)).toList();
+        //   LatLngBounds bounds = _calculateBounds(allPoints);
+        //   print("bounds, $bounds");
+        //   _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(25)));
+        // }
       } else {
         throw Exception("${LanguageConfig.getLocalizedString(languageCode, 'failFetchingRoute')}: ${response.body}");
       }
@@ -184,6 +188,23 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       setState(() {
         _isFetchingRoute = false; // Hide the progress bar
       });
+    }
+  }
+
+  void _adjustMapToBounds() {
+    if (_routesWithPoints.isNotEmpty) {
+      List<LatLng> allPoints = _routesWithPoints.values
+          .expand((list) => list.map((p) => p['latlng'] as LatLng))
+          .toList();
+      // Now it's safe to use _boxHeight because this is called after the frame is built
+      LatLngBounds bounds = _calculateBounds(allPoints);
+      double verticalPadding = _boxHeight + 25;
+      double horizontalPadding = 25;
+      _mapController.fitCamera(
+          CameraFit.bounds(
+              bounds: bounds,
+              padding: EdgeInsets.fromLTRB(
+                  horizontalPadding, 25, horizontalPadding, verticalPadding)));
     }
   }
 
@@ -238,14 +259,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     });
   }
 
+  DateTime? _lastSnackbarTime;
+
   Future<void> _fetchSearchSuggestions(String query) async {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+
     try {
-      final response = await http.get(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://192.168.1.82:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
-        // Uri.parse('http://10.101.120.44:3000/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // Para testar na uni
-      );
+      final response = await http
+          .get(
+            Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+          )
+          .timeout(Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -263,6 +287,19 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         });
       } else {
         print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingSuggestions')}: ${response.reasonPhrase}");
+      }
+    } on TimeoutException catch (_) {
+      if (mounted) {
+        final now = DateTime.now();
+        if (_lastSnackbarTime == null || now.difference(_lastSnackbarTime!) > Duration(seconds: 20)) {
+          _lastSnackbarTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(LanguageConfig.getLocalizedString(languageCode, 'timeoutError')),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
       }
     } catch (e) {
       print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingSuggestions')}: $e");
@@ -282,14 +319,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
-
         }
       }
     }
@@ -326,7 +362,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       LatLng(maxLat + buffer, maxLng + buffer), // Top-right corner
     );
   }
-
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     final latTween = Tween<double>(
@@ -433,11 +468,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   void _reCenter() {
     if (_currentLocation != null) {
       _mapController.moveAndRotate(
-        // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
         // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-        const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -561,11 +596,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   MarkerLayer(
                     markers: [
                       Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -683,11 +718,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -703,44 +738,52 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     ), 
                   const SizedBox(height: 8.0),
                   if (_suggestions.isNotEmpty && !destinationSelected)
-                    Container(
-                      // color: Colors.white,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _suggestions.length,
-                        itemBuilder: (context, index) {
-                          final suggestion = _suggestions[index];
-                          return ListTile(
-                            title: Text(
-                              suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: MediaQuery.of(context).size.width * 0.04, 
+                    MediaQuery.removePadding(
+                      context: context,
+                      removeTop: true,
+                      child: Container(
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: _suggestions.length,
+                          itemBuilder: (context, index) {
+                            final suggestion = _suggestions[index];
+                            return ListTile(
+                              title: Text(
+                                suggestion['name'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: MediaQuery.of(context).size.width * 0.04,
+                                ),
                               ),
-                            ),
-                            subtitle: Text(
-                              (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
-                                  ? '${suggestion['city']}, ${suggestion['country']}'
-                                  : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')),
-                              style: TextStyle(
-                                fontSize: MediaQuery.of(context).size.width * 0.03, 
+                              subtitle: Text(
+                                (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
+                                    ? '${suggestion['city']}, ${suggestion['country']}'
+                                    : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')),
+                                style: TextStyle(
+                                  fontSize: MediaQuery.of(context).size.width * 0.03,
+                                ),
                               ),
-                            ),
-                            onTap: () {
-                              // When a suggestion is tapped, update the text field, clear suggestions, and set the destinationSelected flag
-                              _addressController.text = suggestion['name'];
-                              FocusScope.of(context).unfocus(); // Dismiss the keyboard
-                              setState(() {
-                                _suggestions.clear();
-                                destinationSelected = true;
-                                selectedDestination = _addressController.text;
-                              });
-                            },
-                          );
-                        },
+                              onTap: () {
+                                _addressController.text = suggestion['name'];
+                                FocusScope.of(context).unfocus(); // Dismiss the keyboard
+                                setState(() {
+                                  _suggestions.clear();
+                                  destinationSelected = true;
+                                  selectedDestination = _addressController.text;
+                                });
+                              },
+                            );
+                          },
+                          separatorBuilder: (context, index) => Divider(
+                            color: Colors.grey[300],
+                            thickness: 1,
+                            height: 1,
+                          ),
+                        ),
                       ),
                     ),
+
                   if (_routesWithPoints.isEmpty && setDestVis)
                     ElevatedButton(
                       onPressed: () {
@@ -1065,21 +1108,21 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
     : "assets/icons/warning_orange.png";
 
   return Padding(
-    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05), 
+    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image(
           image: AssetImage(imagePath),
-          width: MediaQuery.of(context).size.width * 0.14,
+          width: screenWidth * 0.14,
         ),
-        SizedBox(width: screenWidth * 0.05), 
-        Expanded(
+        SizedBox(width: screenWidth * 0.05),
+        Expanded( // Wrap the Text widget with Expanded
           child: Text(
             text,
             textAlign: TextAlign.left,
             style: TextStyle(
-              fontSize: screenWidth * 0.05, 
+              fontSize: screenWidth * 0.05,
               fontWeight: FontWeight.bold,
               color: color,
             ),

@@ -61,6 +61,7 @@ class LanguageConfig {
       'errorFetchingRoute': 'Error fetching route:',
       'failFetchingRoute': 'Failed to fetch route',
       'errorFetchingCoordinates': 'Error fetching coordinates',
+      'timeoutError': 'The server is taking too long to respond. Please try again later.',
       'errorFetchingSuggestions': 'Error fetching suggestions',
       'errorFetchingPreferences': 'Error fetching preferences', 
       'enterDestination': 'Enter Destination',
@@ -125,7 +126,7 @@ class LanguageConfig {
       'reRouteButton': 'Re-route',
       'ignoreButton': 'Ignore',
       // Loading Navigation
-      'loadingNavigation': 'Loading your route'
+      'loadingNavigation': 'Loading your route',
     },
     'pt': {
       // About
@@ -188,6 +189,7 @@ class LanguageConfig {
       "errorFetchingRoute": "Erro ao obter rota:",
       "failFetchingRoute": "Falha ao obter rota",
       "errorFetchingCoordinates": "Erro ao obter coordenadas",
+      'timeoutError': 'O servidor está a demorar demasiado a responder. Por favor, tente novamente mais tarde.',
       "errorFetchingSuggestions": "Erro ao obter sugestões",
       "errorFetchingPreferences": "Erro ao obter preferências",
       "enterDestination": "Digite o destino",
@@ -315,6 +317,7 @@ class LanguageConfig {
       "errorFetchingRoute": "Error al obtener la ruta:",
       "failFetchingRoute": "Error al obtener la ruta",
       "errorFetchingCoordinates": "Error al obtener coordenadas",
+      'timeoutError': 'El servidor está tardando demasiado en responder. Por favor, inténtalo de nuevo más tarde.',
       "errorFetchingSuggestions": "Error al obtener sugerencias",
       "errorFetchingPreferences": "Error al obtener preferencias",
       "enterDestination": "Ingrese destino",
