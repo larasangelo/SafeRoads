@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -166,18 +167,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _isFetchingRoute = false; // Hide the progress bar
           _selectedRouteKey = _routesWithPoints.keys.first;
         });
+        _adjustMapToBounds();
 
-        // WidgetsBinding.instance.addPostFrameCallback((_) {
-        //   _adjustMapToBounds();
-        // });
-
-        // // Adjust map view to fit all routes
-        // if (routesWithPoints.isNotEmpty) {
-        //   List<LatLng> allPoints = routesWithPoints.values.expand((list) => list.map((p) => p['latlng'] as LatLng)).toList();
-        //   LatLngBounds bounds = _calculateBounds(allPoints);
-        //   print("bounds, $bounds");
-        //   _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(25)));
-        // }
       } else {
         throw Exception("${LanguageConfig.getLocalizedString(languageCode, 'failFetchingRoute')}: ${response.body}");
       }
@@ -193,10 +184,54 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   void _adjustMapToBounds() {
     if (_routesWithPoints.isNotEmpty) {
-      List<LatLng> allPoints = _routesWithPoints.values.expand((list) => list.map((p) => p['latlng'] as LatLng)).toList();
-      LatLngBounds bounds = _calculateBounds(allPoints);
-      _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(25)));
+      final allPoints = _routesWithPoints.values
+          .expand((list) => list.map((p) => p['latlng'] as LatLng))
+          .toList();
+
+      if (allPoints.length < 2) return;
+
+      final bounds = _calculateBounds(allPoints);
+
+      // Calculate center of bounds
+      final centerLat = (bounds.northEast.latitude + bounds.southWest.latitude) / 2;
+      final centerLng = (bounds.northEast.longitude + bounds.southWest.longitude) / 2;
+      final center = LatLng(centerLat, centerLng);
+
+      // Estimate zoom level that fits the bounds
+      final zoom = _getZoomLevelToFitBounds(bounds);
+
+      // Animate to center and zoom
+      _animatedMapMove(center, zoom);
     }
+  }
+
+  double _getZoomLevelToFitBounds(LatLngBounds bounds) {
+    final mapSize = MediaQuery.of(context).size;
+    final mapWidth = mapSize.width;
+    final mapHeight = mapSize.height;
+
+    const padding = 25.0;
+
+    final effectiveWidth = mapWidth - 2 * padding;
+    final effectiveHeight = mapHeight - 2 * padding;
+
+    final latDiff = (bounds.northEast.latitude - bounds.southWest.latitude).abs();
+    final lngDiff = (bounds.northEast.longitude - bounds.southWest.longitude).abs();
+
+    // Convert lat/lng to radians
+    final latFraction = latDiff / 180;
+    final lngFraction = lngDiff / 360;
+
+    final latZoom = _zoomForFraction(latFraction, effectiveHeight);
+    final lngZoom = _zoomForFraction(lngFraction, effectiveWidth);
+
+    return latZoom < lngZoom ? latZoom : lngZoom;
+  }
+
+  double _zoomForFraction(double fraction, double screenPx) {
+    const tileSize = 256.0;
+    final zoom = (log(screenPx / tileSize / fraction) / ln2).clamp(0.0, 22.0);
+    return zoom;
   }
 
   Future<LatLng?> _getCoordinatesFromAddress(String address) async {
@@ -864,7 +899,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   ? MediaQuery.of(context).size.height * HomeConfig.adjustedRiskBoxHeight
                                   : MediaQuery.of(context).size.height * HomeConfig.defaultRiskBoxHeight;
                             });
-                            _adjustMapToBounds();
                           });
 
                           if (hasHighRisk) {
@@ -905,7 +939,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               Flexible(
                                 child: _buildRiskMessage(
                                   "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
-                                  Colors.orange,
+                                  Color.fromRGBO(224, 174, 41, 1),
                                   context,
                                 ),
                               ),
