@@ -92,7 +92,7 @@ def materialize_species_risks():
         conn = psycopg2.connect(
             dbname=DB_NAME,
             user=DB_USER,
-            password=DB_PASSWORD,  # Replace with your actual password
+            password=DB_PASSWORD,
             host=DB_HOST,
             port=DB_PORT
         )
@@ -139,11 +139,11 @@ def materialize_species_risks():
 def create_get_ways_with_risk_function():
     try:
         conn = psycopg2.connect(
-            dbname="portugal",
-            user="postgres",
-            password="Leia2002.",  # Sua senha
-            host="localhost",
-            port="5432"
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD, 
+            host=DB_HOST,
+            port=DB_PORT
         )
         cur = conn.cursor()
 
@@ -202,10 +202,6 @@ def create_get_ways_with_risk_function():
 if __name__ == "__main__":
     download_tiff()
     projected_path = os.path.join(DOWNLOAD_DIR, "predictions_T1.tiff")
-    # if os.path.exists(reprojected_path):
-    #     os.remove(reprojected_path)
-    # reproject_raster(TIFF_PATH, reprojected_path)
     import_to_postgres(projected_path)
-    # materialize_species_risks()
-    # create_get_ways_with_risk_function() # Execute a criação da função
-    # # Demorou quase 11 mins a correr
+    materialize_species_risks()
+    create_get_ways_with_risk_function() 
