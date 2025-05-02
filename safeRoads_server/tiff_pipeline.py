@@ -18,10 +18,6 @@ DB_NAME = os.getenv('DB_NAME')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_PORT = os.getenv('DB_PORT')
 
-# # Corrigir variável de ambiente para evitar conflito de PROJ
-# env = os.environ.copy()
-# env["PROJ_LIB"] = r"C:\Program Files\QGIS 3.34.10\share\proj"  # também ajusta ao caminho real
-
 def download_tiff():
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     file_url = BASE_URL + FILE_NAME
@@ -57,10 +53,10 @@ def import_to_postgres(raster_path):
         "-I",
         "-M",
         raster_path,
-        "public.reptiles"
+        "public.amphibians"
     ]
-    # Created a file for windows so that is doenst prompt the pass in the cmd
-    psql_command = "| psql -U postgres -d portugal -h localhost -p 5432"
+    # Created a file for linux so that is doenst prompt the pass in the cmd
+    psql_command = "| psql -U postgres -d saferoads -h localhost -p 5432"
     full_command = " ".join(command) + " " + psql_command
 
     file_size = os.path.getsize(raster_path)
@@ -85,8 +81,8 @@ def materialize_species_risks():
 
     # Species list (update as needed)
     # SPECIES = ["amphibians", "reptiles", "hedgehogs"]
-    SPECIES = ["amphibians", "reptiles"]
-    # SPECIES = ["amphibians"]
+    # SPECIES = ["amphibians", "reptiles"]
+    SPECIES = ["amphibians"]
 
     try:
         conn = psycopg2.connect(
