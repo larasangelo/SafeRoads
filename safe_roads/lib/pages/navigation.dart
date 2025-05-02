@@ -133,12 +133,6 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       currentPosition = widget.initialPosition;
     }
 
-    // String? formattedTime = calculateArrivalTime(widget.times[selectedRouteKey] ?? NavigationConfig.defaultTime);
-
-    // setState(() {
-    //   estimatedArrivalTime = formattedTime!;
-    // });
-
     locationSubscription = location.onLocationChanged.listen((LocationData loc) async {
       if (loc.latitude != null && loc.longitude != null) {
         LatLng newPosition = LatLng(loc.latitude!, loc.longitude!);
@@ -213,88 +207,33 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     updateMessageSubscription(result!);
 
     // -------------------- TESTE NO DISPOSITIVO FÍSICO ------------------------
-      print("Vou enviar a msg de TESTE");
-      String title = "🚨 TESTE!";
-      String body = "Isto é um teste para o dispositivo móvel.";
+      // print("Vou enviar a msg de TESTE");
+      // String title = "🚨 TESTE!";
+      // String body = "Isto é um teste para o dispositivo móvel.";
 
-      try {
-        final response = await http.post(
-          Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-         // Uri.parse('http://192.168.1.82:3000/send'),
-         // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "fcmToken": _notifications.fcmToken,
-            "title": title,
-            "body": body,
-            "button": "true",
-            "changeRoute": "false"
-          }),
-        );
+      // try {
+      //   final response = await http.post(
+      //     Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+      //    // Uri.parse('http://192.168.1.82:3000/send'),
+      //    // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+      //     headers: {"Content-Type": "application/json"},
+      //     body: jsonEncode({
+      //       "fcmToken": _notifications.fcmToken,
+      //       "title": title,
+      //       "body": body,
+      //       "button": "true",
+      //       "changeRoute": "false"
+      //     }),
+      //   );
 
-        if (response.statusCode == 200) {
-          print("Risk alert sent successfully: $title");
-        }
-      } catch (e) {
-        print("Error sending risk alert: $e");
-      }
+      //   if (response.statusCode == 200) {
+      //     print("Risk alert sent successfully: $title");
+      //   }
+      // } catch (e) {
+      //   print("Error sending risk alert: $e");
+      // }
     // ------------------------------------------------------------------------
   }
-
-  // String? calculateArrivalTime(String travelTime) {
-  //   String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-  //   try {
-  //     DateTime now = DateTime.now();
-  //     int totalMinutes = 0;
-
-  //     // Define regex to capture time units like "4 min" or "1h 30min"
-  //     final regex = RegExp(r'(\d+)\s*(h|min)');
-  //     final matches = regex.allMatches(travelTime);
-
-  //     for (final match in matches) {
-  //       int value = int.tryParse(match.group(1)!) ?? 0; 
-  //       String unit = match.group(2)!.toLowerCase(); 
-
-  //       if (unit == 'h') {
-  //         totalMinutes += value * 60; 
-  //       } else if (unit == 'min') {
-  //         totalMinutes += value; 
-  //       }
-  //     }
-
-  //     if (totalMinutes == 0) {
-  //       print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
-  //       return null;
-  //     }
-
-  //     DateTime arrivalTime = now.add(Duration(minutes: totalMinutes));
-
-  //     // Format the time in 24-hour format (e.g., 13:45)
-  //     String formattedTime = "${arrivalTime.hour.toString().padLeft(2, '0')}:${arrivalTime.minute.toString().padLeft(2, '0')}";
-
-  //     return formattedTime;
-  //   } catch (e) {
-  //     print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
-  //   }
-  //   return null;
-  // }
-
-  // Future<void> _sendPositionToServer(double lat, double lon) async {
-  //   try {
-  //     await http.post(
-  //      // Uri.parse('http://192.168.1.82:3000/update-position'),
-  //      // Uri.parse('http://10.101.120.44:3000/update-position'),    // Para testar na uni
-
-  //       body: {
-  //         // 'userId': '123', // Example user ID
-  //         'lat': lat.toString(),
-  //         'lon': lon.toString(),
-  //       },
-  //     );
-  //   } catch (e) {
-  //     print("Error sending position: $e");
-  //   }
-  // }
   
   void _animateMarker(LatLng start, LatLng end) async {
     int steps = NavigationConfig.animationSteps; // Number of steps for smooth animation
