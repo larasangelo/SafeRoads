@@ -100,7 +100,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
-    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+    String languageCode = Provider.of<UserPreferences>(context, listen:false).languageCode;
     try {
       setState(() {
         _isFetchingRoute = true; // Show the progress bar
@@ -167,9 +167,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           _selectedRouteKey = _routesWithPoints.keys.first;
         });
 
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _adjustMapToBounds();
-        });
+        // WidgetsBinding.instance.addPostFrameCallback((_) {
+        //   _adjustMapToBounds();
+        // });
 
         // // Adjust map view to fit all routes
         // if (routesWithPoints.isNotEmpty) {
@@ -193,18 +193,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   void _adjustMapToBounds() {
     if (_routesWithPoints.isNotEmpty) {
-      List<LatLng> allPoints = _routesWithPoints.values
-          .expand((list) => list.map((p) => p['latlng'] as LatLng))
-          .toList();
-      // Now it's safe to use _boxHeight because this is called after the frame is built
+      List<LatLng> allPoints = _routesWithPoints.values.expand((list) => list.map((p) => p['latlng'] as LatLng)).toList();
       LatLngBounds bounds = _calculateBounds(allPoints);
-      double verticalPadding = _boxHeight + 25;
-      double horizontalPadding = 25;
-      _mapController.fitCamera(
-          CameraFit.bounds(
-              bounds: bounds,
-              padding: EdgeInsets.fromLTRB(
-                  horizontalPadding, 25, horizontalPadding, verticalPadding)));
+      _mapController.fitCamera(CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(25)));
     }
   }
 
@@ -873,6 +864,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   ? MediaQuery.of(context).size.height * HomeConfig.adjustedRiskBoxHeight
                                   : MediaQuery.of(context).size.height * HomeConfig.defaultRiskBoxHeight;
                             });
+                            _adjustMapToBounds();
                           });
 
                           if (hasHighRisk) {
@@ -932,7 +924,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,  // Align content at the start of the row
                                 children: [
-                                  // LEFT COLUMN - Image (centered)
+                                  // LEFT COLUMN - Image
                                   SizedBox(
                                     width: MediaQuery.of(context).size.width * 0.16,  // Width of the image column
                                     child: Center(
@@ -1042,13 +1034,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 ],
                               ),
                          
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
                          
-                              // BOTTOM ROW: Conditional Switch + Start buttons
+                              // BOTTOM ROW: Start button
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
-                                  // Always show the Start Button
                                   ElevatedButton(
                                     onPressed: () {
                                       if (_routesWithPoints.containsKey(_selectedRouteKey)) {
