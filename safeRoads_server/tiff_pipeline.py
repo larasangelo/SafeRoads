@@ -43,7 +43,8 @@ def import_to_postgres(raster_path):
         return
 
     print("Importing into Postgres...")
-    command = [
+
+    raster_command = [
         "raster2pgsql",
         "-s", "4326",
         "-t", "100x100",
@@ -55,26 +56,47 @@ def import_to_postgres(raster_path):
         raster_path,
         "public.amphibians"
     ]
-    # Created a file for linux so that is doenst prompt the pass in the cmd
-    psql_command = "| psql -U postgres -d saferoads -h localhost -p 5432"
-    full_command = " ".join(command) + " " + psql_command
 
-    file_size = os.path.getsize(raster_path)
-    total_mb = file_size / (1024 * 1024)
+    psql_command = [
+        "psql",
+        "-U", "postgres",
+        "-d", "saferoads",
+        "-h", "localhost",
+        "-p", "5432"
+    ]
 
-    process = subprocess.Popen(full_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # Start raster2pgsql and pipe its output to psql
+    raster_proc = subprocess.Popen(
+        raster_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
 
-    with tqdm(total=total_mb, desc="Processing Raster", unit="MB") as pbar:
-        for line in process.stdout:
+    psql_proc = subprocess.Popen(
+        psql_command,
+        stdin=raster_proc.stdout,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    raster_proc.stdout.close()
+
+    # Track progress
+    with tqdm(desc="Processing Raster", unit="lines") as pbar:
+        for line in psql_proc.stdout:
             sys.stdout.write(line)
             sys.stdout.flush()
             pbar.update(1)
 
-    process.wait()
-    if process.returncode != 0:
-        print(f"Error: {process.stderr.read()}")
+    stderr = psql_proc.stderr.read()
+    psql_proc.wait()
+    if psql_proc.returncode != 0:
+        print(f"PostgreSQL Error:\n{stderr}")
     else:
         print("Import complete.")
+
 
 def materialize_species_risks():
     print("Materializing species risk values...")
