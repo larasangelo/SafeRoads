@@ -9,11 +9,13 @@ import 'package:http/http.dart' as http;
 import 'package:safe_roads/configuration/home_config.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
+import 'package:safe_roads/log_service.dart';
 import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/loading_navigation.dart';
 import 'package:provider/provider.dart';
+import 'package:safe_roads/session_manager.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -352,6 +354,25 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
+          final logService = LogService();
+          final sessionId = SessionManager().sessionId;
+          if (sessionId != null && _currentLocation != null) {
+            await logService.logDestination(
+              sessionId: sessionId,
+              destinationData: {
+                'timestamp': DateTime.now().toIso8601String(),
+                'destination': {
+                  'lat': destination.latitude,
+                  'lng': destination.longitude,
+                  'address': _addressController.text,
+                },
+                'routeChosen': null,
+                'routeWasAdjusted': null,
+                'reRoutePromptShown': null,
+                'reRouteAction': null,
+              },
+            );
+          }
         }
       }
     }

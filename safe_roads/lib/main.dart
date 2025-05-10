@@ -22,6 +22,7 @@ import 'package:safe_roads/pages/register.dart';
 import 'package:safe_roads/pages/welcome.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:safe_roads/session_manager.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -158,7 +159,8 @@ Future<void> logAppStart() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user != null) {
     final logService = LogService();
-    await logService.startSession();  // Log the session when the app starts
+    final sessionId = await logService.startSession();
+    SessionManager().sessionId = sessionId;
   }
 }
 

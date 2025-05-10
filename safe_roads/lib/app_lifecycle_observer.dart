@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/widgets.dart';
 import 'package:safe_roads/log_service.dart';
+import 'package:safe_roads/session_manager.dart';
 
 class AppLifecycleObserver extends WidgetsBindingObserver {
   @override
@@ -12,7 +13,8 @@ class AppLifecycleObserver extends WidgetsBindingObserver {
       if (user != null) {
         Future.microtask(() async {
           final logService = LogService();
-          await logService.startSession();
+          final sessionId = await logService.startSession();
+          SessionManager().sessionId = sessionId;
         });
       }
     }
