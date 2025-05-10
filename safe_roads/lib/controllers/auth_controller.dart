@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/log_service.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/repositories/user_profile_repository.dart';
 import '../models/auth_model.dart';
@@ -8,6 +9,7 @@ import '../models/auth_model.dart';
 class AuthController {
   final AuthModel _authModel = AuthModel();
   final UserProfileRepository _userProfileRepository = UserProfileRepository();
+  final LogService _logService = LogService(); // Instanciando o LogService
 
   // Registering a new user
   Future<void> registerUser({
@@ -16,8 +18,7 @@ class AuthController {
     required String email,
     required String password,
     required String confirmPassword,
-  }) 
-  async {
+  }) async {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     if (username.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       _showErrorDialog(context, LanguageConfig.getLocalizedString(languageCode, 'allFields'));
@@ -74,6 +75,11 @@ class AuthController {
 
       // Login successful
       print("Login successful");
+
+      // Iniciar a sessão de log após login
+      String sessionId = await _logService.startSession(); // Chamada para iniciar a sessão de log
+      print("Session started with ID: $sessionId");
+
       return true;
     } catch (e) {
       if (context.mounted) {
