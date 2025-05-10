@@ -16,6 +16,8 @@ class LogService {
       'routeWasAdjusted': null,
       'reRoutePromptShown': false,
       'reRouteAction': null,
+      'userEmail': user.email, 
+      'userId': user.uid       
     });
 
     return sessionRef.key ?? '';
