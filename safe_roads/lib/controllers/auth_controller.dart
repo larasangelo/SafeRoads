@@ -33,18 +33,22 @@ class AuthController {
       final user = await _authModel.registerUser(email: email, password: password, username: username);
       if (user != null) {
         await _userProfileRepository.updateUserProfile(user.uid, {
+          'lowRisk': false,
+          'changeRoute': true,
+          'tolls': true,
+          'measure': 'km',
+          'riskAlertDistance': "250 m",
+          'rerouteAlertDistance': "250 m",
           'username': username,
+          'country': 'Portugal',
           'email': email,
-          'location': 'Portugal',
           'level': 1,
           'distance': 0,
-          'targetDistance': 200,
           'totalKm': 0,
           'places': 0,
-          'tolls': true,
-          're_route': true,
-          'measure': 'km',
-          'avatar': 'assets/profile_images/avatar_1.jpg'
+          'avatar': 'assets/profile_images/avatar_1.jpg',
+          'selectedSpecies': ["amphibians"],
+          'selectedLanguage': "en"
         });
       }
       if (context.mounted) {

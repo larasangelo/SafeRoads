@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class ProfileConfig {
   // Default Preferences
-  static const bool defaultLowRisk = true;
+  static const bool defaultLowRisk = false;
   static const bool defaultChangeRoute = true;
   static const bool defaultNotifications = true;
   static const bool defaultTolls = false;
