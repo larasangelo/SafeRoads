@@ -38,6 +38,22 @@ class LogService {
     return sessionRef.key ?? '';
   }
 
+  Future<void> logAppStartEvent() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final appStartRef = _db
+        .child('userLogs')
+        .child(user.uid)
+        .child('appStarts')
+        .push();
+
+    await appStartRef.set({
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+
   Future<void> updateSession(String sessionId, Map<String, dynamic> updates) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -45,12 +61,12 @@ class LogService {
     await sessionRef.update(updates);
   }
 
-  Future<void> logDestination({
+  Future<String?> logDestination({
     required String sessionId,
     required Map<String, dynamic> destinationData,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) return null;
 
     final destinationsRef = _db
         .child('userLogs')
@@ -61,5 +77,25 @@ class LogService {
         .push();
 
     await destinationsRef.set(destinationData);
+    return destinationsRef.key;
+  }
+
+  Future<void> updateDestination({
+    required String sessionId,
+    required String destinationId,
+    required Map<String, dynamic> updates,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final destinationRef = _db
+        .child('userLogs')
+        .child(user.uid)
+        .child('sessions')
+        .child(sessionId)
+        .child('destinations')
+        .child(destinationId);
+
+    await destinationRef.update(updates);
   }
 }

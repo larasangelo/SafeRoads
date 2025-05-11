@@ -13,7 +13,9 @@ class AppLifecycleObserver extends WidgetsBindingObserver {
       if (user != null) {
         Future.microtask(() async {
           final logService = LogService();
-          final sessionId = await logService.startSession();
+          await logService.logAppStartEvent(); 
+          await SessionManager().ensureSessionStarted(logService);
+          final sessionId = SessionManager().sessionId;
           SessionManager().sessionId = sessionId;
         });
       }

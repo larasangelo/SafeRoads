@@ -357,7 +357,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           final logService = LogService();
           final sessionId = SessionManager().sessionId;
           if (sessionId != null && _currentLocation != null) {
-            await logService.logDestination(
+            final destinationId = await logService.logDestination(
               sessionId: sessionId,
               destinationData: {
                 'timestamp': DateTime.now().toIso8601String(),
@@ -372,6 +372,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 'reRouteAction': null,
               },
             );
+
+            SessionManager().destinationId = destinationId;
           }
         }
       }
@@ -1096,9 +1098,28 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
                                   ElevatedButton(
-                                    onPressed: () {
+                                    onPressed: () async {
                                       if (_routesWithPoints.containsKey(_selectedRouteKey)) {
                                         List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
+
+                                        final String routeTypeChosen;
+
+                                        if (_routesWithPoints.length == 1) {
+                                          routeTypeChosen = 'onlyAvailable'; 
+                                        } else {
+                                          routeTypeChosen = _selectedRouteKey == 'adjustedRoute' ? 'adjusted' : 'default';
+                                        }
+
+                                        final logService = LogService();
+                                        await logService.updateDestination(
+                                          sessionId: SessionManager().sessionId!,
+                                          destinationId: SessionManager().destinationId!,
+                                          updates: {
+                                            'routeChosen': routeTypeChosen,
+                                          },
+                                        );
+
+                                        if (!context.mounted) return;
 
                                         Navigator.push(
                                           context,
@@ -1115,6 +1136,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                         );
                                       }
                                     },
+
                                      style: ElevatedButton.styleFrom(
                                         backgroundColor: _selectedRouteKey == 'adjustedRoute' ||
                                                 !_routesWithPoints.containsKey('adjustedRoute')

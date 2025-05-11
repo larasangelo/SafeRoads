@@ -5,6 +5,7 @@ import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/log_service.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/repositories/user_profile_repository.dart';
+import 'package:safe_roads/session_manager.dart';
 import '../models/auth_model.dart';
 
 class AuthController {
@@ -80,7 +81,8 @@ class AuthController {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final logService = LogService();
-        await logService.startSession();
+        await logService.logAppStartEvent(); 
+        SessionManager().sessionId = await logService.startSession();
       }
 
       print("Login successful");
@@ -94,6 +96,7 @@ class AuthController {
   }
 
   Future<void> logout() async {
+    SessionManager().reset();
     await _authModel.logout();
   }
 

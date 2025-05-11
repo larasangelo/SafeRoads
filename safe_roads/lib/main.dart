@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:ui';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -8,7 +7,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/app_lifecycle_observer.dart';
 import 'package:safe_roads/firebase_options.dart';
-import 'package:safe_roads/log_service.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/monochrome_theme.dart';
@@ -22,7 +20,6 @@ import 'package:safe_roads/pages/register.dart';
 import 'package:safe_roads/pages/welcome.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:safe_roads/session_manager.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -73,10 +70,6 @@ void main() async {
 
   // Initialize background service
   await initializeService();
-
-  // Log when the app starts
-  await logAppStart();
-  print("Depois do logAppStart");
 
   runApp(
     MultiProvider( 
@@ -153,15 +146,6 @@ Future<void> initializeService() async {
     ),
   );
   print("Passo pelo initializeService");
-}
-
-Future<void> logAppStart() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    final logService = LogService();
-    final sessionId = await logService.startSession();
-    SessionManager().sessionId = sessionId;
-  }
 }
 
 Future<void> requestLocationPermissions() async {
