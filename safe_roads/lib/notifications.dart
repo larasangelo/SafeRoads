@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/log_service.dart';
 import 'dart:async';
 import 'package:safe_roads/models/user_preferences.dart';
+import 'package:safe_roads/session_manager.dart';
 
 class Notifications {
   static final Notifications _instance = Notifications._internal();
@@ -137,6 +139,8 @@ class Notifications {
       print("No valid context available to show notification.");
       return;
     }
+    
+    final logService = LogService();
 
     flutterLocalNotificationsPlugin.show(
       0,
@@ -232,12 +236,20 @@ class Notifications {
                                     languageCode,
                                     'reRouteButton',
                                     animationController,
-                                    () {
+                                    () async {
                                       if (!isInteracted) {
                                         isInteracted = true;
+                                        print("SWITCH isInteracted.value, isInteracted");
                                         animationController.stop();
                                         onSwitchRoute?.call();
                                         _removeOverlay(overlayEntry);
+                                        await logService.updateDestination(
+                                          sessionId: SessionManager().sessionId!,
+                                          destinationId: SessionManager().destinationId!,
+                                          updates: {
+                                            'reRouteAction': 'accepted'
+                                          },
+                                        );
                                       }
                                     },
                                   )
@@ -249,12 +261,20 @@ class Notifications {
                                     'reRouteButton',
                                     Theme.of(context).colorScheme.primary,
                                     Theme.of(context).colorScheme.onPrimary,
-                                    () {
+                                    () async {
                                       if (!isInteracted) {
                                         isInteracted = true;
+                                        print("SWITCH isInteracted.value, $isInteracted");
                                         animationController.stop();
                                         onSwitchRoute?.call();
                                         _removeOverlay(overlayEntry);
+                                        await logService.updateDestination(
+                                          sessionId: SessionManager().sessionId!,
+                                          destinationId: SessionManager().destinationId!,
+                                          updates: {
+                                            'reRouteAction': 'accepted'
+                                          },
+                                        );
                                       }
                                     },
                                   ),
@@ -266,12 +286,20 @@ class Notifications {
                                     languageCode,
                                     'ignoreButton',
                                     animationController,
-                                    () {
+                                    () async {
                                       if (!isInteracted) {
                                         isInteracted = true;
+                                        print("IGNORE isInteracted.value, $isInteracted");
                                         animationController.stop();
                                         ignoreSwitchRoute?.call();
                                         _removeOverlay(overlayEntry);
+                                        await logService.updateDestination(
+                                          sessionId: SessionManager().sessionId!,
+                                          destinationId: SessionManager().destinationId!,
+                                          updates: {
+                                            'reRouteAction': 'ignored'
+                                          },
+                                        );
                                       }
                                     },
                                   )
@@ -283,12 +311,20 @@ class Notifications {
                                     'ignoreButton',
                                     Theme.of(context).colorScheme.primary,
                                     Theme.of(context).colorScheme.onPrimary,
-                                    () {
+                                    () async {
                                       if (!isInteracted) {
                                         isInteracted = true;
+                                        print("IGNORE isInteracted.value, $isInteracted");
                                         animationController.stop();
                                         ignoreSwitchRoute?.call();
                                         _removeOverlay(overlayEntry);
+                                        await logService.updateDestination(
+                                          sessionId: SessionManager().sessionId!,
+                                          destinationId: SessionManager().destinationId!,
+                                          updates: {
+                                            'reRouteAction': 'ignored'
+                                          },
+                                        );
                                       }
                                     },
                                   ),
@@ -309,14 +345,26 @@ class Notifications {
     overlay.insert(overlayEntry);
     _currentOverlays.add(overlayEntry); // Keep track of the new overlay
 
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 5), () async {
+      print("FUTURE isInteracted: $isInteracted");
       if (_currentOverlays.contains(overlayEntry) && !isInteracted) {
         isInteracted = true;
         _removeOverlay(overlayEntry);
-        if (changeRoute) {
-          onSwitchRoute?.call();
-        } else {
-          ignoreSwitchRoute?.call();
+
+        if (showButton) {
+          await logService.updateDestination(
+            sessionId: SessionManager().sessionId!,
+            destinationId: SessionManager().destinationId!,
+            updates: {
+              'reRouteAction': 'expired',
+            },
+          );
+
+          if (changeRoute) {
+            onSwitchRoute?.call();
+          } else {
+            ignoreSwitchRoute?.call();
+          }
         }
       }
     });

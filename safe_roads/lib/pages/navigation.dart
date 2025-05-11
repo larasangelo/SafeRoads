@@ -11,9 +11,11 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/configuration/navigation_config.dart';
+import 'package:safe_roads/log_service.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
+import 'package:safe_roads/session_manager.dart';
 
 class NavigationPage extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> routesWithPoints;
@@ -172,9 +174,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
           if (_appLifecycleState != AppLifecycleState.resumed && !_destinationReachedNotif && mounted) { //TODO: VER SE MANDA A NOTIFICAÇÃO QUANDO CHEGA AO FIM
             String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
             await http.post(
-              Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-              // Uri.parse('http://192.168.1.82:3000/send'),
-              // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+              // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+              Uri.parse('http://192.168.1.82:3001/send'),
+              // Uri.parse('http://10.101.120.44:3001/send'),    // Para testar na uni
               headers: {"Content-Type": "application/json"},
               body: jsonEncode({
                 "fcmToken": _notifications.fcmToken,
@@ -213,9 +215,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
       // try {
       //   final response = await http.post(
-      //     Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-      //    // Uri.parse('http://192.168.1.82:3000/send'),
-      //    // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+          // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+         // Uri.parse('http://192.168.1.82:3001/send'),
+      //    // Uri.parse('http://10.101.120.44:3001/send'),    // Para testar na uni
       //     headers: {"Content-Type": "application/json"},
       //     body: jsonEncode({
       //       "fcmToken": _notifications.fcmToken,
@@ -512,9 +514,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('http://10.101.120.44:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -560,9 +562,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('http://10.101.120.44:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -594,9 +596,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('http://10.101.120.44:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -700,9 +702,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       }
       print("Vou enviar ReRouteNotification");
       await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('http://10.101.120.44:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -712,6 +714,14 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
           "changeRoute": changeRoute.toString(),
           "type": "alternativeRoute",
         }),
+      );
+      final logService = LogService();
+      await logService.updateDestination(
+        sessionId: SessionManager().sessionId!,
+        destinationId: SessionManager().destinationId!,
+        updates: {
+          'reRoutePromptShown': DateTime.now().toIso8601String()
+        },
       );
     } catch (e) {
       print("Erro ao enviar notificação de re-rota: $e");

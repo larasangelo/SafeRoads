@@ -9,13 +9,11 @@ class LogService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    final userRef = _db.child('userLogs').child(user.uid);
+    final emailRef = _db.child('userLogs').child(user.uid).child('userEmail');
+    final snapshot = await emailRef.once();
 
-    final snapshot = await userRef.once();
     if (!snapshot.snapshot.exists) {
-      await userRef.update({
-        'userEmail': user.email,
-      });
+      await emailRef.set(user.email);
     }
   }
 
@@ -29,10 +27,6 @@ class LogService {
 
     await sessionRef.set({
       'startTime': DateTime.now().toIso8601String(),
-      'routeChosen': null,
-      'routeWasAdjusted': null,
-      'reRoutePromptShown': null,
-      'reRouteAction': null,
     });
 
     return sessionRef.key ?? '';

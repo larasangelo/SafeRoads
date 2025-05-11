@@ -221,7 +221,12 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
 // Firebase Admin initialization
 admin.initializeApp({
   credential: admin.credential.cert(
-    JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, "utf8"))
+    JSON.parse(
+      readFileSync(
+        path.join(__dirname, "flutter-saferoads-firebase-adminsdk-sekrk-712d669273.json"),
+        "utf8"
+      )
+    )
   ),
   projectId: "flutter-saferoads",
 });
