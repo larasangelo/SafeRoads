@@ -166,6 +166,9 @@ class Notifications {
     bool changeRoute = message.data['changeRoute'] == 'true';
 
     final overlay = Overlay.of(_latestContext!, rootOverlay: true);
+
+    bool defaultReRoute = Provider.of<UserPreferences>(_latestContext!, listen: false).changeRoute;
+
     late OverlayEntry overlayEntry;
     bool isInteracted = false;
     late AnimationController animationController;
@@ -174,8 +177,7 @@ class Notifications {
       builder: (context) {
         final screenWidth = MediaQuery.of(context).size.width;
         final screenHeight = MediaQuery.of(context).size.height;
-        String languageCode =
-            Provider.of<UserPreferences>(context, listen: false).languageCode;
+        String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
 
         print("Estou a entrar no OverLay (Type: ${message.data['type']})");
 
@@ -247,7 +249,8 @@ class Notifications {
                                           sessionId: SessionManager().sessionId!,
                                           destinationId: SessionManager().destinationId!,
                                           updates: {
-                                            'reRouteAction': 'accepted'
+                                            'reRouteAction': 'accepted',
+                                            'defaultReRoute': defaultReRoute
                                           },
                                         );
                                       }
@@ -272,7 +275,8 @@ class Notifications {
                                           sessionId: SessionManager().sessionId!,
                                           destinationId: SessionManager().destinationId!,
                                           updates: {
-                                            'reRouteAction': 'accepted'
+                                            'reRouteAction': 'accepted',
+                                            'defaultReRoute': defaultReRoute
                                           },
                                         );
                                       }
@@ -297,7 +301,8 @@ class Notifications {
                                           sessionId: SessionManager().sessionId!,
                                           destinationId: SessionManager().destinationId!,
                                           updates: {
-                                            'reRouteAction': 'ignored'
+                                            'reRouteAction': 'ignored',
+                                            'defaultReRoute': defaultReRoute
                                           },
                                         );
                                       }
@@ -322,7 +327,8 @@ class Notifications {
                                           sessionId: SessionManager().sessionId!,
                                           destinationId: SessionManager().destinationId!,
                                           updates: {
-                                            'reRouteAction': 'ignored'
+                                            'reRouteAction': 'ignored',
+                                            'defaultReRoute': defaultReRoute
                                           },
                                         );
                                       }
@@ -357,6 +363,7 @@ class Notifications {
             destinationId: SessionManager().destinationId!,
             updates: {
               'reRouteAction': 'expired',
+              'defaultReRoute': defaultReRoute
             },
           );
 
