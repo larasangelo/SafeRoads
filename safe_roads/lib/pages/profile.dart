@@ -7,6 +7,7 @@ import 'package:safe_roads/controllers/auth_controller.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/alert_distance.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/profile_config.dart';
@@ -146,6 +147,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     );
 
     if (shouldSignOut == true) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
       await _authController.logout();
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');

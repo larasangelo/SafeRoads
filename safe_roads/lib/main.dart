@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/firebase_options.dart';
@@ -142,6 +145,7 @@ Future<void> initializeService() async {
       onBackground: onIosBackground,
     ),
   );
+  await service.startService();
   print("Passo pelo initializeService");
 }
 
@@ -167,40 +171,119 @@ Future<void> requestLocationPermissions() async {
   }
 }
 
-// Ios background function
+const double mediumRiskThreshold = 0.3;
+const double highRiskThreshold = 0.5;
+DateTime lastNotificationTime = DateTime.now().subtract(Duration(seconds: 30));
+
+@pragma('vm:entry-point')
+void onStart(ServiceInstance service) async {
+  DartPluginRegistrant.ensureInitialized();
+  final plugin = FlutterLocalNotificationsPlugin();
+
+  Timer? notificationTimer;
+
+  Timer.periodic(const Duration(seconds: 20), (monitorTimer) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    print("=== Checking motion status ===");
+
+    try {
+      final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      print("onStart: Accessed isLoggedIn = ${prefs.getBool('isLoggedIn')}");
+
+      if (!isLoggedIn) {
+        print("User is not logged in. Skipping check.");
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      double speed = position.speed;
+      print("Speed: $speed m/s");
+
+      bool isNavigationActive = prefs.getBool('isNavigationActive') ?? false;
+      print("isNavigationActive: $isNavigationActive");
+
+      bool isDriving = speed > 10.0;
+
+      if (isDriving && notificationTimer == null && !isNavigationActive) {
+        print("User is driving and not navigating. Starting notification timer.");
+
+        notificationTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
+          final selectedSpecies = prefs.getStringList('selectedSpecies') ?? [];
+          print("selectedSpecies: $selectedSpecies");
+          final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+          print("position: $position");
+          final risk = await getRiskLevel(position.latitude, position.longitude, selectedSpecies);
+          print("Risk: $risk");
+
+          if (risk >= mediumRiskThreshold) {
+            final now = DateTime.now();
+            if (now.difference(lastNotificationTime).inSeconds >= 15) {
+              print("=== Sending Risk Notification ===");
+              lastNotificationTime = now;
+
+              final level = risk >= highRiskThreshold ? "high" : "medium";
+
+              const androidDetails = AndroidNotificationDetails(
+                'risk_zone_channel',
+                'Wildlife Risk Alerts',
+                importance: Importance.high,
+                priority: Priority.high,
+                playSound: true,
+                icon: '@mipmap/ic_launcher',
+              );
+
+              await plugin.show(
+                0,
+                'Wildlife Risk Alert',
+                'You are in a $level risk zone for animal crossings.',
+                const NotificationDetails(android: androidDetails),
+              );
+            }
+          }
+        });
+      } else if (!isDriving && notificationTimer != null) {
+        print("User stopped driving. Cancelling notification timer.");
+        notificationTimer?.cancel();
+        notificationTimer = null;
+      }
+
+    } catch (e) {
+      print("Error in monitoring: $e");
+    }
+  });
+}
+
+
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
-
-  SharedPreferences preferences = await SharedPreferences.getInstance();
-  await preferences.reload();
-  final log = preferences.getStringList('log') ?? <String>[];
+  final prefs = await SharedPreferences.getInstance();
+  final log = prefs.getStringList('log') ?? [];
   log.add(DateTime.now().toIso8601String());
-  await preferences.setStringList('log', log);
-
+  await prefs.setStringList('log', log);
   return true;
 }
 
-// OnStart function to update service state
-@pragma('vm:entry-point')
-void onStart(ServiceInstance service) async {
-  DartPluginRegistrant.ensureInitialized();
-
-  SharedPreferences preferences = await SharedPreferences.getInstance();
-  await preferences.setString("hello", "world");
-
-  if (service is AndroidServiceInstance) {
-    service.on('setAsForeground').listen((event) {
-      service.setAsForegroundService();
-    });
-
-    service.on('setAsBackground').listen((event) {
-      service.setAsBackgroundService();
-    });
+Future<double> getRiskLevel(double lat, double lon, List<String> selectedSpecies) async {
+  try {
+    final response = await http.post(
+      // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/raster'),
+      // Uri.parse('http://192.168.1.82:3001/raster'),
+      Uri.parse('http://10.101.121.11:3001/raster'), // testar na uni
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'point': {'lat': lat, 'lon': lon}, 'selectedSpecies': selectedSpecies}),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (data['risk_value'] as num?)?.toDouble() ?? 0.0;
+    } else {
+      print('Risk fetch failed: ${response.statusCode}');
+      return 0.0;
+    }
+  } catch (e) {
+    print('Risk fetch error: $e');
+    return 0.0;
   }
-
-  service.on('stopService').listen((event) {
-    service.stopSelf();
-  });
 }

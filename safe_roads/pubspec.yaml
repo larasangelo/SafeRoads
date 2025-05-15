@@ -56,6 +56,7 @@ dependencies:
   permission_handler: ^12.0.0+1
   flutter_launcher_icons: ^0.14.3
   flutter_svg: ^2.0.17
+  geolocator: ^11.0.0
 
 dev_dependencies:
   flutter_test:

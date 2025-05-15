@@ -14,6 +14,7 @@ import 'package:safe_roads/configuration/navigation_config.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NavigationPage extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> routesWithPoints;
@@ -40,6 +41,7 @@ class NavigationPage extends StatefulWidget {
 }
 
 class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObserver{
+  bool isNavigationActive = NavigationConfig.isNavigationActive;
   late String selectedRouteKey;
   late List<Map<String, dynamic>> routeCoordinates;
   final Notifications _notifications = NavigationConfig.notifications;
@@ -93,6 +95,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   @override
   void initState() {
     WidgetsBinding.instance.addObserver(this);
+    NavigationConfig.isNavigationActive = true;
+    _setNavigationStatus(true);
     // Reset NavigationConfig values
     NavigationConfig.isFirstLocationUpdate = true;
     NavigationConfig.estimatedArrivalTime = "";
@@ -117,6 +121,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     // print("enteringNewRiskZone: $enteringNewRiskZone");
     // print("NavigationConfig.enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}");
     // print("NavigationConfig.upcomingRisks: ${NavigationConfig.upcomingRisks}");
+
+    print("Navigation init isNavigationActive: ${NavigationConfig.isNavigationActive}");
 
     super.initState();
     selectedRouteKey = widget.selectedRouteKey; // Set initial route from Home.dart
@@ -172,9 +178,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
           if (_appLifecycleState != AppLifecycleState.resumed && !_destinationReachedNotif && mounted) { //TODO: VER SE MANDA A NOTIFICAÇÃO QUANDO CHEGA AO FIM
             String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
             await http.post(
-              Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-              // Uri.parse('http://192.168.1.82:3000/send'),
-              // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+              // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+              // Uri.parse('http://192.168.1.82:3001/send'),
+              Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
               headers: {"Content-Type": "application/json"},
               body: jsonEncode({
                 "fcmToken": _notifications.fcmToken,
@@ -191,6 +197,12 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         }
       }
     });
+  }
+
+  Future<void> _setNavigationStatus(bool status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isNavigationActive', status);
+    print("SharedPreferences: Navigation active set to $status");
   }
 
   // Update the preference globally using Provider
@@ -213,9 +225,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
       // try {
       //   final response = await http.post(
-      //     Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-      //    // Uri.parse('http://192.168.1.82:3000/send'),
-      //    // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+      //   //   Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+      //   //  Uri.parse('http://192.168.1.82:3001/send'),
+      //    Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
       //     headers: {"Content-Type": "application/json"},
       //     body: jsonEncode({
       //       "fcmToken": _notifications.fcmToken,
@@ -512,9 +524,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        // Uri.parse('http://192.168.1.82:3001/send'),
+        Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -560,9 +572,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        // Uri.parse('http://192.168.1.82:3001/send'),
+        Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -594,9 +606,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        // Uri.parse('http://192.168.1.82:3001/send'),
+        Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -700,9 +712,9 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       }
       print("Vou enviar ReRouteNotification");
       await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3000/send'),
-        // Uri.parse('http://10.101.120.44:3000/send'),    // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        // Uri.parse('http://192.168.1.82:3001/send'),
+        Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "fcmToken": _notifications.fcmToken,
@@ -746,6 +758,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    NavigationConfig.isNavigationActive = false;
+    _setNavigationStatus(false);
     // Cancel location updates
     locationSubscription?.cancel();
     _mapController.dispose();

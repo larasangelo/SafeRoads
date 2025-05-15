@@ -41,5 +41,5 @@ class NavigationConfig {
   static int reRouteReSend = 30;
 
   static bool enteringNewRiskZone = false;
-
+  static bool isNavigationActive = false;
 }

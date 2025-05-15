@@ -89,11 +89,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           13.0,
         );
       }
@@ -117,9 +117,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       print("HOME selectedSpecies: $selectedSpecies");
 
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
-        // Uri.parse('http://192.168.1.82:3000/route'),
-        // Uri.parse('http://10.101.120.44:3000/route'), // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
+        // Uri.parse('http://192.168.1.82:3001/route'),
+        Uri.parse('http://10.101.121.11:3001/route'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
@@ -238,9 +238,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/geocode'),
-        // Uri.parse('http://192.168.1.82:3000/geocode'),
-        // Uri.parse('http://10.101.120.44:3000/geocode'), // Para testar na uni
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/geocode'),
+        // Uri.parse('http://192.168.1.82:3001/geocode'),
+        Uri.parse('http://10.101.121.11:3001/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
       );
@@ -293,7 +293,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http
           .get(
-            Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+            // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+            // Uri.parse('http://192.168.1.82:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+            Uri.parse('http://10.101.121.11:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // testar na uni
           )
           .timeout(Duration(seconds: 10));
 
@@ -345,11 +347,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             destination,
           );
         }
@@ -494,11 +496,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   void _reCenter() {
     if (_currentLocation != null) {
       _mapController.moveAndRotate(
-        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
         // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-        // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -622,11 +624,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -744,11 +746,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               13.0, // Adjust zoom level as needed
                             );
                           }
