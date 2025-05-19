@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/firebase_options.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
@@ -178,82 +179,112 @@ DateTime lastNotificationTime = DateTime.now().subtract(Duration(seconds: 30));
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
   DartPluginRegistrant.ensureInitialized();
+
   final plugin = FlutterLocalNotificationsPlugin();
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.reload();
 
   Timer? notificationTimer;
+  DateTime lastNotificationTime = DateTime.now().subtract(const Duration(seconds: 30));
 
   Timer.periodic(const Duration(seconds: 20), (monitorTimer) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-    print("=== Checking motion status ===");
+    print("=== Background Check (onStart) ===");
 
     try {
       final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      print("onStart: Accessed isLoggedIn = ${prefs.getBool('isLoggedIn')}");
-
       if (!isLoggedIn) {
-        print("User is not logged in. Skipping check.");
+        print("User is not logged in.");
         return;
       }
 
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      double speed = position.speed;
-      print("Speed: $speed m/s");
+      final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      final speed = position.speed;
+      final isDriving = speed > 10.0;
 
-      bool isNavigationActive = prefs.getBool('isNavigationActive') ?? false;
-      print("isNavigationActive: $isNavigationActive");
-
-      bool isDriving = speed > 10.0;
+      final isNavigationActive = prefs.getBool('isNavigationActive') ?? false;
 
       if (isDriving && notificationTimer == null && !isNavigationActive) {
-        print("User is driving and not navigating. Starting notification timer.");
+        print("User is driving without navigation. Starting risk check timer.");
 
-        notificationTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
+        notificationTimer =
+            Timer.periodic(const Duration(seconds: 15), (timer) async {
           final selectedSpecies = prefs.getStringList('selectedSpecies') ?? [];
-          print("selectedSpecies: $selectedSpecies");
-          final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-          print("position: $position");
-          final risk = await getRiskLevel(position.latitude, position.longitude, selectedSpecies);
-          print("Risk: $risk");
+          final languageCode = prefs.getString('languageCode') ?? 'en';
+          final fcmToken = prefs.getString('fcmToken');
 
-          if (risk >= mediumRiskThreshold) {
-            final now = DateTime.now();
-            if (now.difference(lastNotificationTime).inSeconds >= 15) {
-              print("=== Sending Risk Notification ===");
-              lastNotificationTime = now;
+          final currentPosition = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.high);
+          final risk = await getRiskLevel(currentPosition.latitude,
+              currentPosition.longitude, selectedSpecies);
 
-              final level = risk >= highRiskThreshold ? "high" : "medium";
+          if (risk >= mediumRiskThreshold &&
+              DateTime.now().difference(lastNotificationTime).inSeconds >= 15 &&
+              fcmToken != null) {
+            lastNotificationTime = DateTime.now();
+            final level = risk >= highRiskThreshold ? "high" : "medium";
 
-              const androidDetails = AndroidNotificationDetails(
-                'risk_zone_channel',
-                'Wildlife Risk Alerts',
-                importance: Importance.high,
-                priority: Priority.high,
-                playSound: true,
-                icon: '@mipmap/ic_launcher',
+            final title = LanguageConfig.getLocalizedString(
+                languageCode, 'wildlifeRiskAlertTitle');
+            final bodyKey = level == "high"
+                ? 'wildlifeRiskAlertBodyHigh'
+                : 'wildlifeRiskAlertBodyMedium';
+            final body =
+                LanguageConfig.getLocalizedString(languageCode, bodyKey);
+
+            // Send push notification via server
+            try {
+              final response = await http.post(
+              Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+                // Uri.parse('http://192.168.1.82:3001/send'),
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "fcmToken": fcmToken,
+                  "title": title,
+                  "body": body,
+                  "button": "false",
+                  "changeRoute": "false",
+                  "type": "risk" // Optionally include type
+                }),
               );
 
-              await plugin.show(
-                0,
-                'Wildlife Risk Alert',
-                'You are in a $level risk zone for animal crossings.',
-                const NotificationDetails(android: androidDetails),
-              );
+              if (response.statusCode == 200) {
+                print("Push sent via API: ${response.body}");
+              } else {
+                print("Failed to send push via API: ${response.body}");
+              }
+            } catch (e) {
+              print("Error sending push notification: $e");
             }
+
+            // Also show local notification immediately in background
+            const androidDetails = AndroidNotificationDetails(
+              'risk_zone_channel',
+              'Wildlife Risk Alerts',
+              importance: Importance.high,
+              priority: Priority.high,
+              playSound: true,
+              icon: '@mipmap/ic_launcher',
+            );
+
+            await plugin.show(
+              0,
+              title,
+              body,
+              const NotificationDetails(android: androidDetails),
+            );
           }
         });
       } else if (!isDriving && notificationTimer != null) {
-        print("User stopped driving. Cancelling notification timer.");
+        print("User stopped driving. Stopping risk check timer.");
         notificationTimer?.cancel();
         notificationTimer = null;
       }
-
     } catch (e) {
-      print("Error in monitoring: $e");
+      print("Error during background monitoring: $e");
     }
   });
 }
-
 
 @pragma('vm:entry-point')
 Future<bool> onIosBackground(ServiceInstance service) async {
@@ -269,9 +300,9 @@ Future<bool> onIosBackground(ServiceInstance service) async {
 Future<double> getRiskLevel(double lat, double lon, List<String> selectedSpecies) async {
   try {
     final response = await http.post(
-      // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/raster'),
+      Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/raster'),
       // Uri.parse('http://192.168.1.82:3001/raster'),
-      Uri.parse('http://10.101.121.11:3001/raster'), // testar na uni
+      // Uri.parse('http://10.101.121.11:3001/raster'), // testar na uni
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'point': {'lat': lat, 'lon': lon}, 'selectedSpecies': selectedSpecies}),
     );

@@ -42,6 +42,7 @@ class UserPreferences with ChangeNotifier {
       // Save selected species to SharedPreferences
       SharedPreferences preferences = await SharedPreferences.getInstance();
       await preferences.setStringList('selectedSpecies', List<String>.from(_selectedSpecies));
+      await preferences.setString('languageCode', _languageCode);
       
       print("USER_PREFERENCES loadPreferences: $_selectedSpecies");
       notifyListeners();

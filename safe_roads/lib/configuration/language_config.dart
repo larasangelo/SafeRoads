@@ -127,6 +127,10 @@ class LanguageConfig {
       'ignoreButton': 'Ignore',
       // Loading Navigation
       'loadingNavigation': 'Loading your route',
+      // Background Notifications
+      'wildlifeRiskAlertTitle': '⚠️ Wildlife Risk Alert',
+      'wildlifeRiskAlertBodyHigh': 'You are in a high risk zone for animal crossings.',
+      'wildlifeRiskAlertBodyMedium': 'You are in a medium risk zone for animal crossings.',
     },
     'pt': {
       // About
@@ -254,7 +258,11 @@ class LanguageConfig {
       "reRouteButton": "Redirecionar",
       "ignoreButton": "Ignorar",
       // Loading Navigation
-      'loadingNavigation': 'A carregar o seu trajeto'
+      'loadingNavigation': 'A carregar o seu trajeto',
+      // Background Notifications
+      'wildlifeRiskAlertTitle': '⚠️ Alerta de Risco de Animais',
+      'wildlifeRiskAlertBodyHigh': 'Está numa zona de alto risco de travessia de animais.',
+      'wildlifeRiskAlertBodyMedium': 'Está numa zona de risco médio de travessia de animais.',
     },
     'es': {
       // About
@@ -382,7 +390,11 @@ class LanguageConfig {
       "reRouteButton": "Redirigir",
       "ignoreButton": "Ignorar",
       // Loading Navigation
-      'loadingNavigation': 'Cargando tu ruta'
+      'loadingNavigation': 'Cargando tu ruta',
+      // Background Notifications
+      'wildlifeRiskAlertTitle': '⚠️ Alerta de Riesgo de Fauna',
+      'wildlifeRiskAlertBodyHigh': 'Estás en una zona de alto riesgo por cruce de animales.',
+      'wildlifeRiskAlertBodyMedium': 'Estás en una zona de riesgo medio por cruce de animales.',
     },
   };
 

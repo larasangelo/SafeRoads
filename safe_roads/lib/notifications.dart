@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'dart:async';
 import 'package:safe_roads/models/user_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Notifications {
   static final Notifications _instance = Notifications._internal();
@@ -52,6 +53,8 @@ class Notifications {
       print("Notification permission granted");
       fcmToken = await FirebaseMessaging.instance.getToken();
       print("FCM Token: $fcmToken");
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('fcmToken', fcmToken!);
 
       if (existingSubscription != null) {
         _messageSubscription = existingSubscription;

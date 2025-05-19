@@ -490,7 +490,6 @@ app.post("/raster", async (req, res) => {
   const { point, selectedSpecies } = req.body;
 
   try {
-    console.log("Entro no /raster")
     const response = await getRasterValue(point, selectedSpecies);
     res.status(200).json(response);
   } catch (err) {
