@@ -93,7 +93,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-          const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+          const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
           13.0,
         );
       }
@@ -289,11 +290,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   Future<void> _fetchSearchSuggestions(String query) async {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-
+  
     try {
       final response = await http
           .get(
-            Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+            Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&country=Portugal&lang=en'),
             // Uri.parse('http://192.168.1.82:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
             // Uri.parse('http://10.101.121.11:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // testar na uni
           )
@@ -301,14 +302,38 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        List<Map<String, dynamic>> suggestions = (data['features'] as List).map((feature) {
+        print(data);
+       final seenFormattedStrings = <String>{};
+        List<Map<String, dynamic>> suggestions = [];
+
+        for (var feature in data['features']) {
           final props = feature['properties'];
-          return {
+
+          final suggestion = {
             'name': props['name'],
+            'county': props['county'] ?? '',
+            'locality': props['locality'] ?? '',
             'city': props['city'] ?? '',
             'country': props['country'] ?? '',
           };
-        }).toList();
+
+          // Construct the full UI string used to identify duplicates
+          final formatted = [
+            suggestion['name'],
+            suggestion['county'],
+            suggestion['locality'],
+            suggestion['city'],
+            suggestion['country']
+          ]
+              .where((part) => part != null && part.toString().trim().isNotEmpty)
+              .join(', ');
+
+          // Only add if it's not already in the set
+          if (!seenFormattedStrings.contains(formatted)) {
+            seenFormattedStrings.add(formatted);
+            suggestions.add(suggestion);
+          }
+        }
 
         setState(() {
           _suggestions = suggestions;
@@ -351,7 +376,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
             destination,
           );
         }
@@ -500,7 +526,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-        const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -628,7 +655,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -682,24 +710,34 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               return Positioned(
                                 left: screenX,
                                 top: screenY,
-                                child: Container(
-                                  padding: EdgeInsets.all(padding),
-                                  decoration: BoxDecoration(
-                                    color: boxColor,
-                                    borderRadius: BorderRadius.circular(10),
-                                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isAdjustedRoute) // Show an icon for the adjusted route
-                                        Icon(Icons.star, color: Colors.yellow, size: iconSize),
-
-                                      Text(
-                                        "${_times[entry.key]}",
-                                        style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: fontSize),
-                                      ),
-                                    ],
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedRouteKey = entry.key;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(padding),
+                                    decoration: BoxDecoration(
+                                      color: boxColor,
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isAdjustedRoute)
+                                          Icon(Icons.star, color: Colors.yellow, size: iconSize),
+                                        Text(
+                                          "${_times[entry.key]}",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                            fontSize: fontSize,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -750,7 +788,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -785,16 +824,27 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 ),
                               ),
                               subtitle: Text(
-                                (suggestion['city'] != null && suggestion['city']!.isNotEmpty)
-                                    ? '${suggestion['city']}, ${suggestion['country']}'
-                                    : (suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country')),
+                                [
+                                  suggestion['county'],
+                                  suggestion['locality'],
+                                  suggestion['city'],
+                                  suggestion['country'] ?? LanguageConfig.getLocalizedString(languageCode, 'country'),
+                                ]
+                                    .where((part) => part != null && part.toString().trim().isNotEmpty)
+                                    .join(', '),
                                 style: TextStyle(
                                   fontSize: MediaQuery.of(context).size.width * 0.03,
                                 ),
                               ),
                               onTap: () {
-                                _addressController.text = suggestion['name'];
+                                _addressController.text = [
+                                  suggestion['name'],
+                                  suggestion['city'],
+                                  suggestion['country']
+                                ].where((part) => part != null && part.isNotEmpty).join(', ');
+
                                 FocusScope.of(context).unfocus(); // Dismiss the keyboard
+
                                 setState(() {
                                   _suggestions.clear();
                                   destinationSelected = true;
@@ -1015,7 +1065,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                             Text(
                                               _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
                                               style: TextStyle(
-                                                fontSize: MediaQuery.of(context).size.width * 0.04,
+                                                fontSize: MediaQuery.of(context).size.width * 0.036,
                                               ),
                                             ),
                                             const SizedBox(width: 8),  
@@ -1033,7 +1083,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                             Text(
                                               _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
                                               style: TextStyle(
-                                                fontSize: MediaQuery.of(context).size.width * 0.04,
+                                                fontSize: MediaQuery.of(context).size.width * 0.036,
                                               ),
                                             ),
                                           ],
