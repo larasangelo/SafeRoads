@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/auth_controller.dart';
@@ -132,7 +133,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
       context: context,
       builder: (context) => AlertDialog(
         title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut')),
-        content: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOutConfirmation')),  
+        content: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOutConfirmation')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false), // Cancel
@@ -140,7 +141,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true), // Confirm
-            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'), style: const TextStyle(color: Colors.red),),
+            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -149,7 +150,15 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     if (shouldSignOut == true) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', false);
-      await _authController.logout();
+      await _authController.logout(); // Assuming _authController handles Firebase logout or similar
+
+      // Stop the background service explicitly on logout
+      final service = FlutterBackgroundService();
+      if (await service.isRunning()) {
+        service.invoke("stopService"); // Send a message to the background isolate to stop itself
+        print("Sent stop command to background service explicitly on user logout.");
+      }
+
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     }

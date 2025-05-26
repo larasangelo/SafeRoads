@@ -65,7 +65,7 @@ void main() async {
   // Notifications setup
   final Notifications notifications = Notifications();
   await notifications.setupNotificationChannels();
-  
+
   // Explicitly request permissions
   await requestLocationPermissions();
 
@@ -73,28 +73,12 @@ void main() async {
   await initializeService();
 
   runApp(
-    MultiProvider( 
+    MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserPreferences()),
-        ChangeNotifierProvider(create: (_) => NotificationPreferences()), 
-      ], 
-      child: MaterialApp(
-        theme: monochromeTheme,           // Light theme
-        darkTheme: monochromeDarkTheme,   // Dark theme
-        themeMode: ThemeMode.system,      // Respect device setting
-        initialRoute: '/welcome',
-        // initialRoute: '/navigation',
-        routes: {
-          '/': (context) => const Loading(),
-          '/home': (context) => const MapPage(),
-          '/welcome': (context) => const WelcomePage(),
-          '/login': (context) => const LoginPage(),
-          '/register': (context) => const RegisterPage(),
-          '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
-          '/editProfile': (context) => const EditProfile()
-        },
-        debugShowCheckedModeBanner: false,
-      ),
+        ChangeNotifierProvider(create: (_) => NotificationPreferences()),
+      ],
+      child: MyApp(), // Use MyApp to manage lifecycle
     ),
   );
 }
@@ -113,7 +97,7 @@ Future<void> initializeService() async {
   );
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin(); // Corrected type here
 
   if (Platform.isIOS || Platform.isAndroid) {
     await flutterLocalNotificationsPlugin.initialize(
@@ -154,21 +138,22 @@ Future<void> requestLocationPermissions() async {
   print("Entro no requestLocationPermissions");
   final status1 = await Permission.locationWhenInUse.request();
   final status2 = await Permission.location.request();
-  final status3 = await Permission.locationAlways.request();
+  // final status3 = await Permission.locationAlways.request();
 
-  if (status1.isGranted && status2.isGranted && status3.isGranted) {
+  // if (status1.isGranted && status2.isGranted && status3.isGranted) {
+  if (status1.isGranted && status2.isGranted) {
     print("All location permissions granted");
   } else {
     print("Some permissions denied");
     print("WhenInUse: ${status1.isGranted}");
     print("Location: ${status2.isGranted}");
-    print("Always: ${status3.isGranted}");
+    // print("Always: ${status3.isGranted}");
 
-    if (status3.isPermanentlyDenied) {
-      // Send user to app settings
-      print("LocationAlways is permanently denied. Open settings.");
-      await openAppSettings();
-    }
+    // if (status3.isPermanentlyDenied) {
+    //   // Send user to app settings
+    //   print("LocationAlways is permanently denied. Open settings.");
+    //   await openAppSettings();
+    // }
   }
 }
 
@@ -182,21 +167,63 @@ void onStart(ServiceInstance service) async {
 
   final plugin = FlutterLocalNotificationsPlugin();
   final prefs = await SharedPreferences.getInstance();
-  await prefs.reload();
+
+  // This listener will allow the main isolate to send commands (like stop)
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+    print("Background service received stop command and stopped.");
+  });
+
+  // Listen for the main app's disconnection.
+  service.on('onDisconnect').listen((event) async {
+    print("Background service: onDisconnect event received.");
+    await prefs.reload();
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+    if (!isLoggedIn) {
+      print("Background service: Main app disconnected and isLoggedIn is FALSE. Stopping service.");
+      service.stopSelf();
+    } else {
+      print("Background service: Main app disconnected, but user is still logged in (isLoggedIn=true). Service will continue background checks.");
+    }
+  });
 
   Timer? notificationTimer;
-  DateTime lastNotificationTime = DateTime.now().subtract(const Duration(seconds: 30));
+  DateTime localLastNotificationTime = DateTime.now().subtract(const Duration(seconds: 30));
 
   Timer.periodic(const Duration(seconds: 20), (monitorTimer) async {
+    await prefs.reload(); // Always reload to get the latest SharedPreferences state
     print("=== Background Check (onStart) ===");
 
-    try {
-      final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      if (!isLoggedIn) {
-        print("User is not logged in.");
-        return;
-      }
+    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    final isAppInForeground = prefs.getBool('isAppInForeground') ?? true; // Default to true if not set
 
+    // New Condition: Only proceed if logged in AND app is NOT in foreground
+    if (!isLoggedIn) {
+      print("User is not logged in. Background service is active, but not performing driving checks.");
+      if (notificationTimer != null) {
+        notificationTimer?.cancel();
+        notificationTimer = null;
+        print("Risk check timer cancelled as user is not logged in.");
+      }
+      return;
+    }
+
+    // Now, check if the app is in the foreground. If it is, we don't run the risk checks.
+    if (isAppInForeground) {
+      print("User is logged in, but app is in foreground. Skipping background risk checks.");
+      if (notificationTimer != null) {
+        notificationTimer?.cancel();
+        notificationTimer = null;
+        print("Risk check timer cancelled as app is in foreground.");
+      }
+      return;
+    }
+
+    // From this point onwards, we know the user IS logged in AND the app IS NOT in the foreground.
+    print("User is logged in and app is in background. Performing background checks.");
+
+    try {
       final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
       final speed = position.speed;
@@ -219,9 +246,10 @@ void onStart(ServiceInstance service) async {
               currentPosition.longitude, selectedSpecies);
 
           if (risk >= mediumRiskThreshold &&
-              DateTime.now().difference(lastNotificationTime).inSeconds >= 15 &&
+              DateTime.now().difference(localLastNotificationTime).inSeconds >= 15 &&
               fcmToken != null) {
-            lastNotificationTime = DateTime.now();
+            print("User is on a Risk Zone");
+            localLastNotificationTime = DateTime.now();
             final level = risk >= highRiskThreshold ? "high" : "medium";
 
             final title = LanguageConfig.getLocalizedString(
@@ -236,7 +264,6 @@ void onStart(ServiceInstance service) async {
             try {
               final response = await http.post(
               Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-                // Uri.parse('http://192.168.1.82:3001/send'),
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
                   "fcmToken": fcmToken,
@@ -244,7 +271,7 @@ void onStart(ServiceInstance service) async {
                   "body": body,
                   "button": "false",
                   "changeRoute": "false",
-                  "type": "risk" // Optionally include type
+                  "type": "risk"
                 }),
               );
 
@@ -300,8 +327,8 @@ Future<bool> onIosBackground(ServiceInstance service) async {
 Future<double> getRiskLevel(double lat, double lon, List<String> selectedSpecies) async {
   try {
     final response = await http.post(
-      Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/raster'),
-      // Uri.parse('http://192.168.1.82:3001/raster'),
+      // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/raster'),
+      Uri.parse('http://192.168.1.82:3001/raster'),
       // Uri.parse('http://10.101.121.11:3001/raster'), // testar na uni
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'point': {'lat': lat, 'lon': lon}, 'selectedSpecies': selectedSpecies}),
@@ -316,5 +343,98 @@ Future<double> getRiskLevel(double lat, double lon, List<String> selectedSpecies
   } catch (e) {
     print('Risk fetch error: $e');
     return 0.0;
+  }
+}
+
+// New MyApp class to handle app lifecycle
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Initialize the foreground state when the app starts
+    _setAppForegroundState(true);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Ensure to mark app as not in foreground when disposed (though detached handles termination)
+    _setAppForegroundState(false);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    print('AppLifecycleState: $state'); // For debugging
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _setAppForegroundState(true);
+        print("App is in foreground (resumed).");
+        break;
+      case AppLifecycleState.inactive:
+        // On iOS, inactive means it's about to go to background or is interrupted.
+        // On Android, it's often a transient state before paused.
+        _setAppForegroundState(false); // Consider it not in foreground for checks
+        print("App is inactive.");
+        break;
+      case AppLifecycleState.paused:
+        _setAppForegroundState(false);
+        print("App is in background (paused).");
+        break;
+      case AppLifecycleState.detached:
+        print("State is detached, calling _stopBackgroundServiceAndLogout.");
+        _setAppForegroundState(false); // Ensure it's marked as not in foreground
+        _stopBackgroundServiceAndLogout();
+        break;
+      case AppLifecycleState.hidden: // Only on Android API 34+
+        _setAppForegroundState(false);
+        print("App is hidden.");
+        break;
+    }
+  }
+
+  Future<void> _setAppForegroundState(bool isForeground) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isAppInForeground', isForeground);
+    print("SharedPreferences: isAppInForeground set to $isForeground");
+  }
+
+  Future<void> _stopBackgroundServiceAndLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', false);
+    final isLoggedInCheck = prefs.getBool('isLoggedIn');
+    print("isLoggedIn set to $isLoggedInCheck in SharedPreferences on termination.");
+    print("User logged out status updated due to app termination (detached state).");
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: monochromeTheme, // Light theme
+      darkTheme: monochromeDarkTheme, // Dark theme
+      themeMode: ThemeMode.system, // Respect device setting
+      initialRoute: '/welcome',
+      routes: {
+        '/': (context) => const Loading(),
+        '/home': (context) => const MapPage(),
+        '/welcome': (context) => const WelcomePage(),
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
+        '/editProfile': (context) => const EditProfile()
+      },
+      debugShowCheckedModeBanner: false,
+    );
   }
 }
