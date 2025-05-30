@@ -284,24 +284,37 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   CircleAvatar(
                     radius: screenWidth * 0.15,
                     backgroundImage: AssetImage(avatar),
                   ),
-                  SizedBox(width: screenWidth * 0.04), 
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        username,
-                        style: TextStyle(fontSize: screenWidth * 0.05), 
-                      ),
-                      Text(
-                        country,
-                        style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.04), 
-                      ),
-                    ],
+                  SizedBox(width: screenWidth * 0.04),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username,
+                          style: TextStyle(fontSize: screenWidth * 0.05),
+                        ),
+                        Text(
+                          country,
+                          style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.04),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.edit, size: screenWidth * 0.06),
+                    onPressed: () async {
+                      final result = await Navigator.pushNamed(context, '/editProfile');
+                      if (result == true) {
+                        fetchUserProfile();
+                      }
+                    },
+                    tooltip: LanguageConfig.getLocalizedString(selectedLanguage, 'editProfile'),
                   ),
                 ],
               ),
@@ -415,7 +428,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.3),
+            // color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 6.0,
             offset: Offset(0, 4),
           ),
@@ -699,7 +712,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.3),
+            // color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 6.0,
             offset: Offset(0, 4),
           ),

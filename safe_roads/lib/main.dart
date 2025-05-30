@@ -327,8 +327,8 @@ Future<bool> onIosBackground(ServiceInstance service) async {
 Future<double> getRiskLevel(double lat, double lon, List<String> selectedSpecies) async {
   try {
     final response = await http.post(
-      // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/raster'),
-      Uri.parse('http://192.168.1.82:3001/raster'),
+      Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/raster'),
+      // Uri.parse('http://192.168.1.82:3001/raster'),
       // Uri.parse('http://10.101.121.11:3001/raster'), // testar na uni
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'point': {'lat': lat, 'lon': lon}, 'selectedSpecies': selectedSpecies}),
