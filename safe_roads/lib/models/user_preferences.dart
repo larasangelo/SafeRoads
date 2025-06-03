@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:safe_roads/configuration/profile_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserPreferences with ChangeNotifier {
   final ProfileController _profileController = ProfileController();
@@ -37,6 +38,12 @@ class UserPreferences with ChangeNotifier {
       _changeRoute = userProfile['changeRoute'] ?? ProfileConfig.defaultChangeRoute;
       _selectedSpecies = userProfile['selectedSpecies'] ?? ProfileConfig.defaultSelectedSpecies;
       _languageCode = userProfile['selectedLanguage'] ?? ProfileConfig.defaultLanguage;
+
+      // Save selected species to SharedPreferences
+      SharedPreferences preferences = await SharedPreferences.getInstance();
+      await preferences.setStringList('selectedSpecies', List<String>.from(_selectedSpecies));
+      await preferences.setString('languageCode', _languageCode);
+      
       print("USER_PREFERENCES loadPreferences: $_selectedSpecies");
       notifyListeners();
     } catch (e) {

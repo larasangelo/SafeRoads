@@ -38,21 +38,45 @@ const closeDatabaseConnection = async () => {
 };
 
 //Function to test if we can get raster values for a single point
-// const getRasterValue = async (start) => {
-//   try{
-//     const rasterValue = await pool.query(`
-//       SELECT ST_VALUE(rast,1,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326)) AS raster_value
-//       FROM public.raster_table
-//       WHERE ST_Intersects(rast,ST_SetSRID(ST_MakePoint(${start.lon}, ${start.lat}), 4326));
-//     `)
-//     // 41.84083,-7.89093 // Test with an higher value
-//     const value = rasterValue.rows[0]?.raster_value;
-//     // console.log(value); 
-//     return value;
-//   } catch (err){
-//     console.error(err);
-//   }
-// };
+const getRasterValue = async (point, selectedSpecies = []) => {
+  try {
+    if (!point || !point.lat || !point.lon) {
+      throw new Error("Invalid coordinates");
+    }
+
+    if (!Array.isArray(selectedSpecies) || selectedSpecies.length === 0) {
+      throw new Error("No species selected");
+    }
+
+    // Create SQL snippet to UNION ALL risk queries for each species
+    const speciesUnion = selectedSpecies.map(species =>
+      `SELECT '${species.replace(/'/g, "''")}' AS species_name,
+              COALESCE(ST_Value(r_${species.toLowerCase()}.rast, 1, ST_SetSRID(ST_MakePoint(${point.lon}, ${point.lat}), 4326)), 0) AS value
+       FROM ${species.toLowerCase()} r_${species.toLowerCase()}
+       WHERE ST_Intersects(r_${species.toLowerCase()}.rast, ST_SetSRID(ST_MakePoint(${point.lon}, ${point.lat}), 4326))`
+    ).join(" UNION ALL ");
+
+    const query = `
+      SELECT 
+        MAX(value) AS risk_value,
+        ARRAY_AGG(species_name) FILTER (WHERE value > 0) AS risky_species
+      FROM (
+        ${speciesUnion}
+      ) AS species_risks;
+    `;
+
+    const result = await pool.query(query);
+    const row = result.rows[0];
+
+    return {
+      risk_value: row?.risk_value || 0,
+      risky_species: row?.risky_species || []
+    };
+  } catch (err) {
+    console.error("Error in getRasterValue:", err);
+    return { risk_value: 0, risky_species: [] };
+  }
+};
 
 // Route computation function
 const getRoute = async (start, end, lowRisk, selectedSpecies) => {
@@ -221,12 +245,13 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
 // Firebase Admin initialization
 admin.initializeApp({
   credential: admin.credential.cert(
-    JSON.parse(
-      readFileSync(
-        path.join(__dirname, "flutter-saferoads-firebase-adminsdk-sekrk-712d669273.json"),
-        "utf8"
-      )
-    )
+    JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, "utf8"))
+    // JSON.parse(
+    //   readFileSync(
+    //     path.join(__dirname, "flutter-saferoads-firebase-adminsdk-sekrk-712d669273.json"),
+    //     "utf8"
+    //   )
+    // )
   ),
   projectId: "flutter-saferoads",
 });
@@ -461,18 +486,17 @@ app.post("/route", async (req, res) => {
 });
 
 // Test if we can get the raster_values for a single point
-// app.post("/raster", async (req, res) => {
-//   const {point} = req.body;
+app.post("/raster", async (req, res) => {
+  const { point, selectedSpecies } = req.body;
 
-//   try {
-//     const response = await getRasterValue(point);
-//     res.status(200).json(response);
-//   } catch (err) {
-//     console.error("Error fetching search results:", err);
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// })
-
+  try {
+    const response = await getRasterValue(point, selectedSpecies);
+    res.status(200).json(response);
+  } catch (err) {
+    console.error("Error fetching raster value:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // Helper function to calculate distance between two coordinates
 function calculateDistance(lat1, lon1, lat2, lon2) {

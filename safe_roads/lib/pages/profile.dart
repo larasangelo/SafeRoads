@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/auth_controller.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/alert_distance.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/profile_config.dart';
@@ -131,7 +133,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
       context: context,
       builder: (context) => AlertDialog(
         title: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut')),
-        content: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOutConfirmation')),  
+        content: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOutConfirmation')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false), // Cancel
@@ -139,14 +141,24 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true), // Confirm
-            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'), style: const TextStyle(color: Colors.red),),
+            child: Text(LanguageConfig.getLocalizedString(selectedLanguage, 'signOut'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
     if (shouldSignOut == true) {
-      await _authController.logout();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
+      await _authController.logout(); // Assuming _authController handles Firebase logout or similar
+
+      // Stop the background service explicitly on logout
+      final service = FlutterBackgroundService();
+      if (await service.isRunning()) {
+        service.invoke("stopService"); // Send a message to the background isolate to stop itself
+        print("Sent stop command to background service explicitly on user logout.");
+      }
+
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     }
@@ -272,24 +284,37 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   CircleAvatar(
                     radius: screenWidth * 0.15,
                     backgroundImage: AssetImage(avatar),
                   ),
-                  SizedBox(width: screenWidth * 0.04), 
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        username,
-                        style: TextStyle(fontSize: screenWidth * 0.05), 
-                      ),
-                      Text(
-                        country,
-                        style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.04), 
-                      ),
-                    ],
+                  SizedBox(width: screenWidth * 0.04),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username,
+                          style: TextStyle(fontSize: screenWidth * 0.05),
+                        ),
+                        Text(
+                          country,
+                          style: TextStyle(color: Colors.grey, fontSize: screenWidth * 0.04),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.edit, size: screenWidth * 0.06),
+                    onPressed: () async {
+                      final result = await Navigator.pushNamed(context, '/editProfile');
+                      if (result == true) {
+                        fetchUserProfile();
+                      }
+                    },
+                    tooltip: LanguageConfig.getLocalizedString(selectedLanguage, 'editProfile'),
                   ),
                 ],
               ),
@@ -403,7 +428,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.3),
+            // color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 6.0,
             offset: Offset(0, 4),
           ),
@@ -687,7 +712,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.3),
+            // color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 6.0,
             offset: Offset(0, 4),
           ),

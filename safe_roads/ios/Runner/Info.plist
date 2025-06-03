@@ -50,5 +50,15 @@
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>App requires access to location always and when in use.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>App requires access to location always.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>App requires access to location when in use.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+	<string>location</string>
+	</array>
 </dict>
 </plist>

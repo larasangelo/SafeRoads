@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/loading.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/auth_controller.dart';
 
 class LoginPage extends StatefulWidget {
@@ -145,6 +146,9 @@ class _LoginPageState extends State<LoginPage> {
                         );
 
                         print("loginSuccess: $loginSuccess");
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('isLoggedIn', true);
+                        print("Login: Saved isLoggedIn = ${prefs.getBool('isLoggedIn')}");
 
                         // Ensure the widget is still mounted before navigation
                         if (!context.mounted) return;

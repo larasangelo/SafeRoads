@@ -31,7 +31,7 @@ class ProfileController {
         'riskAlertDistance': data['riskAlertDistance'] ?? ProfileConfig.defaultRiskAlertDistance,
         'rerouteAlertDistance': data['rerouteAlertDistance'] ?? ProfileConfig.defaultRerouteAlertDistance,
         'username': data['username'] ?? ProfileConfig.defaultUsername,
-        'country': data['location'] ?? ProfileConfig.defaultCountry,
+        'country': data['country'] ?? ProfileConfig.defaultCountry,
         'email': data['email'] ?? user.email ?? ProfileConfig.defaultEmail,
         'level': data['level'] ?? ProfileConfig.defaultLevel,
         'distance': data['distance'] ?? ProfileConfig.defaultDistance,
@@ -76,7 +76,7 @@ class ProfileController {
       await _userProfileRepository.updateUserProfile(user.uid, {
         'username': username,
         'email': email,
-        'location': country,
+        'country': country,
         'avatar': avatar
       });
 
