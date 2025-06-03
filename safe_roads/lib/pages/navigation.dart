@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart'; 
 import 'package:location/location.dart';
@@ -74,6 +75,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   Map<LatLng, double> upcomingRisks = NavigationConfig.upcomingRisks; // Store multiple risk points
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   bool _destinationReachedNotif = false;
+  StreamSubscription<double>? _compassSubscription;
+  double? _lastBearing;
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -117,6 +120,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     NavigationConfig.currentRiskLevel = 0;
     NavigationConfig.detectedRiskZones.clear();  
     NavigationConfig.upcomingRisks.clear(); 
+    _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
     
     // print("enteringNewRiskZone: $enteringNewRiskZone");
     // print("NavigationConfig.enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}");
@@ -246,6 +250,27 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       // }
     // ------------------------------------------------------------------------
   }
+
+  void _startCompassListener() {
+    _compassSubscription = FlutterCompass.events?.listen((double? heading) {
+      if (heading == null || !mounted) return;
+
+      // You can smooth the rotation here if needed
+      setState(() {
+        bearing = _smoothBearing(heading);
+      });
+
+      if (currentPosition != null && !isAnimating) {
+        _mapController.rotate(bearing);
+      }
+    } as void Function(CompassEvent event)?) as StreamSubscription<double>?;
+  }
+
+  double _smoothBearing(double newBearing) {
+    if (_lastBearing == null) return newBearing;
+    _lastBearing = (_lastBearing! * 0.8 + newBearing * 0.2);
+    return _lastBearing!;
+  }
   
   void _animateMarker(LatLng start, LatLng end) async {
     int steps = NavigationConfig.animationSteps; // Number of steps for smooth animation
@@ -280,7 +305,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         }
       });
 
-      _mapController.moveAndRotate(intermediatePosition, 19.0, bearing);
+      _mapController.move(intermediatePosition, 19.0); // bearing handled by compass
     }
 
     // Final position and animation end state
@@ -763,6 +788,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     // Cancel location updates
     locationSubscription?.cancel();
     _mapController.dispose();
+    _compassSubscription?.cancel();
     
     print("NavigationPage disposed. Stopping location updates and clearing resources.");
     

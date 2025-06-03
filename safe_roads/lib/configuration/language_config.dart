@@ -241,7 +241,7 @@ class LanguageConfig {
       'warning': 'AVISO: Você está em uma zona de alto risco para as seguintes espécies',
       'riskZoneHere': 'Você está agora em uma área com risco médio para as seguintes espécies',
       'wrongRouteMsgTitle': '🔃 Rota Errada!',
-      'wrongRouteMsgBody': 'Você saiu da rota planejada.',
+      'wrongRouteMsgBody': 'Você saiu da rota planeada.',
       'sameTimeMsg': 'Mude de rota! Levará o mesmo tempo, mas com menos risco.',
       'changeRouteMsg': 'A rota alternativa tem menos risco. Considere mudar de rota.',
       'altRouteTitle': '🚧 Rota Alternativa Recomendada!',

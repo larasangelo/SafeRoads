@@ -47,6 +47,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   double _boxHeight = HomeConfig.defaultBoxHeight;
   double mediumRisk = HomeConfig.mediumRisk;
   double highRisk = HomeConfig.highRisk;
+  Timer? _locationUpdateTimer;
 
   @override
   bool get wantKeepAlive => true;
@@ -70,6 +71,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         await notifications.setupFirebaseMessaging(context, null); // Set up FCM
       }
     });
+
+    // Periodically update location every 30 seconds
+    _locationUpdateTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateCurrentLocation());
   }
 
   Future<void> _requestLocationPermission() async {
@@ -101,6 +105,34 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         );
       }
     });
+  }
+
+  Future<void> _updateCurrentLocation() async {
+    Location location = Location();
+
+    try {
+      final newLocation = await location.getLocation();
+
+      // Only move the map if no route is being fetched and there are no routes displayed
+      if (!_isFetchingRoute && _routesWithPoints.isEmpty && mounted) {
+        setState(() {
+          _currentLocation = newLocation;
+          _mapController.move(
+            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            _currentZoom,
+          );
+        });
+      } else {
+        // Still update current location silently
+        if (mounted) {
+          setState(() {
+            _currentLocation = newLocation;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error getting updated location: $e");
+    }
   }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
@@ -553,6 +585,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       );
       // print("HomeConfig.defaultZoom: ${HomeConfig.defaultZoom}");
     }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _locationUpdateTimer?.cancel();
+    super.dispose();
   }
 
   @override
