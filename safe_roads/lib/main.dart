@@ -89,6 +89,12 @@ GlobalKey<NavigationBarExampleState> navigationBarKey = GlobalKey<NavigationBarE
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
 
+  final isRunning = await service.isRunning();
+  if (isRunning) {
+    print("Service already running. Skipping start.");
+    return;
+  }
+
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'my_foreground', // id
     'SafeRoads Foreground Service', // title
@@ -392,9 +398,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         print("App is in background (paused).");
         break;
       case AppLifecycleState.detached:
-        print("State is detached, calling _stopBackgroundServiceAndLogout.");
+        // print("State is detached, calling _stopBackgroundServiceAndLogout.");
+        print("State is detached");
         _setAppForegroundState(false); // Ensure it's marked as not in foreground
-        _stopBackgroundServiceAndLogout();
+        // _stopBackgroundServiceAndLogout();
         break;
       case AppLifecycleState.hidden: // Only on Android API 34+
         _setAppForegroundState(false);
@@ -409,30 +416,44 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     print("SharedPreferences: isAppInForeground set to $isForeground");
   }
 
-  Future<void> _stopBackgroundServiceAndLogout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', false);
-    final isLoggedInCheck = prefs.getBool('isLoggedIn');
-    print("isLoggedIn set to $isLoggedInCheck in SharedPreferences on termination.");
-    print("User logged out status updated due to app termination (detached state).");
-    await Future.delayed(const Duration(milliseconds: 500));
-  }
+  // Future<void> _stopBackgroundServiceAndLogout() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.setBool('isLoggedIn', false);
+  //   final isLoggedInCheck = prefs.getBool('isLoggedIn');
+  //   print("isLoggedIn set to $isLoggedInCheck in SharedPreferences on termination.");
+  //   print("User logged out status updated due to app termination (detached state).");
+  //   await Future.delayed(const Duration(milliseconds: 500));
+  // }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: monochromeTheme, // Light theme
-      darkTheme: monochromeDarkTheme, // Dark theme
-      themeMode: ThemeMode.system, // Respect device setting
-      initialRoute: '/welcome',
+      theme: monochromeTheme,
+      darkTheme: monochromeDarkTheme,
+      themeMode: ThemeMode.system,
+      home: FutureBuilder(
+        future: SharedPreferences.getInstance(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Loading();
+          }
+          final prefs = snapshot.data as SharedPreferences;
+          final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+          if (isLoggedIn) {
+            return const NavigationBarExample();
+          } else {
+            return const WelcomePage();
+          }
+        },
+      ),
       routes: {
-        '/': (context) => const Loading(),
         '/home': (context) => const MapPage(),
         '/welcome': (context) => const WelcomePage(),
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
         '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
-        '/editProfile': (context) => const EditProfile()
+        '/editProfile': (context) => const EditProfile(),
       },
       debugShowCheckedModeBanner: false,
     );

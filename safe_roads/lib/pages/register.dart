@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/models/user_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/auth_controller.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -23,6 +24,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
+    });
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     double screenHeight = MediaQuery.of(context).size.height;
     double screenWidth = MediaQuery.of(context).size.width;

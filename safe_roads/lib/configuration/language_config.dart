@@ -215,13 +215,13 @@ class LanguageConfig {
       'forgotPass': 'Esqueceu-se da senha?',
       'login': 'Entrar',
       'noAccount': 'Não tem uma conta? ',
-      'registerNow': 'Cadastre-se agora',
+      'registerNow': 'Registe-se agora',
       'loginFailed': 'Login falhou. Verifique as suas credenciais.',
       // Register
-      'helloRegister': 'Olá! \nCadastre-se para começar',
+      'helloRegister': 'Olá! \nRegiste-se para começar',
       'pass': 'Senha',
       'confirmPass': 'Confirmar senha',
-      'register': 'Cadastrar',
+      'register': 'Registar',
       'accountAlready': 'Já tem uma conta? ',
       'loginNow': 'Entrar agora',
       // Navigation Bar
