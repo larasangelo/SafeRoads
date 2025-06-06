@@ -3,9 +3,9 @@ class LanguageConfig {
     'en': {
       // About
       'why': 'Why',
-      'whyBody': 'The expansion of roads and traffic systems globally presents significant challenges to biodiversity. While roads offer benefits to humans, they also contribute to a growing biodiversity crisis by fragmenting ecosystems, altering natural landscapes, and creating "barrier effects" that impede wildlife movement. One of the most immediate impacts of roads on wildlife is the high mortality caused by collisions with vehicles, endangering many species. \nTo address this issue, the SafeRoads mobile application provides a platform to visualize a predictive model of roadkill risk. The system integrates a navigation feature that assesses the likelihood of animal presence along road segments, alerts users, and recommends safer routes to mitigate the risk of Wildlife-Vehicle Collisions (WVCs).',
+      'whyBody': 'The global expansion of roads poses serious threats to biodiversity by fragmenting habitats, disrupting ecosystems, and causing wildlife mortality through vehicle collisions. \nTo address this issue, the SafeRoads mobile application provides a platform to visualize a predictive model of roadkill risk. The system integrates a navigation feature that assesses the likelihood of animal presence along road segments, alerts users, and recommends safer routes to mitigate the risk of Wildlife-Vehicle Collisions (WVCs).',
       'how': 'How',
-      'howBody': 'The SafeRoads mobile application accesses the results from a predictive, daily updated roadkill risk machine learning model. This model assesses roadkill probability based on conditions such as surrounding land use, weather, season, and time of day. The application visualizes this information through a user-friendly platform, providing dynamic roadkill risk insights across different road segments. By notifying drivers of high-risk areas and suggesting alternative routes, SafeRoads aims to reduce the incidence of roadkill, similar to how navigation tools like Waze or Google Maps re-route based on traffic conditions.',
+      'howBody': 'The SafeRoads mobile app uses a daily-updated machine learning model to predict roadkill risk based on factors like land use, weather, season, and time of day. It presents this data through a user-friendly interface, highlighting high-risk road segments, notifying drivers of risk areas and suggesting safer routes much like how Waze or Google Maps re-route around traffic to help reduce wildlife-vehicle collisions.',
       'who': 'Who',
       'whoBody': 'This work was conducted as part of the academic project SafeRoads, developed by Lara Ângelo (LASIGE), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE) and Fernando Ascensão (ce3c) in collaboration with César Capinha (IGOT) and Rui Rebelo (ce3c). The project is entirely owned by the Faculdade de Ciências, Universidade de Lisboa.',
       // Profile & Edit Profile w/ Snackbars
@@ -135,9 +135,9 @@ class LanguageConfig {
     'pt': {
       // About
       'why': 'Porquê',
-      'whyBody': 'A expansão das estradas e dos sistemas de tráfego a nível global representa desafios significativos para a biodiversidade. Embora as estradas ofereçam benefícios para os seres humanos, também contribuem para uma crise crescente da biodiversidade, fragmentando ecossistemas, alterando paisagens naturais e criando “efeitos de barreira” que dificultam o movimento da vida selvagem. Um dos impactos mais imediatos das estradas sobre os animais é a elevada mortalidade causada por colisões com veículos, colocando muitas espécies em risco.\nPara enfrentar este problema, a aplicação móvel SafeRoads oferece uma plataforma que visualiza um modelo preditivo de risco de atropelamento de fauna. O sistema integra uma funcionalidade de navegação que avalia a probabilidade de presença de animais ao longo de segmentos rodoviários, alerta os utilizadores e recomenda rotas mais seguras para mitigar o risco de colisões com a vida selvagem (WVCs).',
+      'whyBody': 'A expansão global das estradas representa uma ameaça séria para a biodiversidade, fragmentando habitats, perturbando ecossistemas e causando mortalidade da vida selvagem devido a colisões com veículos.\nPara enfrentar este problema, a aplicação móvel SafeRoads oferece uma plataforma que permite visualizar um modelo preditivo do risco de atropelamento de animais. O sistema integra uma funcionalidade de navegação que avalia a probabilidade de presença de animais ao longo dos troços rodoviários, alerta os utilizadores e recomenda rotas mais seguras para mitigar o risco de colisões entre veículos e fauna selvagem.',
       'how': 'Como',
-      'howBody': 'A aplicação móvel SafeRoads acede aos resultados de um modelo preditivo de risco de atropelamento, atualizado diariamente. Este modelo avalia a probabilidade de ocorrência de atropelamentos com base em fatores como o uso do solo envolvente, condições meteorológicas, estação do ano e hora do dia. A aplicação visualiza esta informação através de uma interface intuitiva, fornecendo perceções dinâmicas sobre o risco de atropelamento em diferentes segmentos rodoviários. Ao notificar os condutores sobre zonas de elevado risco e sugerir rotas alternativas, o SafeRoads pretende reduzir a ocorrência de atropelamentos, de forma semelhante a como o Waze ou o Google Maps redirecionam o tráfego com base nas condições da estrada.',
+      'howBody': 'A aplicação móvel SafeRoads utiliza um modelo de aprendizagem automática, atualizado diariamente, para prever o risco de atropelamento de fauna com base em fatores como o uso do solo, as condições meteorológicas, a estação do ano e a hora do dia. Apresenta essa informação numa interface intuitiva, destacando os troços de estrada de maior risco, alertando os condutores para essas zonas e sugerindo rotas mais seguras, de forma semelhante ao que fazem aplicações como o Waze ou o Google Maps ao evitar o trânsito, para ajudar a reduzir as colisões entre veículos e animais.',
       'who': 'Quem',
       'whoBody': 'Este trabalho foi realizado no âmbito do projeto académico SafeRoads, desenvolvido por Lara Ângelo (LASIGE), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE) e Fernando Ascensão (ce3c), em colaboração com César Capinha (IGOT) e Rui Rebelo (ce3c). O projeto é integralmente propriedade da Faculdade de Ciências da Universidade de Lisboa.',
       // Profile & Edit Profile w/ Snackbars
@@ -149,8 +149,8 @@ class LanguageConfig {
       'signOut': 'Sair',
       'signOutConfirmation': 'Tem certeza de que deseja sair?',
       'cancel': 'Cancelar',
-      'deleteAccount': 'Excluir conta',
-      'enterPassword': 'Digite sua senha para confirmar a exclusão da conta.',
+      'deleteAccount': 'Eliminar conta',
+      'enterPassword': 'Digite a sua palavra-passe para confirmar que pretende apagar a conta.',
       'password': 'Senha',
       'delete': 'Excluir',
       'passwordRequired': 'A senha é necessária para excluir sua conta.',
@@ -200,6 +200,8 @@ class LanguageConfig {
       "setDestination": "Definir destino",
       "highProbability": "Alta probabilidade de encontrar",
       "mediumProbability": "Média probabilidade de encontrar",
+      "mediumHighProbability": "Média-alta probabilidade de encontrar",
+      "mediumLowProbability": "Média-baixa probabilidade de encontrar",
       "unknown": "Desconhecido",
       "switchRoute": "Alterar \nRota",
       'arrivalTime': 'Chegada às',
@@ -267,9 +269,9 @@ class LanguageConfig {
     'es': {
       // About
       'why': 'Por qué',
-      'whyBody': 'La expansión de carreteras y sistemas de tráfico a nivel mundial representa desafíos significativos para la biodiversidad. Aunque las carreteras ofrecen beneficios para los humanos, también contribuyen a una creciente crisis de biodiversidad al fragmentar ecosistemas, alterar paisajes naturales y crear “efectos barrera” que dificultan el movimiento de la fauna. Uno de los impactos más inmediatos es la alta mortalidad de animales causada por colisiones con vehículos, lo que pone en peligro a muchas especies.\nPara abordar este problema, la aplicación móvil SafeRoads proporciona una plataforma que visualiza un modelo predictivo del riesgo de atropellos de fauna. El sistema integra una función de navegación que evalúa la probabilidad de presencia de animales en los tramos de carretera, alerta a los usuarios y recomienda rutas más seguras para mitigar el riesgo de colisiones con fauna silvestre (WVCs).',
+      'whyBody': 'La expansión global de las carreteras supone una grave amenaza para la biodiversidad, ya que fragmenta los hábitats, altera los ecosistemas y provoca la mortalidad de fauna silvestre debido a colisiones con vehículos.\nPara abordar este problema, la aplicación móvil SafeRoads proporciona una plataforma para visualizar un modelo predictivo del riesgo de atropellos de animales. El sistema integra una función de navegación que evalúa la probabilidad de presencia de animales a lo largo de los tramos de carretera, alerta a los usuarios y recomienda rutas más seguras para reducir el riesgo de colisiones entre vehículos y fauna.',
       'how': 'Cómo',
-      'howBody': 'La aplicación móvil SafeRoads accede a los resultados de un modelo predictivo de riesgo de atropello, actualizado diariamente. Este modelo evalúa la probabilidad de atropello en función de condiciones como el uso del suelo, el clima, la estación del año y la hora del día. La aplicación visualiza esta información a través de una interfaz fácil de usar, proporcionando información dinámica sobre el riesgo de atropello en distintos tramos de carretera. Al notificar a los conductores sobre zonas de alto riesgo y sugerir rutas alternativas, SafeRoads pretende reducir la incidencia de atropellos, de forma similar a cómo Waze o Google Maps redirigen según el tráfico.',
+      'howBody': 'La aplicación móvil SafeRoads utiliza un modelo de aprendizaje automático actualizado diariamente para predecir el riesgo de atropellos de fauna, teniendo en cuenta factores como el uso del suelo, el clima, la estación del año y la hora del día. Presenta esta información mediante una interfaz intuitiva, destacando los tramos de carretera con mayor riesgo, notificando a los conductores sobre las zonas peligrosas y sugiriendo rutas más seguras, de forma similar a cómo Waze o Google Maps desvían el tráfico, con el objetivo de reducir las colisiones con fauna silvestre.',
       'who': 'Quiénes',
       'whoBody': 'Este trabajo se llevó a cabo como parte del proyecto académico SafeRoads, desarrollado por Lara Ângelo (LASIGE), Ana Paula Afonso (LASIGE), Carlos Duarte (LASIGE) y Fernando Ascensão (ce3c), en colaboración con César Capinha (IGOT) y Rui Rebelo (ce3c). El proyecto es propiedad exclusiva de la Faculdade de Ciências de la Universidade de Lisboa.',
       // Profile & Edit Profile w/ Snackbars

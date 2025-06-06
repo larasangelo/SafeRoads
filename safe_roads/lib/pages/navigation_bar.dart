@@ -33,54 +33,65 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
     super.dispose();
   }
 
-  @override
+  Future<bool> _onWillPopExit() async {
+    // This exits the app
+    return true; // If you want to show a confirmation dialog before exiting, return false and show dialog
+  }
+
+ @override
   Widget build(BuildContext context) {
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        children: [
-          const About(),
-          PageStorage(
-            bucket: _bucket,
-            child: const MapPage(), // Use PageStorage to preserve MapPage state
-          ),
-          const Profile(),
-        ],
+
+    return WillPopScope(
+      onWillPop: () async {
+        // Exit the app instead of navigating back
+        return await _onWillPopExit();
+      },
+      child: Scaffold(
+        body: PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          children: [
+            const About(),
+            PageStorage(
+              bucket: _bucket,
+              child: const MapPage(),
+            ),
+            const Profile(),
+          ],
+        ),
+        bottomNavigationBar: _showNavigationBar
+            ? NavigationBar(
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (int index) {
+                  _pageController.jumpToPage(index);
+                },
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.info_outline),
+                    selectedIcon: const Icon(Icons.info),
+                    label: LanguageConfig.getLocalizedString(languageCode, 'about'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.place_outlined),
+                    selectedIcon: const Icon(Icons.place),
+                    label: LanguageConfig.getLocalizedString(languageCode, 'navigation'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.person_outline),
+                    selectedIcon: const Icon(Icons.person),
+                    label: LanguageConfig.getLocalizedString(languageCode, 'profile'),
+                  ),
+                ],
+                elevation: 3,
+              )
+            : null,
       ),
-      bottomNavigationBar: _showNavigationBar
-          ? NavigationBar(
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: (int index) {
-                _pageController.jumpToPage(index);
-              },
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.info_outline),
-                  selectedIcon: const Icon(Icons.info),
-                  label: LanguageConfig.getLocalizedString(languageCode, 'about'), 
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.place_outlined),
-                  selectedIcon: const Icon(Icons.place),
-                  label: LanguageConfig.getLocalizedString(languageCode, 'navigation'), 
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.person_outline),
-                  selectedIcon: const Icon(Icons.person),
-                  label: LanguageConfig.getLocalizedString(languageCode, 'profile'),
-                ),
-              ],
-              // backgroundColor: Theme.of(context).colorScheme.onPrimary,
-              elevation: 3,
-            )
-          : null,
     );
   }
 }

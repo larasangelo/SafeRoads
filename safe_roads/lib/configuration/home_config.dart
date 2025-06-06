@@ -18,9 +18,11 @@ class HomeConfig {
   static String? defaultSelectedDestination;
   static Map<String, dynamic> defaultUserPreferences = {};
 
-  static const double defaultRiskBoxHeight = 0.30;
-  static const double adjustedRiskBoxHeight = 0.40;
+  static const double defaultRiskBoxHeight = 0.3;
+  static const double adjustedRiskBoxHeight = 0.4;
 
+  static double mediumLowRisk = 0.2;
   static double mediumRisk = 0.3;
-  static double highRisk = 0.5;
+  static double mediumHighRisk = 0.5;
+  static double highRisk = 0.6;
 }

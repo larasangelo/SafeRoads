@@ -75,7 +75,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   Map<LatLng, double> upcomingRisks = NavigationConfig.upcomingRisks; // Store multiple risk points
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   bool _destinationReachedNotif = false;
-  StreamSubscription<double>? _compassSubscription;
+  StreamSubscription<CompassEvent>? _compassSubscription;
   double? _lastBearing;
 
   // Extract LatLng safely
@@ -252,10 +252,10 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   }
 
   void _startCompassListener() {
-    _compassSubscription = FlutterCompass.events?.listen((double? heading) {
+    _compassSubscription = FlutterCompass.events?.listen((CompassEvent event) {
+      final double? heading = event.heading;
       if (heading == null || !mounted) return;
 
-      // You can smooth the rotation here if needed
       setState(() {
         bearing = _smoothBearing(heading);
       });
@@ -263,7 +263,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       if (currentPosition != null && !isAnimating) {
         _mapController.rotate(bearing);
       }
-    } as void Function(CompassEvent event)?) as StreamSubscription<double>?;
+    });
   }
 
   double _smoothBearing(double newBearing) {

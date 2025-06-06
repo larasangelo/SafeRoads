@@ -20,17 +20,14 @@ class AboutConfig {
     return [
       {
         "title": LanguageConfig.getLocalizedString(languageCode, 'why'),
-        "image": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Tree_frog_%28Pacific%29_edit.jpg",
         "body": LanguageConfig.getLocalizedString(languageCode, 'whyBody'),
       },
       {
         "title": LanguageConfig.getLocalizedString(languageCode, 'how'),
-        "image": "https://upload.wikimedia.org/wikipedia/commons/8/8b/Salamandra_salamandra_MHNT.jpg",
         "body": LanguageConfig.getLocalizedString(languageCode, 'howBody'),
       },
       {
         "title": LanguageConfig.getLocalizedString(languageCode, 'who'),
-        "image": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Frog_on_rock.jpg",
         "body": LanguageConfig.getLocalizedString(languageCode, 'whoBody'),
       },
     ];

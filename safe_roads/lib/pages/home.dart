@@ -45,7 +45,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Map<String, dynamic> userPreferences = HomeConfig.defaultUserPreferences;
   String _selectedRouteKey = HomeConfig.defaultRouteKey;
   double _boxHeight = HomeConfig.defaultBoxHeight;
+  double mediumLowRisk = HomeConfig.mediumLowRisk;
   double mediumRisk = HomeConfig.mediumRisk;
+  double mediumHighRisk = HomeConfig.mediumHighRisk;
   double highRisk = HomeConfig.highRisk;
   Timer? _locationUpdateTimer;
 
@@ -72,8 +74,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       }
     });
 
+    //TODO: METER ISTO SEM COMENTÁRIO QUANDO NÃO SE ESTÁ A FAZER OS TESTES
     // Periodically update location every 30 seconds
-    _locationUpdateTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateCurrentLocation());
+    // _locationUpdateTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateCurrentLocation());
   }
 
   Future<void> _requestLocationPermission() async {
@@ -95,12 +98,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
           // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-          const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+          // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
           13.0,
         );
       }
@@ -109,7 +112,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   Future<void> _updateCurrentLocation() async {
     Location location = Location();
-
     try {
       final newLocation = await location.getLocation();
 
@@ -191,24 +193,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         });
 
         print("routesWithPoints $routesWithPoints");
-
-        // Write defaultRoute to a local file
-        final defaultRoute = routesWithPoints['default'];
-        if (defaultRoute != null) {
-          final directory = await getApplicationDocumentsDirectory();
-          final file = File('${directory.path}/default_route.json');
-
-          // Convert to JSON and write to file
-          final jsonContent = jsonEncode(defaultRoute.map((point) => {
-            'lat': point['latlng'].latitude,
-            'lon': point['latlng'].longitude,
-            'raster_value': point['raster_value'],
-            'species': point['species'],
-          }).toList());
-
-          await file.writeAsString(jsonContent);
-          print("defaultRoute written to: ${file.path}");
-        }
 
         // Hide the navigation bar when the user gets the route
         navigationBarKey.currentState?.toggleNavigationBar(false);
@@ -413,7 +397,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   Future<void> _setDestination() async {
     if (_addressController.text.isNotEmpty) {
-      final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
+      String address = _addressController.text.trim();
+      // Check if "Portugal" is already in the address (case-insensitive)
+      if (!address.toLowerCase().contains('portugal')) {
+        address += ', Portugal';
+      }
+      final LatLng? destination = await _getCoordinatesFromAddress(address);
+
       if (destination != null) {
         // Smoothly move the map to the destination
         _animatedMapMove(destination, 15.0); // Zoom level 15 for closer view
@@ -424,12 +414,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
             // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-            const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+            // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
             destination,
           );
         }
@@ -554,10 +544,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         }
       }
 
-      if (totalMinutes == 0) {
-        print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
-        return null;
-      }
+      // if (totalMinutes == 0) {
+      //   print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
+      //   return null;
+      // }
 
       DateTime arrivalTime = now.add(Duration(minutes: totalMinutes));
 
@@ -574,12 +564,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   void _reCenter() {
     if (_currentLocation != null) {
       _mapController.moveAndRotate(
-        // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
         // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
         // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-        const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+        // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL //TODO: PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -603,6 +593,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
 
     final selectedTime = _times[_selectedRouteKey];
+    print("selectedTime: $selectedTime");
 
     final String? arrivalTime = selectedTime != null
         ? calculateArrivalTime(selectedTime)
@@ -692,8 +683,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             final raster = current['raster_value'];
                             if (raster > highRisk) {
                               lineColor = Colors.red;
+                            } else if (raster > mediumHighRisk) {
+                              lineColor = Colors.deepOrangeAccent;
                             } else if (raster > mediumRisk) {
                               lineColor = Colors.orange;
+                            } else if (raster > mediumLowRisk) {
+                              lineColor = Colors.yellow;
                             } else {
                               lineColor = Colors.purple;
                             }
@@ -710,12 +705,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   MarkerLayer(
                     markers: [
                       Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
                         // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                        point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+                        // point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -843,12 +838,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
                               // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                              const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+                              // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -908,7 +903,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   _suggestions.clear();
                                   destinationSelected = true;
                                   selectedDestination = _addressController.text;
+                                  setDestVis = false;
                                 });
+                                _setDestination();
                               },
                             );
                           },
@@ -921,7 +918,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       ),
                     ),
 
-                  if (_routesWithPoints.isEmpty && setDestVis)
+                  if (_routesWithPoints.isEmpty && setDestVis && _addressController.text.isNotEmpty)
                     ElevatedButton(
                       onPressed: () {
                         _setDestination();
@@ -1001,12 +998,17 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         ...() {
                           bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
                               .any((point) => point['raster_value'] > highRisk);
+                          bool hasMediumHighRisk = _routesWithPoints[_selectedRouteKey]!
+                              .any((point) => point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk);
                           bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > mediumRisk && point['raster_value'] <= highRisk);
+                              .any((point) => point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk);
+                          bool hasMediumLowRisk = _routesWithPoints[_selectedRouteKey]!
+                              .any((point) => point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk);
+                          
 
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             setState(() {
-                              _boxHeight = (hasHighRisk || hasMediumRisk)
+                              _boxHeight = (hasHighRisk || hasMediumRisk || hasMediumHighRisk || hasMediumLowRisk)
                                   ? MediaQuery.of(context).size.height * HomeConfig.adjustedRiskBoxHeight
                                   : MediaQuery.of(context).size.height * HomeConfig.defaultRiskBoxHeight;
                             });
@@ -1034,10 +1036,32 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               ),
                               SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
                             ];
+                          } else if (hasMediumHighRisk) {
+                            Set<String> speciesList = {};
+                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
+                              if (point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk) {
+                                speciesList.addAll(List<String>.from(point['species']));
+                              }
+                            }
+
+                            List<String> translatedSpecies = speciesList.map(
+                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
+                            ).toList();
+
+                            return [
+                              Flexible(
+                                child: _buildRiskMessage(
+                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumHighProbability')} ${translatedSpecies.join(', ')}",
+                                  Colors.deepOrangeAccent,
+                                  context,
+                                ),
+                              ),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                            ];
                           } else if (hasMediumRisk) {
                             Set<String> speciesList = {};
                             for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > mediumRisk && point['raster_value'] <= highRisk) {
+                              if (point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk) {
                                 speciesList.addAll(List<String>.from(point['species']));
                               }
                             }
@@ -1051,6 +1075,29 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 child: _buildRiskMessage(
                                   "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
                                   Color.fromRGBO(224, 174, 41, 1),
+                                  context,
+                                ),
+                              ),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                            ];
+                          } else if (hasMediumLowRisk) {
+                            Set<String> speciesList = {};
+                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
+                              if (point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk) {
+                                speciesList.addAll(List<String>.from(point['species']));
+                              }
+                            }
+
+                            List<String> translatedSpecies = speciesList.map(
+                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
+                            ).toList();
+                            print("Entro no hasMediumLowRisk");
+
+                            return [
+                              Flexible(
+                                child: _buildRiskMessage(
+                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumLowProbability')} ${translatedSpecies.join(', ')}",
+                                  Colors.yellow,
                                   context,
                                 ),
                               ),
@@ -1179,7 +1226,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 ],
                               ),
                          
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.020), 
                          
                               // BOTTOM ROW: Start button
                               Row(
