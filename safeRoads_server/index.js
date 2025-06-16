@@ -442,7 +442,7 @@ app.post("/route", async (req, res) => {
       // Format the distance and time as before
       const formattedDistance =
         totalDistance < 1000
-          ? `${totalDistance.toFixed(0)} meters`
+          ? `${totalDistance.toFixed(0)} m`
           : `${(totalDistance / 1000).toFixed(2)} km`;
 
       const totalHours = Math.floor(totalTime / 3600);
@@ -456,7 +456,7 @@ app.post("/route", async (req, res) => {
       // Format distanceAtMaxRisk similarly:
       const formattedDistanceAtMaxRisk = 
         distanceAtMaxRisk < 1000
-          ? `${Math.round(distanceAtMaxRisk)} meters`
+          ? `${Math.round(distanceAtMaxRisk)} m`
           : `${(distanceAtMaxRisk / 1000).toFixed(2)} km`;
 
       // Store route data for comparison (adjusting for new structure)
