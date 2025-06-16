@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+// import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+// import 'package:path_provider/path_provider.dart';
 import 'package:safe_roads/configuration/home_config.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
@@ -38,6 +38,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   String? selectedDestination = HomeConfig.defaultSelectedDestination;
   Map<String, String> _distances = HomeConfig.defaultDistances;
   Map<String, String> _times = HomeConfig.defaultTimes;
+  Map<String, String> _distancesAtMaxRisk = HomeConfig.defaultDistancesAtMaxRisk;
   bool setDestVis = HomeConfig.defaultSetDestVis;
   bool _isFetchingRoute = HomeConfig.defaultIsFetchingRoute;
   bool _cancelFetchingRoute = HomeConfig.defaultCancelFetchingRoute;
@@ -50,6 +51,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   double mediumHighRisk = HomeConfig.mediumHighRisk;
   double highRisk = HomeConfig.highRisk;
   Timer? _locationUpdateTimer;
+  http.Client? _httpClient; // Declare an http client
 
   @override
   bool get wantKeepAlive => true;
@@ -74,7 +76,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       }
     });
 
-    //TODO: METER ISTO SEM COMENTÁRIO QUANDO NÃO SE ESTÁ A FAZER OS TESTES
+    //TODO: METER ISTO COMENTÁRIO QUANDO SE ESTÁ A FAZER OS TESTES
+
     // Periodically update location every 30 seconds
     // _locationUpdateTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateCurrentLocation());
   }
@@ -98,12 +101,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
           // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-          // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+          const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
           13.0,
         );
       }
@@ -138,7 +141,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
-    String languageCode = Provider.of<UserPreferences>(context, listen:false).languageCode;
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       setState(() {
         _isFetchingRoute = true; // Show the progress bar
@@ -147,62 +150,90 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       // Access the updated values from the UserPreferences provider
       final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-      bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
+      bool lowRisk = userPreferences.lowRisk;
       List<Object?> selectedSpecies = userPreferences.selectedSpecies;
 
       print("lowRisk: $lowRisk");
       print("HOME selectedSpecies: $selectedSpecies");
 
-      final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
-        // Uri.parse('http://192.168.1.82:3001/route'),
-        // Uri.parse('http://10.101.121.11:3001/route'), // Para testar na uni
+      _httpClient = http.Client();
+
+      final response = await _httpClient!.post( 
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
+        Uri.parse('http://192.168.1.82:3001/route'),
+        // Uri.parse('http://10.101.121.11:3001/route'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
           "end": {"lat": end.latitude, "lon": end.longitude},
-          "lowRisk": lowRisk, 
+          "lowRisk": lowRisk,
           "selectedSpecies": selectedSpecies,
         }),
       );
 
-      if (_cancelFetchingRoute) return; // Exit if route-fetching is canceled
+      // After the request, if we still have the client, close it
+      // This ensures resources are released, even if not cancelled.
+      _httpClient?.close();
+      _httpClient = null; // Clear the client reference
+
+      if (_cancelFetchingRoute) {
+        // If cancellation was requested while waiting for response,
+        // ensure UI is reset and return.
+        _resetRouteUI(); // Call a new function to encapsulate UI reset
+        return;
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Iterate through returned routes (defaultRoute and/or adjustedRoute)
-        Map<String, List<Map<String, dynamic>>> routesWithPoints = {};
+        Map<String, List<Map<String, dynamic>>> routesWithSegments = {};
         Map<String, String> distances = {};
         Map<String, String> times = {};
-        Map<String, bool> hasRisk = {}; 
+        Map<String, bool> hasRisk = {};
+        Map<String, double> maxRiskValue = {};
+        Map<String, String> distanceAtMaxRisk = {};
+
 
         data.forEach((key, routeData) {
-          List<Map<String, dynamic>> pointsWithRaster = (routeData['route'] as List).map((point) {
-            return {
-              'latlng': LatLng(point['lat'], point['lon']),
-              'raster_value': point['raster_value'],
-              'species': point['species'],
-            };
-          }).toList();
+          List<Map<String, dynamic>> segments = [];
+          if (routeData['segments'] is List) {
+            segments = (routeData['segments'] as List).map((segmentMap) {
+              return {
+                'start': LatLng(segmentMap['start']['lat'], segmentMap['start']['lon']),
+                'end': LatLng(segmentMap['end']['lat'], segmentMap['end']['lon']),
+                'raster_value': segmentMap['raster_value'],
+                'species': List<String>.from(segmentMap['species'] ?? []),
+                'time_to_next_seconds': (segmentMap['time_to_next_seconds'] as num?)?.toDouble() ?? 0.0,
+                'segment_distance': segmentMap['segment_distance'],
+              };
+            }).toList();
+          } else {
+            print("Warning: 'segments' key not found or not a List for route $key");
+            return;
+          }
 
-          routesWithPoints[key] = pointsWithRaster;
+          routesWithSegments[key] = segments;
           distances[key] = routeData['distance'];
           times[key] = routeData['time'];
           hasRisk[key] = routeData['hasRisk'];
+          maxRiskValue[key] = (routeData['maxRiskValue'] as num?)?.toDouble() ?? 0.0;
+          distanceAtMaxRisk[key] = routeData['distanceAtMaxRisk'] as String? ?? '0 meters';
+
         });
 
-        print("routesWithPoints $routesWithPoints");
+        print("routesWithSegments: $routesWithSegments");
+        print("maxRiskValue: $maxRiskValue");
+        print("distanceAtMaxRisk: $distanceAtMaxRisk");
 
-        // Hide the navigation bar when the user gets the route
         navigationBarKey.currentState?.toggleNavigationBar(false);
 
         setState(() {
-          _routesWithPoints = routesWithPoints;
+          _routesWithPoints = routesWithSegments;
           _distances = distances;
           _times = times;
-          _isFetchingRoute = false; // Hide the progress bar
+          _isFetchingRoute = false;
           _selectedRouteKey = _routesWithPoints.keys.first;
+          _distancesAtMaxRisk = distanceAtMaxRisk;
         });
         _adjustMapToBounds();
 
@@ -210,22 +241,65 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         throw Exception("${LanguageConfig.getLocalizedString(languageCode, 'failFetchingRoute')}: ${response.body}");
       }
     } catch (e) {
-      if (!_cancelFetchingRoute) {
-        print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
+      if (e is http.ClientException && e.message == 'Connection closed before full header was received') {
+        // This is often the exception thrown when the client is closed prematurely
+        print("Route fetching was cancelled.");
+      } else if (!_cancelFetchingRoute) { // Only log if not explicitly cancelled by user
+        print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')} $e");
       }
       setState(() {
         _isFetchingRoute = false; // Hide the progress bar
       });
+    } finally {
+      // Ensure the client is closed even if an error occurs
+      _httpClient?.close();
+      _httpClient = null;
     }
+  }
+
+  void _resetRouteUI() {
+    setState(() {
+      _routesWithPoints.clear();
+      _distances.clear(); 
+      _times.clear();   
+      _distancesAtMaxRisk.clear();    
+      _selectedRouteKey = ""; 
+      destinationSelected = false;
+      selectedDestination = "";
+      _destinationLocation = null;
+      _addressController.text = "";
+      _suggestions.clear();
+      setDestVis = true;
+      _isFetchingRoute = false;
+    });
   }
 
   void _adjustMapToBounds() {
     if (_routesWithPoints.isNotEmpty) {
-      final allPoints = _routesWithPoints.values
-          .expand((list) => list.map((p) => p['latlng'] as LatLng))
-          .toList();
+      // Collect all unique LatLng points from all route segments
+      final List<LatLng> allPoints = [];
 
-      if (allPoints.length < 2) return;
+      for (var routeSegments in _routesWithPoints.values) {
+        for (final segment in routeSegments) {
+          // Add start point of the segment
+          if (segment['start'] is LatLng) {
+            allPoints.add(segment['start'] as LatLng);
+          }
+          // Add end point of the segment
+          if (segment['end'] is LatLng) {
+            allPoints.add(segment['end'] as LatLng);
+          }
+        }
+      }
+
+      if (allPoints.length < 2) {
+        // If there are less than 2 points, maybe center on the first point if it exists
+        // or simply return without adjusting the map.
+        if (allPoints.isNotEmpty) {
+          _animatedMapMove(allPoints.first, 15.0); // A default zoom
+        }
+        return;
+      }
 
       final bounds = _calculateBounds(allPoints);
 
@@ -275,8 +349,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/geocode'),
-        // Uri.parse('http://192.168.1.82:3001/geocode'),
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/geocode'),
+        Uri.parse('http://192.168.1.82:3001/geocode'),
         // Uri.parse('http://10.101.121.11:3001/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
@@ -330,8 +404,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http
           .get(
-            Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&country=Portugal&lang=en'),
-            // Uri.parse('http://192.168.1.82:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+            // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&country=Portugal&lang=en'),
+            Uri.parse('http://192.168.1.82:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
             // Uri.parse('http://10.101.121.11:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // testar na uni
           )
           .timeout(Duration(seconds: 10));
@@ -414,12 +488,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
             // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-            // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+            const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
             destination,
           );
         }
@@ -564,12 +638,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   void _reCenter() {
     if (_currentLocation != null) {
       _mapController.moveAndRotate(
-        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
         // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
         // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-        // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL //TODO: PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
+        const LatLng(38.756546, -9.155300), //Current location for testing at FCUL //TODO: PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -593,7 +667,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
 
     final selectedTime = _times[_selectedRouteKey];
-    print("selectedTime: $selectedTime");
+    // print("selectedTime: $selectedTime");
 
     final String? arrivalTime = selectedTime != null
         ? calculateArrivalTime(selectedTime)
@@ -621,66 +695,79 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
+                      // --- Other Routes (Not Selected) ---
                       ..._routesWithPoints.entries.expand<Polyline>((entry) {
                         if (entry.key == _selectedRouteKey) return [];
 
-                        final routePoints = entry.value;
-                        if (routePoints.length < 2) return [];
+                        final routeSegments = entry.value;
+                        if (routeSegments.isEmpty) return [];
 
-                        // Extract LatLng points safely
-                        final points = routePoints
-                          .where((point) => point['latlng'] is LatLng)
-                          .map((point) => point['latlng'] as LatLng)
-                          .toList();
+                        final List<LatLng> points = [];
+
+                        // Add the start point of the first segment
+                        if (routeSegments.first['start'] is LatLng) {
+                          points.add(routeSegments.first['start'] as LatLng);
+                        }
+
+                        // Add the end point of each segment
+                        for (final segment in routeSegments) {
+                          if (segment['end'] is LatLng) {
+                            points.add(segment['end'] as LatLng);
+                          }
+                        }
 
                         if (points.length < 2) return [];
 
                         return [
-                          // Border polyline
                           Polyline(
                             points: points,
                             strokeWidth: 8.0,
-                            color: Color.fromRGBO(171, 145, 242, 0.9)
+                            color: const Color.fromRGBO(171, 145, 242, 0.9),
                           ),
-                          // Main polyline
                           Polyline(
                             points: points,
                             strokeWidth: 4.0,
-                            color: Color.fromRGBO(211, 173, 253, 0.9),
+                            color: const Color.fromRGBO(211, 173, 253, 0.9),
                           ),
                         ];
                       }),
-                      // SELECTED ROUTE with dynamic color and unified border
-                      if (_routesWithPoints.containsKey(_selectedRouteKey)) ...[
-                        // Draw one thick, dark polyline underneath (the border)
-                        Polyline(
-                          points: _routesWithPoints[_selectedRouteKey]!
-                            .where((p) => p['latlng'] is LatLng)
-                            .map((p) => p['latlng'] as LatLng)
-                            .toList(),
-                          strokeWidth: 8.0,
-                          color: Colors.black.withValues(alpha: 0.8), // Dark outline
-                        ),
 
-                        // Draw each colored segment on top
-                        ..._routesWithPoints[_selectedRouteKey]!
-                          .sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1)
-                          .asMap()
-                          .entries
-                          .where((entry) {
-                            final current = entry.value;
-                            final next = _routesWithPoints[_selectedRouteKey]![entry.key + 1];
-                            return current['latlng'] is LatLng && next['latlng'] is LatLng;
-                          })
-                          .map((entry) {
-                            final index = entry.key;
-                            final current = entry.value;
-                            final next = _routesWithPoints[_selectedRouteKey]![index + 1];
+                      // --- SELECTED ROUTE with dynamic color and unified border ---
+                      if (_routesWithPoints.containsKey(_selectedRouteKey)) ...() {
+                        final selectedRouteSegments = _routesWithPoints[_selectedRouteKey]!;
 
-                            final points = [current['latlng'] as LatLng, next['latlng'] as LatLng];
+                        final List<Polyline> selectedPolylines = [];
 
-                            Color lineColor;
-                            final raster = current['raster_value'];
+                        final List<LatLng> selectedRouteAllPoints = [];
+                        if (selectedRouteSegments.isNotEmpty) {
+                          if (selectedRouteSegments.first['start'] is LatLng) {
+                            selectedRouteAllPoints.add(selectedRouteSegments.first['start'] as LatLng);
+                          }
+                          for (final segment in selectedRouteSegments) {
+                            if (segment['end'] is LatLng) {
+                              selectedRouteAllPoints.add(segment['end'] as LatLng);
+                            }
+                          }
+                        }
+
+                        if (selectedRouteAllPoints.length >= 2) {
+                          selectedPolylines.add(
+                            Polyline(
+                              points: selectedRouteAllPoints,
+                              strokeWidth: 8.0,
+                              color: Colors.black.withValues(alpha:0.8),
+                            ),
+                          );
+                        }
+
+                        for (final segment in selectedRouteSegments) {
+                          final startPoint = segment['start'] as LatLng;
+                          final endPoint = segment['end'] as LatLng;
+
+                          Color lineColor;
+                          final raster = segment['raster_value'];
+
+                          if (raster != null) {
                             if (raster > highRisk) {
                               lineColor = Colors.red;
                             } else if (raster > mediumHighRisk) {
@@ -692,25 +779,33 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             } else {
                               lineColor = Colors.purple;
                             }
-                            return Polyline(
-                              points: points,
+                          } else {
+                            lineColor = Colors.purple;
+                          }
+
+                          selectedPolylines.add(
+                            Polyline(
+                              points: [startPoint, endPoint],
                               strokeWidth: 4.0,
                               color: lineColor,
-                            );
-                          })
-                      ],
+                            ),
+                          );
+                        }
+
+                        return selectedPolylines;
+                      }(),
                     ],
                   ),
                   if (_currentLocation != null)
                   MarkerLayer(
                     markers: [
                       Marker(
-                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
                         // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                        // point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+                        point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -734,16 +829,30 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   Stack(
                     children: [
                       // Add Info Boxes on Routes
-                      for (var i = 0; i < _routesWithPoints.entries.length; i++) 
+                      for (var i = 0; i < _routesWithPoints.entries.length; i++)
                         if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
                           Builder(
                             builder: (context) {
                               var entry = _routesWithPoints.entries.elementAt(i);
-                              var routePoints = entry.value;
-                              var midPointIndex = routePoints.length ~/ 2;
+                              var routeSegments = entry.value; // Renamed to reflect segments
 
-                              // Get midpoint coordinates
-                              LatLng midPoint = routePoints[midPointIndex]['latlng'];
+                              // Check if routeSegments has elements before trying to access an index
+                              if (routeSegments.isEmpty) {
+                                return const SizedBox.shrink(); // Return an empty widget if no segments
+                              }
+
+                              // Get the middle segment's index
+                              var midSegmentIndex = routeSegments.length ~/ 2;
+                              // Ensure midSegmentIndex is valid
+                              if (midSegmentIndex >= routeSegments.length) {
+                                midSegmentIndex = routeSegments.length - 1; // Fallback to the last segment if calculation is off for very short routes
+                              }
+                              if (midSegmentIndex < 0) { // Handle empty or single-segment routes
+                                midSegmentIndex = 0;
+                              }
+
+                              // Access the 'start' LatLng from the chosen segment
+                              LatLng midPoint = routeSegments[midSegmentIndex]['start'] as LatLng; // Directly cast to LatLng
 
                               // Compute dynamic offset to avoid overlap
                               double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
@@ -753,13 +862,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                               // Ensure selected route's box is more visible
                               bool isSelectedRoute = entry.key == _selectedRouteKey;
                               bool isAdjustedRoute = entry.key == 'adjustedRoute'; // Check if it's the adjusted route
-                              Color boxColor = isSelectedRoute ? Colors.purple.withValues(alpha: 0.8) : Colors.grey.withValues(alpha: 0.6);
+                              Color boxColor = isSelectedRoute ? Colors.purple.withValues(alpha:0.8) : Colors.grey..withValues(alpha:0.6); // Corrected Colors.grey.withValues to withOpacity
                               Color textColor = isSelectedRoute ? Colors.white : Colors.black;
 
                               // MediaQuery for dynamic sizing based on screen size
-                              double iconSize = MediaQuery.of(context).size.width * 0.04; 
-                              double padding = MediaQuery.of(context).size.width * 0.022; 
-                              double fontSize = MediaQuery.of(context).size.width * 0.032; 
+                              double iconSize = MediaQuery.of(context).size.width * 0.04;
+                              double padding = MediaQuery.of(context).size.width * 0.022;
+                              double fontSize = MediaQuery.of(context).size.width * 0.032;
 
                               return Positioned(
                                 left: screenX,
@@ -822,28 +931,25 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         onPressed: () {
                           navigationBarKey.currentState?.toggleNavigationBar(true);
 
+                          // Crucially, close the http client to cancel the request
+                          _httpClient?.close();
+                          _httpClient = null; // Clear the client reference
+
                           // Reset the map state and UI elements
                           setState(() {
-                            _cancelFetchingRoute = true; // Cancel the route-fetching process
-                            _routesWithPoints.clear();
-                            destinationSelected = false;
-                            selectedDestination = "";
-                            _destinationLocation = null;
-                            _addressController.text = "";
-                            _suggestions.clear();
-                            setDestVis = true;
-                            _isFetchingRoute = false;
+                            _cancelFetchingRoute = true; // Set this flag
+                            _resetRouteUI(); // Call to reset UI
                           });
 
                           // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                               // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
                               // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                              // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+                              const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
                               13.0, // Adjust zoom level as needed
                             );
                           }
@@ -996,15 +1102,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                     children: [
                       if (_routesWithPoints[_selectedRouteKey] != null)
                         ...() {
-                          bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > highRisk);
-                          bool hasMediumHighRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk);
-                          bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk);
-                          bool hasMediumLowRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk);
-                          
+                          final selectedRoute = _routesWithPoints[_selectedRouteKey]!;
+                          bool hasHighRisk = selectedRoute.any((point) => point['raster_value'] > highRisk);
+                          bool hasMediumHighRisk = selectedRoute.any((point) =>
+                              point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk);
+                          bool hasMediumRisk = selectedRoute.any((point) =>
+                              point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk);
+                          bool hasMediumLowRisk = selectedRoute.any((point) =>
+                              point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk);
 
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             setState(() {
@@ -1014,94 +1119,83 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             });
                           });
 
-                          if (hasHighRisk) {
-                            Set<String> speciesList = {};
-                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > highRisk) {
-                                speciesList.addAll(List<String>.from(point['species']));
-                              }
-                            }
+                          String buildMessage(String key, Set<String> species, String? distance) {
+                            final speciesText = species.map((s) => LanguageConfig.getLocalizedString(languageCode, s)).join(', ');
+                            final distanceText = distance != null && distance.isNotEmpty
+                                ? " ${LanguageConfig.getLocalizedString(languageCode, 'in')} $distance"
+                                : "";
+                            return "${LanguageConfig.getLocalizedString(languageCode, key)} $speciesText$distanceText";
+                          }
 
-                            List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
-                            ).toList();
+                          String? riskDistance = _distancesAtMaxRisk[_selectedRouteKey];
+
+
+                          if (hasHighRisk) {
+                            Set<String> speciesList = selectedRoute
+                                .where((point) => point['raster_value'] > highRisk)
+                                .expand((point) => List<String>.from(point['species']))
+                                .toSet();
 
                             return [
                               Flexible(
                                 child: _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'highProbability')} ${translatedSpecies.join(', ')}",
+                                  buildMessage('highProbability', speciesList, riskDistance),
                                   Colors.red,
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                             ];
                           } else if (hasMediumHighRisk) {
-                            Set<String> speciesList = {};
-                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk) {
-                                speciesList.addAll(List<String>.from(point['species']));
-                              }
-                            }
-
-                            List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
-                            ).toList();
+                            Set<String> speciesList = selectedRoute
+                                .where((point) =>
+                                    point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk)
+                                .expand((point) => List<String>.from(point['species']))
+                                .toSet();
 
                             return [
                               Flexible(
                                 child: _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumHighProbability')} ${translatedSpecies.join(', ')}",
+                                  buildMessage('mediumHighProbability', speciesList, riskDistance),
                                   Colors.deepOrangeAccent,
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                             ];
                           } else if (hasMediumRisk) {
-                            Set<String> speciesList = {};
-                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk) {
-                                speciesList.addAll(List<String>.from(point['species']));
-                              }
-                            }
-
-                            List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
-                            ).toList();
+                            Set<String> speciesList = selectedRoute
+                                .where((point) =>
+                                    point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk)
+                                .expand((point) => List<String>.from(point['species']))
+                                .toSet();
 
                             return [
                               Flexible(
                                 child: _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
-                                  Color.fromRGBO(224, 174, 41, 1),
+                                  buildMessage('mediumProbability', speciesList, riskDistance),
+                                  const Color.fromRGBO(224, 174, 41, 1),
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                             ];
                           } else if (hasMediumLowRisk) {
-                            Set<String> speciesList = {};
-                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk) {
-                                speciesList.addAll(List<String>.from(point['species']));
-                              }
-                            }
-
-                            List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
-                            ).toList();
-                            print("Entro no hasMediumLowRisk");
+                            Set<String> speciesList = selectedRoute
+                                .where((point) =>
+                                    point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk)
+                                .expand((point) => List<String>.from(point['species']))
+                                .toSet();
 
                             return [
                               Flexible(
                                 child: _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumLowProbability')} ${translatedSpecies.join(', ')}",
+                                  buildMessage('mediumLowProbability', speciesList, riskDistance),
                                   Colors.yellow,
                                   context,
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.03),
                             ];
                           }
                           return [];
@@ -1136,66 +1230,104 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   // RIGHT COLUMN - Route Info
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Arrival Time
-                                        Text(
-                                          "${LanguageConfig.getLocalizedString(languageCode, 'arrivalTime')} ${calculateArrivalTime(_times[_selectedRouteKey]!) ?? LanguageConfig.getLocalizedString(languageCode, 'unknown')}",
-                                          style: TextStyle(
-                                            fontSize: MediaQuery.of(context).size.width * 0.045,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Arrival Time
+                                      Text(
+                                        "${LanguageConfig.getLocalizedString(languageCode, 'arrivalTime')} ${calculateArrivalTime(_times[_selectedRouteKey]!) ?? LanguageConfig.getLocalizedString(languageCode, 'unknown')}",
+                                        style: TextStyle(
+                                          fontSize: MediaQuery.of(context).size.width * 0.045,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                         
-                                        const SizedBox(height: 4),
-                         
-                                        // Comment below arrival time
-                                        Text(
-                                          _selectedRouteKey == 'adjustedRoute'
-                                              ? LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill')
-                                              : (_routesWithPoints.containsKey('adjustedRoute')
-                                                  ? LanguageConfig.getLocalizedString(languageCode, 'notBestOption')
-                                                  : LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill')),
-                                          style: TextStyle(
-                                            fontSize: MediaQuery.of(context).size.width * 0.035,
-                                            color: Colors.grey[700],
-                                          ),
-                                        ),
-                         
-                                        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-                         
-                                        // Distance + Duration row
-                                        Row(
-                                          crossAxisAlignment: CrossAxisAlignment.center,  // Ensure texts align vertically
-                                          children: [
-                                            Text(
-                                              _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                      ),
+
+                                      const SizedBox(height: 4),
+
+                                      // Comment below arrival time (dynamic cost comparison)
+                                      Builder(
+                                        builder: (context) {
+                                          if (_selectedRouteKey == 'adjustedRoute') {
+                                            return Text(
+                                              LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
                                               style: TextStyle(
-                                                fontSize: MediaQuery.of(context).size.width * 0.036,
+                                                fontSize: MediaQuery.of(context).size.width * 0.035,
+                                                color: Colors.grey[700],
                                               ),
+                                            );
+                                          }
+
+                                          if (_routesWithPoints.containsKey('adjustedRoute') && _routesWithPoints.containsKey('defaultRoute')) {
+                                            double calculateRiskAwareCost(List<Map<String, dynamic>> segments) {
+                                              return segments.fold(0.0, (sum, segment) {
+                                                final double distance = (segment['segment_distance'] ?? 0.0).toDouble();
+                                                final double risk = (segment['raster_value'] ?? 0.0).toDouble();
+                                                return sum + (distance * (1 + risk * 4));
+                                              });
+                                            }
+
+                                            final adjustedCost = calculateRiskAwareCost(_routesWithPoints['adjustedRoute']!);
+                                            final selectedCost = calculateRiskAwareCost(_routesWithPoints[_selectedRouteKey]!);
+
+                                            print("adjustedCost: $adjustedCost");
+                                            print("selectedCost: $selectedCost");
+
+                                            if (adjustedCost > 0) {
+                                              final costFactor = selectedCost / adjustedCost;
+                                              final template = LanguageConfig.getLocalizedString(languageCode, 'routeCostMultiplier');
+                                              final message = template.replaceAll('{x}', costFactor.toStringAsFixed(2));
+                                              return Text(
+                                                message,
+                                                style: TextStyle(
+                                                  fontSize: MediaQuery.of(context).size.width * 0.035,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              );
+                                            }
+                                          }
+
+                                          // Default fallback message
+                                          return Text(
+                                            LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context).size.width * 0.035,
+                                              color: Colors.grey[700],
                                             ),
-                                            const SizedBox(width: 8),  
-                                            const SizedBox(
-                                              height: 15,  // Divider height
-                                              child: VerticalDivider(
-                                                color: Colors.grey,  // Divider color
-                                                width: 1,  // Divider width
-                                                thickness: 1,  // Divider thickness
-                                                indent: 0,  // Optional, adjust the distance from the top
-                                                endIndent: 0,  // Optional, adjust the distance from the bottom
-                                              ),
+                                          );
+                                        },
+                                      ),
+
+                                      SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+
+                                      // Distance + Duration row
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context).size.width * 0.036,
                                             ),
-                                            const SizedBox(width: 8),  // Adds space between the divider and the next text
-                                            Text(
-                                              _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                              style: TextStyle(
-                                                fontSize: MediaQuery.of(context).size.width * 0.036,
-                                              ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const SizedBox(
+                                            height: 15,
+                                            child: VerticalDivider(
+                                              color: Colors.grey,
+                                              width: 1,
+                                              thickness: 1,
                                             ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context).size.width * 0.036,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                   ),
                                   SizedBox(width: MediaQuery.of(context).size.width * 0.03), 
 
@@ -1305,7 +1437,7 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
             text,
             textAlign: TextAlign.left,
             style: TextStyle(
-              fontSize: screenWidth * 0.05,
+              fontSize: screenWidth * 0.045,
               fontWeight: FontWeight.bold,
               color: color,
             ),

@@ -55,28 +55,31 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   bool isFirstLocationUpdate = NavigationConfig.isFirstLocationUpdate;
   String estimatedArrivalTime = NavigationConfig.estimatedArrivalTime; // To display the arrival time
   bool isAnimating = NavigationConfig.isAnimating; // To prevent overlapping animations
-  bool _destinationReached = NavigationConfig.destinationReached;
-  Set<LatLng> notifiedZones = NavigationConfig.notifiedZones; // Track notified risk zones
+  final bool _destinationReached = NavigationConfig.destinationReached;
+  final int _destinationThresholdMeters = NavigationConfig.destinationThresholderMeters;
+  Set<Map<String, dynamic>> notifiedZones = NavigationConfig.notifiedZones; // Track notified risk zones
   bool inRiskZone = NavigationConfig.inRiskZone;
   DateTime? lastWarningTime; // Move this outside the function to persist the value
   bool keepRoute = NavigationConfig.keepRoute;
-  Set<LatLng> passedSegments = NavigationConfig.passedSegments; // Store segments already passed
+  Set<Map<String, dynamic>> passedSegments = NavigationConfig.passedSegments; // Store segments already passed
   int consecutiveOffRouteCount = NavigationConfig.consecutiveOffRouteCount; // Track how many times user is "off-route"
   int offRouteThreshold = NavigationConfig.offRouteThreshold; // Require 7 consecutive off-route detections
   bool lastOnRouteState = NavigationConfig.lastOnRouteState; // Track last known on-route state
-  bool _startRiskNotificationSent = NavigationConfig.startRiskNotificationSent; // Track if the initial notification was sent
+  bool startRiskNotificationSent = NavigationConfig.startRiskNotificationSent; // Track if the initial notification was sent
   List<dynamic> notifiedDivergences = NavigationConfig.notifiedDivergences;
-  bool _firstRiskDetected = NavigationConfig.firstRiskDetected;
+  bool firstRiskDetected = NavigationConfig.firstRiskDetected;
   bool enteringNewRiskZone = NavigationConfig.enteringNewRiskZone;
   bool isOnRoute = NavigationConfig.isOnRoute;
   double highestUpcomingRisk = NavigationConfig.highestUpcomingRisk;
   double currentRiskLevel = NavigationConfig.currentRiskLevel;
-  Set<LatLng> detectedRiskZones = NavigationConfig.detectedRiskZones;  
-  Map<LatLng, double> upcomingRisks = NavigationConfig.upcomingRisks; // Store multiple risk points
+  Set<Map<String, dynamic>> detectedRiskZones = NavigationConfig.detectedRiskZones;  
+  Map<Map<String, dynamic>, double> upcomingRisks = NavigationConfig.upcomingRisks; // Store multiple risk points
   AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
   bool _destinationReachedNotif = false;
   StreamSubscription<CompassEvent>? _compassSubscription;
   double? _lastBearing;
+  String _remainingTimeFormatted = '';
+  String _remainingDistanceFormatted = '';
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -95,7 +98,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     _appLifecycleState = state;
   }
 
-  @override
+ @override
   void initState() {
     WidgetsBinding.instance.addObserver(this);
     NavigationConfig.isNavigationActive = true;
@@ -120,7 +123,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     NavigationConfig.currentRiskLevel = 0;
     NavigationConfig.detectedRiskZones.clear();  
     NavigationConfig.upcomingRisks.clear(); 
-    _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
+    // _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
     
     // print("enteringNewRiskZone: $enteringNewRiskZone");
     // print("NavigationConfig.enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}");
@@ -131,6 +134,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     super.initState();
     selectedRouteKey = widget.selectedRouteKey; // Set initial route from Home.dart
     routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
+
     location = Location();
     _mapController = MapController();
 
@@ -147,60 +151,223 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       if (loc.latitude != null && loc.longitude != null) {
         LatLng newPosition = LatLng(loc.latitude!, loc.longitude!);
 
+        // Only update previousPosition if not currently animating,
+        // and trigger animation if needed.
         if (previousPosition != null && !isAnimating) {
           _animateMarker(previousPosition!, newPosition);
         } else {
           setState(() {
             previousPosition = currentPosition;
             currentPosition = newPosition;
+            // When not animating, update progress immediately after currentPosition changes
+            _updateRouteProgress();
           });
-
-          if (isFirstLocationUpdate) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (currentPosition != null) {
-                _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
-                isFirstLocationUpdate = false;
-              }
-            });
-          }
         }
 
-        if(selectedRouteKey == "defaultRoute"){
+        // Handle the first location update to set initial map view
+        if (NavigationConfig.isFirstLocationUpdate) { // Use NavigationConfig's flag
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (currentPosition != null) {
+              _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
+              NavigationConfig.isFirstLocationUpdate = false; // Update the flag
+            }
+          });
+        }
+
+        // // Important: Call _updateRouteProgress after currentPosition has definitively updated,
+        // // especially after animation completes or if no animation occurs.
+        // // If _animateMarker's completion callback calls setState to update `currentPosition`,
+        // // then `_updateRouteProgress` should be called there to ensure it uses the final position.
+        // // For simplicity here, we'll ensure it's called after the non-animated update,
+        // // and assume _animateMarker's completion handles its own update.
+        // if (!isAnimating) {
+        //   // This line is potentially redundant if `_updateRouteProgress` is already called
+        //   // within the `setState` block above, or if `_animateMarker` calls it on completion.
+        //   // Make sure it's called exactly once per location update.
+        //   // _updateRouteProgress(); // Consider if this is truly needed here or if _animateMarker handles it.
+        // }
+
+        // Check for off-route or risk zones
+        if (selectedRouteKey == "defaultRoute") {
           _checkReRoute();
         }
-        _checkRiskZone(); 
+        _checkRiskZone();
 
-        // Extract last coordinate safely
-        LatLng lastPoint = _getLatLngFromMap(routeCoordinates.last);
-        
-        if ((currentPosition!.latitude - lastPoint.latitude).abs() < NavigationConfig.threshold &&
-            (currentPosition!.longitude - lastPoint.longitude).abs() < NavigationConfig.threshold) {
-          setState(() {
-            _destinationReached = true;
-          });
-
-          if (_appLifecycleState != AppLifecycleState.resumed && !_destinationReachedNotif && mounted) { //TODO: VER SE MANDA A NOTIFICAÇÃO QUANDO CHEGA AO FIM
-            String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-            await http.post(
-              Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-              // Uri.parse('http://192.168.1.82:3001/send'),
-              // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
-              headers: {"Content-Type": "application/json"},
-              body: jsonEncode({
-                "fcmToken": _notifications.fcmToken,
-                "title": LanguageConfig.getLocalizedString(languageCode, 'destinationReached'),
-                "body": LanguageConfig.getLocalizedString(languageCode, 'destinationReachedBody'),
-                "button": "false",
-                "changeRoute": "false"
-              }),
-            );
+        // Check if destination is reached
+        // Get the last segment's end point
+        if (routeCoordinates.isNotEmpty) {
+          final LatLng destinationPoint = routeCoordinates.last['end'] as LatLng; // Use 'end' of the last segment
+          if ((currentPosition!.latitude - destinationPoint.latitude).abs() < NavigationConfig.threshold &&
+              (currentPosition!.longitude - destinationPoint.longitude).abs() < NavigationConfig.threshold) {
             setState(() {
-                _destinationReachedNotif = true;
+              NavigationConfig.destinationReached = true; // Use NavigationConfig flag
+            });
+
+            if (_appLifecycleState != AppLifecycleState.resumed && !_destinationReachedNotif && mounted) {
+              String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+              await http.post(
+                // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
+                Uri.parse('http://192.168.1.82:3001/send'),
+                // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
+                headers: {"Content-Type": "application/json"},
+                body: jsonEncode({
+                  "fcmToken": _notifications.fcmToken,
+                  "title": LanguageConfig.getLocalizedString(languageCode, 'destinationReached'),
+                  "body": LanguageConfig.getLocalizedString(languageCode, 'destinationReachedBody'),
+                  "button": "false",
+                  "changeRoute": "false"
+                }),
+              );
+              setState(() {
+                _destinationReachedNotif = true; // Use NavigationConfig flag
               });
+            }
           }
         }
       }
     });
+  }
+
+  void _updateRouteProgress() {
+    if (currentPosition == null || routeCoordinates.isEmpty) {
+      NavigationConfig.estimatedArrivalTime = ""; // Clear time if no route/position
+      _remainingDistanceFormatted = "0 m";
+      return;
+    }
+
+    double totalRemainingDistance = 0.0;
+    double totalRemainingTimeSeconds = 0.0; // To accumulate time from segments
+    int currentSegmentIndex = -1; // The index of the segment the user is currently on or closest to
+
+    // Find the current segment: Iterate through segments to find the one the user is on or closest to.
+    for (int i = 0; i < routeCoordinates.length; i++) {
+      final segment = routeCoordinates[i];
+      final LatLng segmentStart = segment['start'] as LatLng; // Already cast to LatLng in _fetchRoute
+      final LatLng segmentEnd = segment['end'] as LatLng;     // Already cast to LatLng in _fetchRoute
+
+      // Use a small buffer distance to determine if the user is "on" or "near" the segment
+      const double onSegmentThresholdMeters = 20.0; // Adjust as needed
+
+      // Check if the current position is near this segment
+      // This is a simplified check. For precise "on-route" detection,
+      // you'd typically project the point onto the segment.
+      final distToStart = const Distance().as(LengthUnit.Meter, currentPosition!, segmentStart);
+      final distToEnd = const Distance().as(LengthUnit.Meter, currentPosition!, segmentEnd);
+      final segmentLength = const Distance().as(LengthUnit.Meter, segmentStart, segmentEnd);
+
+      // Simple check: if within threshold of either end and total length is reasonable
+      if ((distToStart < onSegmentThresholdMeters || distToEnd < onSegmentThresholdMeters) &&
+          (distToStart + distToEnd - segmentLength).abs() < onSegmentThresholdMeters * 2) {
+        currentSegmentIndex = i;
+        break; // Found the current segment
+      }
+    }
+
+    // If we couldn't find a current segment, it means the user is off-route significantly,
+    // or the route is very short/complex to match.
+    // We'll calculate from the closest segment's start, or assume off-route.
+    if (currentSegmentIndex == -1) {
+      // Fallback: Find the closest segment's start point if not "on" any segment
+      double minDistanceToAnySegmentStart = double.infinity;
+      int closestSegmentStartIndex = -1;
+
+      for (int i = 0; i < routeCoordinates.length; i++) {
+        final segmentStart = routeCoordinates[i]['start'] as LatLng;
+        final dist = const Distance().as(LengthUnit.Meter, currentPosition!, segmentStart);
+        if (dist < minDistanceToAnySegmentStart) {
+          minDistanceToAnySegmentStart = dist;
+          closestSegmentStartIndex = i;
+        }
+      }
+      currentSegmentIndex = closestSegmentStartIndex;
+    }
+
+
+    // If a current segment is identified (or a closest starting point)
+    if (currentSegmentIndex != -1) {
+      // Add the remaining distance/time for the current segment
+      final currentSegment = routeCoordinates[currentSegmentIndex];
+      // final LatLng segmentStart = currentSegment['start'] as LatLng;
+      final LatLng segmentEnd = currentSegment['end'] as LatLng;
+      final double timeToNextSeconds = (currentSegment['time_to_next_seconds'] as num?)?.toDouble() ?? 0.0;
+
+      // Calculate remaining distance within the current segment.
+      // This is a simplification: ideally, you'd project currentPosition onto the segment.
+      // For now, we'll just sum up the distance from `currentPosition` to the end of the current segment,
+      // and then add remaining segments.
+      totalRemainingDistance += const Distance().as(LengthUnit.Meter, currentPosition!, segmentEnd);
+      totalRemainingTimeSeconds += timeToNextSeconds;
+
+
+      // Add distances and times for all subsequent segments
+      for (int i = currentSegmentIndex + 1; i < routeCoordinates.length; i++) {
+        final segment = routeCoordinates[i];
+        final LatLng p1 = segment['start'] as LatLng;
+        final LatLng p2 = segment['end'] as LatLng;
+        final double segmentLength = const Distance().as(LengthUnit.Meter, p1, p2);
+        final double segmentTimeToNext = (segment['time_to_next_seconds'] as num?)?.toDouble() ?? 0.0;
+
+        totalRemainingDistance += segmentLength;
+        totalRemainingTimeSeconds += segmentTimeToNext;
+      }
+
+      // --- Update passed segments for tracking ---
+      NavigationConfig.passedSegments.clear(); // Clear previous passed segments
+      for (int i = 0; i <= currentSegmentIndex; i++) {
+        NavigationConfig.passedSegments.add(routeCoordinates[i]);
+      }
+
+    } else {
+      // If no segment is found, the user is likely far off-route or reached destination.
+      // Set remaining distance/time to zero.
+      totalRemainingDistance = 0.0;
+      totalRemainingTimeSeconds = 0.0;
+      NavigationConfig.passedSegments.clear(); // No segments passed if not on route
+    }
+
+    // Destination reached check 
+    if (routeCoordinates.isNotEmpty) {
+      final LatLng finalDestination = routeCoordinates.last['end'] as LatLng;
+      if (currentPosition != null && const Distance().as(LengthUnit.Meter, currentPosition!, finalDestination) < _destinationThresholdMeters) {
+        setState(() {
+          NavigationConfig.destinationReached = true;
+        });
+        totalRemainingDistance = 0.0; // Ensure 0 if destination reached
+        totalRemainingTimeSeconds = 0.0;
+      }
+    }
+
+    setState(() {
+      _remainingDistanceFormatted = _formatDistance(totalRemainingDistance);
+      _remainingTimeFormatted = _formatTime(totalRemainingTimeSeconds);
+      NavigationConfig.estimatedArrivalTime = _remainingTimeFormatted; 
+    });
+
+    // Keep the map centered on the current position
+    _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
+  }
+
+  String _formatDistance(double meters) {
+    if (meters < 1000) {
+      return '${meters.toStringAsFixed(0)} m';
+    } else {
+      return '${(meters / 1000).toStringAsFixed(1)} km';
+    }
+  }
+
+  String _formatTime(double seconds) {
+    final Duration duration = Duration(seconds: seconds.round());
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitHours = twoDigits(duration.inHours);
+
+    if (duration.inHours > 0) {
+      return '$twoDigitHours h $twoDigitMinutes min';
+    } else if (duration.inMinutes > 0) {
+      return '$twoDigitMinutes min';
+    } else {
+      return '${duration.inSeconds} sec';
+    }
   }
 
   Future<void> _setNavigationStatus(bool status) async {
@@ -229,7 +396,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
       // try {
       //   final response = await http.post(
-        //   Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+          // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
         //  Uri.parse('http://192.168.1.82:3001/send'),
         //  Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
       //     headers: {"Content-Type": "application/json"},
@@ -332,117 +499,164 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   }
 
   void _checkRiskZone() async {
-    if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) return;
+    if (currentPosition == null || _notifications.fcmToken == null || _notifications.fcmToken!.isEmpty) {
+      return;
+    }
 
     final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-    String riskAlertDistance = userPreferences.riskAlertDistance;
+    String riskAlertDistanceSetting = userPreferences.riskAlertDistance;
 
-    double alertDistanceThreshold = _convertAlertDistance(riskAlertDistance);
+    double alertDistanceThreshold = _convertAlertDistance(riskAlertDistanceSetting);
     double routeDeviationThreshold = NavigationConfig.routeDeviationThreshold;
     const Distance distance = Distance();
 
+    // Reset flags for the current check iteration
+    isOnRoute = false;
+    NavigationConfig.highestUpcomingRisk = 0;
+    upcomingRisks.clear();
+    detectedRiskZones.clear();
+
+    // --- Determine Current Risk Level based on closest segment ---
+    double closestDistToRoute = double.infinity;
+    Map<String, dynamic>? currentSegment; // To hold the segment the user is currently on
+
     for (var segment in routeCoordinates) {
-      if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
+      if (segment['start'] is! LatLng || segment['end'] is! LatLng || segment['raster_value'] == null) {
+        continue;
+      }
 
-      LatLng point = segment['latlng'];
-      double distanceToPoint = distance(currentPosition!, point);
-      double riskValue = (segment['raster_value'] as num).toDouble();
+      final LatLng segmentStart = segment['start'] as LatLng;
+      final LatLng segmentEnd = segment['end'] as LatLng;
 
-      if (passedSegments.contains(point)) continue;
+      double distToStart = distance(currentPosition!, segmentStart);
+      double distToEnd = distance(currentPosition!, segmentEnd);
+      double segmentLength = distance(segmentStart, segmentEnd);
 
-      if (distanceToPoint < routeDeviationThreshold) {
+      // More robust check for being "on" a segment: project point onto line segment
+      // This is a simplified approach, a true projection can be complex.
+      // For now, we'll continue with the "near start/end and sum of distances" method.
+      bool isNearSegment = (distToStart < routeDeviationThreshold || distToEnd < routeDeviationThreshold) &&
+          (distToStart + distToEnd - segmentLength).abs() < routeDeviationThreshold * 2;
+
+      if (isNearSegment) {
         isOnRoute = true;
-      }
-
-      if (distanceToPoint < routeDeviationThreshold && riskValue > currentRiskLevel) {
-        currentRiskLevel = riskValue;
-      }
-
-      bool withinAlertDistance = distanceToPoint < alertDistanceThreshold;
-
-      if (withinAlertDistance && riskValue > NavigationConfig.mediumRisk) {
-        upcomingRisks[point] = riskValue;  // Store all upcoming risk values
-        detectedRiskZones.add(point);
-        if (riskValue > highestUpcomingRisk || highestUpcomingRisk == 0) {
-          highestUpcomingRisk = riskValue;
+        // If multiple segments are "near", consider the one with the closest start point
+        // or a more sophisticated 'closest segment to current position' logic.
+        // For simplicity, we'll take the first one found that's "near enough"
+        // or the one that minimizes the sum of distances to its start/end.
+        // A better approach would be to find the closest point *on the line segment*.
+        // For now, let's just pick the "nearest" segment that we are currently on/near.
+        if (distToStart < closestDistToRoute) { // Or a more complex distance to segment logic
+            closestDistToRoute = distToStart;
+            currentSegment = segment;
         }
       }
     }
 
-    // Prevent sudden flips between "on-route" and "off-route"
-    if (isOnRoute) {
-      consecutiveOffRouteCount = 0; // Reset counter if back on track
+    if (currentSegment != null) {
+      NavigationConfig.currentRiskLevel = (currentSegment['raster_value'] as num).toDouble();
     } else {
-      consecutiveOffRouteCount++; // Count how many times user is "off-route"
+      // If not on any segment, set currentRiskLevel to 0 or a safe default
+      NavigationConfig.currentRiskLevel = 0.0;
+    }
+    // --- End of Current Risk Level Determination ---
+
+    // Loop through segments to find upcoming risks
+    for (var segment in routeCoordinates) {
+      if (segment['start'] is! LatLng || segment['end'] is! LatLng || segment['raster_value'] == null) {
+        continue;
+      }
+
+      final LatLng segmentStart = segment['start'] as LatLng;
+      double riskValue = (segment['raster_value'] as num).toDouble();
+
+      double distToSegmentStart = distance(currentPosition!, segmentStart);
+      bool withinAlertDistance = distToSegmentStart < alertDistanceThreshold;
+
+      // Logic for upcoming high-risk zones
+      if (withinAlertDistance && riskValue > NavigationConfig.mediumRisk) {
+        // Add to upcoming risks if this segment is *ahead* of the current position.
+        // A more robust check here would be to ensure the segment is indeed 'upcoming'
+        // relative to `currentSegment` (e.g., its index in `routeCoordinates` is higher).
+        // For simplicity, we'll keep the current approach of "within alert distance and risky".
+        upcomingRisks[segment] = riskValue;
+        detectedRiskZones.add(segment);
+        if (riskValue > NavigationConfig.highestUpcomingRisk || NavigationConfig.highestUpcomingRisk == 0) {
+          NavigationConfig.highestUpcomingRisk = riskValue;
+        }
+      }
     }
 
-    bool confirmedOffRoute = consecutiveOffRouteCount >= offRouteThreshold;
+    // --- Off-route detection and notification ---
+    if (isOnRoute) {
+      NavigationConfig.consecutiveOffRouteCount = 0;
+    } else {
+      NavigationConfig.consecutiveOffRouteCount++;
+    }
 
-    // Only send off-route warning if user was previously on route and now confirmed off-route
-    if (confirmedOffRoute && lastOnRouteState) {
+    bool confirmedOffRoute = NavigationConfig.consecutiveOffRouteCount >= NavigationConfig.offRouteThreshold;
+
+    if (confirmedOffRoute && NavigationConfig.lastOnRouteState) {
       _sendOffRouteWarning();
     }
+    NavigationConfig.lastOnRouteState = isOnRoute;
 
-    lastOnRouteState = !confirmedOffRoute; // Update last known state
+    String currentRiskCategory = getRiskCategory(NavigationConfig.currentRiskLevel);
 
-    String currentRiskCategory = getRiskCategory(currentRiskLevel);
+    NavigationConfig.enteringNewRiskZone = false;
 
-    // Process all upcoming risk points (instead of just the highest)
+    // Process and notify for upcoming risks
     for (var entry in upcomingRisks.entries) {
-      LatLng riskPoint = entry.key;
+      Map<String, dynamic> riskSegment = entry.key;
       double riskValue = entry.value;
       String upcomingRiskCategory = getRiskCategory(riskValue);
 
-      // We need to extract the species list for the current risk point
-      // Find the segment that corresponds to the current risk point
-      var segment = routeCoordinates.firstWhere(
-        (seg) =>
-            seg['latlng'].latitude == riskPoint.latitude &&
-            seg['latlng'].longitude == riskPoint.longitude,
-      );
+      List<dynamic> speciesList = (riskSegment['species'] is List) ? List<dynamic>.from(riskSegment['species']) : [];
 
-      List<dynamic> speciesList = segment['species']; // Extract species list for the current risk point
-      // print("speciesList: $speciesList");
-
-      if (!_firstRiskDetected && !_startRiskNotificationSent && currentRiskLevel > 0.5 && isOnRoute) {
-        _sendInitialRiskWarning(riskPoint, currentRiskLevel, List<dynamic>.from(speciesList));
-        _startRiskNotificationSent = true; // Mark notification as sent
-        _firstRiskDetected = true;
+      // Initial risk warning
+      if (!NavigationConfig.firstRiskDetected && !NavigationConfig.startRiskNotificationSent && NavigationConfig.currentRiskLevel > NavigationConfig.mediumRisk && isOnRoute) {
+        final LatLng notificationPoint = riskSegment['start'] as LatLng;
+        _sendInitialRiskWarning(notificationPoint, NavigationConfig.currentRiskLevel, speciesList);
+        NavigationConfig.startRiskNotificationSent = true;
+        NavigationConfig.firstRiskDetected = true;
       }
 
-      if ((currentRiskCategory == "Low" && upcomingRiskCategory == "Medium") ||
-          (currentRiskCategory == "Low" && upcomingRiskCategory == "High") ||
-          (currentRiskCategory == "Medium" && upcomingRiskCategory == "High")) {
-        enteringNewRiskZone = true;
-        // print('ele volta a entrar no if e diz que enteringNewRiskZone = $enteringNewRiskZone');
+      // Determine if entering a new, higher risk zone based on the specified transitions
+      if ((currentRiskCategory == "Low" || currentRiskCategory == "Medium-Low") &&
+              (upcomingRiskCategory == "Medium" || upcomingRiskCategory == "Medium-High" || upcomingRiskCategory == "High") ||
+          (currentRiskCategory == "Medium" || currentRiskCategory == "Medium-High") &&
+              upcomingRiskCategory == "High") {
+        NavigationConfig.enteringNewRiskZone = true;
       }
 
-      print("enteringNewRiskZone: $enteringNewRiskZone, highestUpcomingRisk: $highestUpcomingRisk, currentRiskLevel: $currentRiskLevel");
+      print("enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}, highestUpcomingRisk: ${NavigationConfig.highestUpcomingRisk}, currentRiskLevel: ${NavigationConfig.currentRiskLevel}");
 
-      if (!enteringNewRiskZone) continue; // Skip if not transitioning to a new risk
+      if (!NavigationConfig.enteringNewRiskZone) continue; // Skip if not transitioning to a new risk
 
-      Set<LatLng> connectedRiskZone = _findConnectedRiskZone(riskPoint, upcomingRiskCategory);
+      Set<Map<String, dynamic>> connectedRiskZone = _findConnectedRiskZone(riskSegment, upcomingRiskCategory);
 
       print("Connected Risk Zone Size: ${connectedRiskZone.length}");
-      // print("connectedRiskZone, $connectedRiskZone");
-      // print("notifiedZones, $notifiedZones");
 
-      if (connectedRiskZone.difference(notifiedZones).isNotEmpty) {
-        print("🔔 Sending notification for risk at $riskPoint (Risk Level: $riskValue)");
-        // print("connectedRiskZone, $connectedRiskZone");
-        // print("notifiedZones, $notifiedZones");
-        _sendRiskWarning(riskPoint, riskValue, List<dynamic>.from(speciesList)); // Pass species list here
-        notifiedZones.addAll(connectedRiskZone);
+      bool anyNewSegmentInZone = false;
+      for (var segmentInZone in connectedRiskZone) {
+        if (!NavigationConfig.notifiedZones.contains(segmentInZone)) {
+          anyNewSegmentInZone = true;
+          break;
+        }
+      }
+
+      if (anyNewSegmentInZone && riskValue > NavigationConfig.currentRiskLevel) {
+        print("🔔 Sending notification for risk at segment (Risk Level: $riskValue, Current Risk Level: ${NavigationConfig.currentRiskLevel})");
+        final LatLng notificationPoint = riskSegment['start'] as LatLng;
+        _sendRiskWarning(notificationPoint, riskValue, speciesList);
+        NavigationConfig.notifiedZones.addAll(connectedRiskZone);
       } else {
-        print("⚠️ Risk already notified: Skipping notification for $riskPoint");
+        print("⚠️ Risk already notified: Skipping notification for segment");
       }
     }
 
-    if (currentRiskLevel > NavigationConfig.mediumRisk) {
-      passedSegments.addAll(detectedRiskZones);
-    }
-
-    inRiskZone = currentRiskLevel > NavigationConfig.mediumRisk;
+    // Update inRiskZone flag based on overall current risk
+    NavigationConfig.inRiskZone = NavigationConfig.currentRiskLevel > NavigationConfig.mediumRisk;
   }
 
   // Determine risk category
@@ -452,54 +666,105 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     return "High";
   }
 
-  // Find all connected segments in the same risk category
-  Set<LatLng> _findConnectedRiskZone(LatLng startPoint, String riskCategory) {
-    Set<LatLng> connectedZone = {};
-    Queue<LatLng> queue = Queue();
-
-    // Define the threshold for different risk categories
-    double threshold;
-    if (riskCategory == "Medium") {
-      threshold = NavigationConfig.mediumRisk;
-    } else if (riskCategory == "High") {
-      threshold = NavigationConfig.highRisk;
+  String _getGroupedRiskCategory(double riskValue) {
+    if (riskValue > NavigationConfig.highRisk) {
+      return "High";
+    } else if (riskValue > NavigationConfig.mediumHighRisk) {
+      return "Medium_Group"; // Group Medium-High with Medium
+    } else if (riskValue > NavigationConfig.mediumRisk) {
+      return "Medium_Group"; // Group Medium with Medium-High
+    } else if (riskValue > NavigationConfig.mediumLowRisk) {
+      return "Low_Group"; // Group Medium-Low with Low
     } else {
-      threshold = double.infinity; 
+      return "Low_Group"; // Default to Low Group
+    }
+  }
+
+  Set<Map<String, dynamic>> _findConnectedRiskZone(Map<String, dynamic> startSegment, String riskCategory) {
+    Set<Map<String, dynamic>> connectedZone = {};
+    Queue<Map<String, dynamic>> queue = Queue();
+
+    // Define the threshold based on the riskCategory
+    double threshold;
+    switch (riskCategory) {
+      case "Low":
+      case "Medium-Low": // These categories now fall under a "Low_Group" for thresholds
+        threshold = NavigationConfig.mediumLowRisk; // Or adjust as needed for the lowest risk in the group
+        break;
+      case "Medium":
+      case "Medium-High": // These categories now fall under a "Medium_Group" for thresholds
+        threshold = NavigationConfig.mediumRisk; // Or adjust as needed for the lowest risk in the group
+        break;
+      case "High":
+        threshold = NavigationConfig.highRisk;
+        break;
+      default:
+        threshold = 0.0; // Default to including all, or handle as an error
     }
 
-    // Initialize with the startPoint
-    connectedZone.add(startPoint);
-    queue.add(startPoint);
+    // Determine the 'group' category of the starting segment
+    final double startSegmentRiskValue = (startSegment['raster_value'] as num).toDouble();
+    final String startSegmentGroupedCategory = _getGroupedRiskCategory(startSegmentRiskValue);
 
-    // Find the starting point index in routeCoordinates
-    int startIndex = routeCoordinates.indexWhere((segment) {
-      return segment['latlng'] == startPoint;
-    });
 
+    // Initialize with the startSegment
+    connectedZone.add(startSegment);
+    queue.add(startSegment);
+
+    // Find the index of the startSegment in the main routeCoordinates list
+    int startIndex = routeCoordinates.indexOf(startSegment);
     if (startIndex == -1) {
-      // If startPoint is not found, return an empty set or handle error
-      return connectedZone; 
+      print("Error: Start segment not found in routeCoordinates.");
+      return connectedZone;
     }
 
-    // Now, iterate through the routeCoordinates from the startPoint onward
-    for (int i = startIndex; i < routeCoordinates.length; i++) {
+    // --- Traverse Forward ---
+    for (int i = startIndex + 1; i < routeCoordinates.length; i++) {
       var segment = routeCoordinates[i];
-      
-      if (segment['latlng'] is! LatLng || segment['raster_value'] == null) continue;
 
-      LatLng point = segment['latlng'];
-      double riskValue = segment['raster_value'];
-      String segmentCategory = getRiskCategory(riskValue);
-
-      // Skip points that are below the threshold
-      if (riskValue < threshold) {
-        return connectedZone;  // Stop adding points once we hit a risk value below threshold
+      if (segment['start'] is! LatLng || segment['end'] is! LatLng || segment['raster_value'] == null) {
+        break;
       }
 
-      // Only add points that are connected and belong to the same category
-      if (!connectedZone.contains(point) && segmentCategory == riskCategory) {
-        connectedZone.add(point);
-        queue.add(point);
+      double riskValue = (segment['raster_value'] as num).toDouble();
+      String segmentGroupedCategory = _getGroupedRiskCategory(riskValue); // Use the new grouped category helper
+
+      // Condition to add to connectedZone:
+      // 1. Risk value is at or above the threshold of the *starting* segment's category.
+      // 2. The segment's *grouped* category is the same as the *starting segment's grouped category*.
+      // This ensures continuity within "Medium_Group" but stops at "High" if starting in "Medium_Group".
+      if (riskValue >= threshold) {
+        if (segmentGroupedCategory == startSegmentGroupedCategory) {
+          connectedZone.add(segment);
+        } else {
+          // If the category changes (e.g., Medium_Group to High, or vice-versa), stop
+          break;
+        }
+      } else {
+        // Stop if the risk value drops below the threshold for the starting category
+        break;
+      }
+    }
+
+    // --- Traverse Backward ---
+    for (int i = startIndex - 1; i >= 0; i--) {
+      var segment = routeCoordinates[i];
+
+      if (segment['start'] is! LatLng || segment['end'] is! LatLng || segment['raster_value'] == null) {
+        break;
+      }
+
+      double riskValue = (segment['raster_value'] as num).toDouble();
+      String segmentGroupedCategory = _getGroupedRiskCategory(riskValue);
+
+      if (riskValue >= threshold) {
+        if (segmentGroupedCategory == startSegmentGroupedCategory) {
+          connectedZone.add(segment);
+        } else {
+          break;
+        }
+      } else {
+        break;
       }
     }
 
@@ -522,11 +787,10 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     }
   }
 
-  void _sendRiskWarning(LatLng riskPoint, double riskValue, List<dynamic> speciesList) async {
+  void _sendRiskWarning(LatLng notificationPoint, double riskValue, List<dynamic> speciesList) async {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-    // print("riskPoint: $riskPoint, riskValue: $riskValue, speciesList: $speciesList");
-    notifiedZones.add(riskPoint);
-    _firstRiskDetected = true;
+    
+    NavigationConfig.firstRiskDetected = true;
 
     String title;
     String body;
@@ -543,14 +807,16 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       title = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgTitle')}: $speciesNames!";
       body = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
     } else {
+      // This 'else' condition covers Medium-High, Medium, Medium-Low, and Low if needed.
+      // Ensure NavigationConfig constants are used correctly for these ranges.
       title = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgTitle')}: $speciesNames ${LanguageConfig.getLocalizedString(languageCode, 'atRisk')}";
       body = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
     }
 
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
+        Uri.parse('http://192.168.1.82:3001/send'), 
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -565,15 +831,17 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
       if (response.statusCode == 200) {
         print("Risk alert sent successfully: $title");
+      } else {
+        print("Failed to send risk alert. Status code: ${response.statusCode}");
+        print("Response body: ${response.body}");
       }
     } catch (e) {
       print("Error sending risk alert: $e");
     }
   }
 
-  void _sendInitialRiskWarning(LatLng riskPoint, double riskValue, List<dynamic> speciesList) async {
+  void _sendInitialRiskWarning(LatLng notificationPoint, double riskValue, List<dynamic> speciesList) async {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-    notifiedZones.add(riskPoint);
 
     String title;
     String body;
@@ -589,7 +857,6 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     if (riskValue > NavigationConfig.highRisk) {
       title = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgTitle')}: $speciesNames!";
       body = "${LanguageConfig.getLocalizedString(languageCode, 'warning')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
-
     } else {
       title = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgTitle')}: $speciesNames ${LanguageConfig.getLocalizedString(languageCode, 'atRisk')}";
       body = "${LanguageConfig.getLocalizedString(languageCode, 'riskZoneHere')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
@@ -597,8 +864,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       final response = await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
+        Uri.parse('http://192.168.1.82:3001/send'), 
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -612,10 +879,13 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       );
 
       if (response.statusCode == 200) {
-        print("Risk alert sent successfully: $title");
+        print("Initial risk alert sent successfully: $title");
+      } else {
+        print("Failed to send initial risk alert. Status code: ${response.statusCode}");
+        print("Response body: ${response.body}");
       }
     } catch (e) {
-      print("Error sending risk alert: $e");
+      print("Error sending initial risk alert: $e");
     }
   }
 
@@ -631,8 +901,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        Uri.parse('http://192.168.1.82:3001/send'),
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -651,48 +921,63 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   void _checkReRoute() {
     if (currentPosition == null || widget.routesWithPoints.isEmpty) return;
 
-    final userPreferences = Provider.of<UserPreferences>(context, listen: false); // Get the user's preference
-    String rerouteAlertDistance = userPreferences.rerouteAlertDistance; 
+    final userPreferences = Provider.of<UserPreferences>(context, listen: false);
+    String rerouteAlertDistance = userPreferences.rerouteAlertDistance;
     bool changeRoute = userPreferences.changeRoute;
 
-    // Convert string to a double in meters
     double alertThreshold = _convertAlertDistance(rerouteAlertDistance);
 
-    List<Map<String, dynamic>> defaultRoute = widget.routesWithPoints['defaultRoute'] ?? [];
-    List<Map<String, dynamic>> adjustedRoute = widget.routesWithPoints['adjustedRoute'] ?? [];
+    // Ensure 'defaultRoute' and 'adjustedRoute' contain lists of segments
+    List<Map<String, dynamic>> defaultRouteSegments = widget.routesWithPoints['defaultRoute'] ?? [];
+    List<Map<String, dynamic>> adjustedRouteSegments = widget.routesWithPoints['adjustedRoute'] ?? [];
 
-    if (defaultRoute.isEmpty || adjustedRoute.isEmpty) return;
+    if (defaultRouteSegments.isEmpty || adjustedRouteSegments.isEmpty) return;
 
     const Distance distance = Distance();
 
-    List<LatLng> divergencePoints = [];
+    // List to store the 'start' LatLng of the segments where divergence occurs
+    List<LatLng> divergenceStartPoints = [];
 
-    // Identify all divergence points along the routes
+    // Identify divergence segments. We'll iterate through the shorter of the two routes.
+    // A divergence occurs when corresponding segments are sufficiently different.
     bool previouslyDiverged = false;
-    for (int i = 0; i < min(defaultRoute.length, adjustedRoute.length); i++) {
-      LatLng defaultPoint = _getLatLngFromMap(defaultRoute[i]);
-      LatLng adjustedPoint = _getLatLngFromMap(adjustedRoute[i]);
+    for (int i = 0; i < min(defaultRouteSegments.length, adjustedRouteSegments.length); i++) {
+      final defaultSegment = defaultRouteSegments[i];
+      final adjustedSegment = adjustedRouteSegments[i];
 
-      if (!_arePointsClose(defaultPoint, adjustedPoint, threshold: NavigationConfig.pointsCloseThreshold)) {
+      // Assuming 'start' and 'end' in segments are already LatLng objects
+      final LatLng defaultSegmentStart = defaultSegment['start'] as LatLng;
+      final LatLng adjustedSegmentStart = adjustedSegment['start'] as LatLng;
+      final LatLng defaultSegmentEnd = defaultSegment['end'] as LatLng;
+      final LatLng adjustedSegmentEnd = adjustedSegment['end'] as LatLng;
+
+      // Check if the segments are "close" enough. This can be done by comparing their start points,
+      bool areSegmentsClose = _arePointsClose(defaultSegmentStart, adjustedSegmentStart, threshold: NavigationConfig.pointsCloseThreshold) &&
+                              _arePointsClose(defaultSegmentEnd, adjustedSegmentEnd, threshold: NavigationConfig.pointsCloseThreshold);
+
+
+      if (!areSegmentsClose) {
         if (!previouslyDiverged) {
-            divergencePoints.add(defaultPoint); // Save divergence point
-            previouslyDiverged = true; // Mark as diverged
+          // This is the first segment where divergence is detected
+          divergenceStartPoints.add(defaultSegmentStart); // Use the start point of the default route's diverging segment
+          previouslyDiverged = true; // Mark as diverged
         }
       } else {
-        previouslyDiverged = false; // Mark as converged
+        previouslyDiverged = false; // Mark as converged or still similar
       }
     }
 
-    if (divergencePoints.isEmpty) return; // No divergences found
+    if (divergenceStartPoints.isEmpty) return; // No divergences found
 
-    // Find the next upcoming divergence
-    for (LatLng divergencePoint in divergencePoints) {
+    // Find the next upcoming divergence point that the user is approaching
+    for (LatLng divergencePoint in divergenceStartPoints) {
       double distanceToDivergence = distance(currentPosition!, divergencePoint);
-      // print("distanceToDivergence, $distanceToDivergence");
 
-      if (distanceToDivergence < alertThreshold && !notifiedDivergences.contains(divergencePoint)) {
+      // Check if the user is within alert distance and this divergence hasn't been notified
+      if (distanceToDivergence < alertThreshold && !NavigationConfig.notifiedDivergences.contains(divergencePoint)) {
         _sendReRouteNotification(changeRoute);
-        notifiedDivergences.add(divergencePoint); // Mark this divergence as notified
+        // Mark this specific LatLng point as notified, not the segment.
+        NavigationConfig.notifiedDivergences.add(divergencePoint); // Add the LatLng point to the set
         break; // Stop after notifying the first upcoming divergence
       }
     }
@@ -737,8 +1022,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       }
       print("Vou enviar ReRouteNotification");
       await http.post(
-        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        // Uri.parse('http://192.168.1.82:3001/send'),
+        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        Uri.parse('http://192.168.1.82:3001/send'),
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -762,12 +1047,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       routeCoordinates = widget.routesWithPoints[selectedRouteKey] ?? [];
       upcomingRisks.clear(); // Clear risks from the old route
       detectedRiskZones.clear();
-      notifiedZones.clear(); // Optional depending on your logic
+      notifiedZones.clear(); // Clear notified zones for the new route
     });
-
-    if (routeCoordinates.isNotEmpty) {
-      _mapController.move(_getLatLngFromMap(routeCoordinates.first), NavigationConfig.cameraZoom);
-    }
 
     print("Switched to Adjusted Route!");
   }
@@ -813,6 +1094,14 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                 initialCenter: currentPosition ?? _getLatLngFromMap(routeCoordinates.first),
                 initialZoom: NavigationConfig.cameraZoom,
                 initialRotation: bearing, // Set initial rotation
+                onMapReady: () {
+                  // This code runs AFTER the map is rendered and ready for interaction
+                  if (currentPosition != null) {
+                    _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
+                    // Also update the initial progress here
+                    _updateRouteProgress();
+                  }
+                },
               ),
               children: [
                 TileLayer(
@@ -820,32 +1109,41 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                   subdomains: const ['a', 'b', 'c'],
                 ),
                 PolylineLayer(
-                  polylines: List.generate(routeCoordinates.length - 1, (index) {
-                    final current = routeCoordinates[index];
-                    final next = routeCoordinates[index + 1];
+                  polylines: [
+                    // Draw the remaining (upcoming) segments of the selected route
+                    // Only draw if there are segments in the routeCoordinates list
+                    if (routeCoordinates.isNotEmpty)
+                      ...List.generate(routeCoordinates.length, (index) {
+                        final segment = routeCoordinates[index];
+                        final LatLng startPoint = segment['start'] as LatLng;
+                        final LatLng endPoint = segment['end'] as LatLng;
 
-                    if (current['latlng'] is! LatLng || next['latlng'] is! LatLng) return null;
+                        // Determine color based on raster value for upcoming segments
+                        Color lineColor;
+                        final raster = segment['raster_value'];
+                        if (raster != null) {
+                          if (raster > NavigationConfig.highRisk) {
+                            lineColor = Colors.red;
+                          } else if (raster > NavigationConfig.mediumHighRisk) { // Assuming you have this constant
+                            lineColor = Colors.deepOrangeAccent;
+                          } else if (raster > NavigationConfig.mediumRisk) {
+                            lineColor = Colors.orange;
+                          } else if (raster > NavigationConfig.mediumLowRisk) { // Assuming you have this constant
+                            lineColor = Colors.yellow;
+                          } else {
+                            lineColor = Colors.purple; // Default for low/no risk
+                          }
+                        } else {
+                          lineColor = Colors.purple; // Fallback if raster_value is null
+                        }
 
-                    // Determine color based on raster value
-                    Color lineColor;
-                    if (current['raster_value'] != null) {
-                      if (current['raster_value'] > NavigationConfig.highRisk) {
-                        lineColor = Colors.red; 
-                      } else if (current['raster_value'] > NavigationConfig.mediumRisk) {
-                        lineColor = Colors.orange; 
-                      } else {
-                        lineColor = Colors.purple; 
-                      }
-                    } else {
-                      lineColor = Colors.purple; 
-                    }
-
-                    return Polyline(
-                      points: [current['latlng'] as LatLng, next['latlng'] as LatLng],
-                      strokeWidth: 8.0,
-                      color: lineColor,
-                    );
-                  }).whereType<Polyline>().toList(), 
+                        return Polyline(
+                          points: [startPoint, endPoint],
+                          strokeWidth: 8.0, // Thickness for upcoming segments
+                          color: lineColor,
+                        );
+                      }).whereType<Polyline>(), // Filter out any nulls
+                  ],
                 ),
                 MarkerLayer(
                   markers: [
@@ -901,7 +1199,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          widget.distances[selectedRouteKey]!,
+                          _remainingDistanceFormatted,
                           style: TextStyle(
                             fontSize: screenWidth * 0.06, 
                             fontWeight: FontWeight.bold,
@@ -911,7 +1209,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                         ),
                         SizedBox(width: screenWidth * 0.08),
                         Text(
-                          widget.times[selectedRouteKey]!,
+                          _remainingTimeFormatted,
                           style: TextStyle(
                             fontSize: screenWidth * 0.06, 
                             fontWeight: FontWeight.bold,

@@ -1,5 +1,5 @@
 // import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+// import 'package:latlong2/latlong.dart';
 import 'package:safe_roads/notifications.dart';
 
 class NavigationConfig {
@@ -11,10 +11,11 @@ class NavigationConfig {
   static String estimatedArrivalTime = "??:??"; // To display the arrival time
   static bool isAnimating = false; // To prevent overlapping animations
   static bool destinationReached = false;
-  static Set<LatLng> notifiedZones = {}; // Track notified risk zones
+  static int  destinationThresholderMeters = 10;
+  static Set<Map<String, dynamic>> notifiedZones = {}; // Track notified risk zones
   static bool inRiskZone = false;
   static bool keepRoute = true;
-  static Set<LatLng> passedSegments = {}; // Store segments already passed
+  static Set<Map<String, dynamic>> passedSegments = {}; // Store segments already passed
   static int consecutiveOffRouteCount = 0; // Track how many times user is "off-route"
   static int offRouteThreshold = 7; // Require 7 consecutive off-route detections
   static bool lastOnRouteState = true; // Track last known on-route state
@@ -31,11 +32,13 @@ class NavigationConfig {
   static bool isOnRoute = false;
   static double highestUpcomingRisk = 0;
   static double currentRiskLevel = 0;
-  static Set<LatLng> detectedRiskZones = {};  
-  static Map<LatLng, double> upcomingRisks = {}; // Store multiple risk points
+  static Set<Map<String, dynamic>> detectedRiskZones = {};  
+  static Map<Map<String, dynamic>, double> upcomingRisks = {}; // Store multiple risk points
 
+  static double mediumLowRisk = 0.2;
   static double mediumRisk = 0.3;
-  static double highRisk = 0.5;
+  static double mediumHighRisk = 0.5;
+  static double highRisk = 0.6;
 
   static double pointsCloseThreshold = 30.0;
   static int reRouteReSend = 30;

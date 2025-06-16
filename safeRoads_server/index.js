@@ -112,14 +112,11 @@ const getRoute = async (start, end, lowRisk, selectedSpecies) => {
     const minLon = Math.min(start.lon, end.lon) - bufferDistance;
     const maxLon = Math.max(start.lon, end.lon) + bufferDistance;
 
-    await pool.query("DROP TABLE IF EXISTS temp_ways;");
-    console.log("Temporary table dropped.");
-
     if(bufferDistance < 0.5){
       console.log("bufferDistance:", bufferDistance, "< 0.5, entra no if");
 
       const createTempTableQuery = `
-       CREATE TABLE temp_ways (
+       CREATE TEMP TABLE temp_ways (
          gid INTEGER,
          source INTEGER,
          target INTEGER,
@@ -326,17 +323,19 @@ app.post("/route", async (req, res) => {
     console.log('Out of the getRoute function');
 
     let responseData = {};
-    let allRoutes = {}; // Store routes for comparison
+    let allRoutes = {};
 
     for (const [key, route] of Object.entries(routes)) {
       if (!route || route.length === 0) {
         console.log(`Skipping route: ${key}, no valid data found.`);
-        continue; // Skip this route and continue with the next one
+        continue;
       }
 
-      let routePoints = [];
+      // We'll build a list of segments, not just individual points
+      let routeSegments = [];
       let totalDistance = 0; // in meters
-      let totalTime = 0; // in hours
+      let totalTime = 0; // in seconds
+
       let hasRisk = false; // Flag for risk detection
 
       route.forEach((row, index) => {
@@ -352,130 +351,141 @@ app.post("/route", async (req, res) => {
         }
 
         const speedMps = (speed * 1000) / 3600;
-        const segmentTime = segmentDistance / speedMps;
-        totalTime += segmentTime / 3600;
+        const segmentTimeSeconds = segmentDistance / speedMps;
+        totalTime += segmentTimeSeconds;
         totalDistance += segmentDistance;
 
         if (geojson.type === "LineString") {
           const coordinates = geojson.coordinates;
-          const firstCoord = coordinates[0];
-          const lastCoord = coordinates[coordinates.length - 1];
-
-          const startDistanceToFirst = calculateDistance(
-            start.lat,
-            start.lon,
-            firstCoord[1],
-            firstCoord[0]
-          );
-          const startDistanceToLast = calculateDistance(
-            start.lat,
-            start.lon,
-            lastCoord[1],
-            lastCoord[0]
-          );
-
-          const processCoordinates = (coords) => {
-            coords.forEach(([lon, lat]) => {
-              if (row.risk_value > 2) hasRisk = true;
-
-              const existingPointIndex = routePoints.findIndex(
-                (point) => point.lat === lat && point.lon === lon
-              );
-
-              if (existingPointIndex !== -1) {
-                // If same coordinate exists, keep the highest raster_value and merge species
-                routePoints[existingPointIndex].raster_value = Math.max(
-                  routePoints[existingPointIndex].raster_value,
-                  row.risk_value
-                );
-                //merge species arrays
-                if(row.risk_value > 0.3 && row.species && row.species.length > 0){
-                  routePoints[existingPointIndex].species = [...new Set([...routePoints[existingPointIndex].species,...row.species])];
-                }
-
-              } else {
-                // Otherwise, add a new unique point
-                routePoints.push({
-                  lat,
-                  lon,
-                  raster_value: row.risk_value,
-                  species: row.risk_value > 0.3 && row.species && row.species.length > 0 ? row.species : []
-                });
-              }
-            });
-          };
-
+          
+          // Determine the correct order of coordinates for this segment
+          let currentSegmentCoords = coordinates;
           if (index === 0) {
+            const startDistanceToFirst = calculateDistance(start.lat, start.lon, coordinates[0][1], coordinates[0][0]);
+            const startDistanceToLast = calculateDistance(start.lat, start.lon, coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
             if (startDistanceToLast < startDistanceToFirst) {
-              processCoordinates(coordinates.slice().reverse());
-            } else {
-              processCoordinates(coordinates);
+              currentSegmentCoords = coordinates.slice().reverse();
             }
           } else {
-            const lastPointInRoute = routePoints[routePoints.length - 1];
-
-            const distanceToFirst = calculateDistance(
-              lastPointInRoute.lat,
-              lastPointInRoute.lon,
-              firstCoord[1],
-              firstCoord[0]
-            );
-            const distanceToLast = calculateDistance(
-              lastPointInRoute.lat,
-              lastPointInRoute.lon,
-              lastCoord[1],
-              lastCoord[0]
-            );
-
-            if (distanceToLast < distanceToFirst) {
-              processCoordinates(coordinates.slice().reverse());
-            } else {
-              processCoordinates(coordinates);
+            // For now, let's assume `routeSegments` accurately represents consecutive segments
+            // and we can infer the connection. If the routing API guarantees sorted segments,
+            // this simplifies. If not, you might need a more robust path reconstruction.
+            const lastPointOfPreviousSegment = routeSegments.length > 0 ? routeSegments[routeSegments.length - 1].end : null;
+            if (lastPointOfPreviousSegment) {
+                const distanceToFirst = calculateDistance(lastPointOfPreviousSegment.lat, lastPointOfPreviousSegment.lon, coordinates[0][1], coordinates[0][0]);
+                const distanceToLast = calculateDistance(lastPointOfPreviousSegment.lat, lastPointOfPreviousSegment.lon, coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]);
+                if (distanceToLast < distanceToFirst) {
+                    currentSegmentCoords = coordinates.slice().reverse();
+                }
             }
+          }
+
+          // Now, iterate through the coordinates of the current LineString
+          // and create sub-segments (point-to-point)
+          for (let i = 0; i < currentSegmentCoords.length - 1; i++) {
+            const startCoord = currentSegmentCoords[i];
+            const endCoord = currentSegmentCoords[i + 1];
+            const microSegmentDistance = calculateDistance(startCoord[1], startCoord[0], endCoord[1], endCoord[0]);
+
+            const segment = {
+              start: { lat: startCoord[1], lon: startCoord[0] },
+              end: { lat: endCoord[1], lon: endCoord[0] },
+              // Assign the raster value and species directly to this micro-segment
+              raster_value: row.risk_value,
+              species: row.risk_value > 0.3 && row.species && row.species.length > 0 ? row.species : [],
+              // For a small point-to-point segment, its time is a fraction of the full geojson segment time.
+              // Calculate this fraction based on distance.
+              // This is a more precise way to distribute time across micro-segments.
+              time_to_next_seconds: (microSegmentDistance / segmentDistance) * segmentTimeSeconds,
+              // If you only want the time for the *full original geojson segment* to be carried,
+              // then you could pass `segmentTimeSeconds` here, but that would be less granular for Flutter.
+              // It depends on whether Flutter's `routeCoordinates` array represents
+              // individual points or segment objects.
+              segment_distance: microSegmentDistance, 
+            };
+            routeSegments.push(segment);
+
+            if (row.risk_value > 2) hasRisk = true;
           }
         }
       });
 
-      // Format the distance
+      const getRiskCategory = (value) => {
+        if (value >= 0.6) return 'high';
+        if (value >= 0.5) return 'mediumHigh';
+        if (value >= 0.3) return 'medium';
+        if (value >= 0.2) return 'mediumLow';
+        return 'low';
+      };
+
+      let maxRiskValue = 0;
+      let riskCategory = '';
+      let distanceAtMaxRisk = 0;
+
+      // Step 1: Find max risk value
+      routeSegments.forEach(seg => {
+        if (seg.raster_value > maxRiskValue) {
+          maxRiskValue = seg.raster_value;
+        }
+      });
+
+      // Step 2: Identify risk category of the max value
+      riskCategory = getRiskCategory(maxRiskValue);
+
+      // Step 3: Sum distance of all segments in the same risk category
+      routeSegments.forEach(seg => {
+        if (getRiskCategory(seg.raster_value) === riskCategory) {
+          distanceAtMaxRisk += seg.segment_distance;
+        }
+      });
+
+      // Format the distance and time as before
       const formattedDistance =
         totalDistance < 1000
           ? `${totalDistance.toFixed(0)} meters`
           : `${(totalDistance / 1000).toFixed(2)} km`;
 
-      console.log("formattedDistance,", formattedDistance);
-
-      // Format the time
-      const totalHours = Math.floor(totalTime);
-      const totalMinutes = Math.round((totalTime - totalHours) * 60);
+      const totalHours = Math.floor(totalTime / 3600);
+      const remainingSeconds = totalTime % 3600;
+      const totalMinutes = Math.round(remainingSeconds / 60);
       const formattedTime =
         totalHours > 0
           ? `${totalHours}h ${totalMinutes}min`
           : `${totalMinutes} min`;
 
-      console.log("formattedTime,", formattedTime);
+      // Format distanceAtMaxRisk similarly:
+      const formattedDistanceAtMaxRisk = 
+        distanceAtMaxRisk < 1000
+          ? `${Math.round(distanceAtMaxRisk)} meters`
+          : `${(distanceAtMaxRisk / 1000).toFixed(2)} km`;
 
-      // Store route data for comparison
-      allRoutes[key] = routePoints;
+      // Store route data for comparison (adjusting for new structure)
+      allRoutes[key] = routeSegments;
 
-      console.log(routePoints)
+      // console.log('Route Segments for', key, ':', routeSegments);
+      console.log('Distance at Max Risk for', key, ':', formattedDistanceAtMaxRisk);
+      console.log('Max Risk Value for', key, ':', maxRiskValue);
 
-      // Store results in responseData, including hasRisk, distance, and time
+      // Store results in responseData
       responseData[key] = {
-        route: routePoints,
+        // Change 'route' to 'segments' to reflect new structure
+        segments: routeSegments, // Changed from 'route' to 'segments'
         distance: formattedDistance,
         time: formattedTime,
         hasRisk,
+        maxRiskValue,
+        distanceAtMaxRisk: formattedDistanceAtMaxRisk,
       };
     }
 
-    // Check if all routes are identical
+    // Check if all routes are identical (adjusting for new structure)
     const routeKeys = Object.keys(allRoutes);
     if (
       routeKeys.length > 1 &&
       JSON.stringify(allRoutes[routeKeys[0]]) === JSON.stringify(allRoutes[routeKeys[1]])
     ) {
       console.log("Duplicate routes detected, returning only the default route.");
-      responseData = { default: responseData[routeKeys[0]] }; // Keep only the first route
+      responseData = { default: responseData[routeKeys[0]] };
     }
 
     res.status(200).json(responseData);
