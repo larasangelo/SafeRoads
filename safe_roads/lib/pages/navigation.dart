@@ -206,8 +206,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
             if (_appLifecycleState != AppLifecycleState.resumed && !_destinationReachedNotif && mounted) {
               String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
               await http.post(
-                // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
-                Uri.parse('http://192.168.1.82:3001/send'),
+                Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
+                // Uri.parse('http://192.168.1.82:3001/send'),
                 // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
                 headers: {"Content-Type": "application/json"},
                 body: jsonEncode({
@@ -396,7 +396,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
       // try {
       //   final response = await http.post(
-          // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        //   Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
         //  Uri.parse('http://192.168.1.82:3001/send'),
         //  Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
       //     headers: {"Content-Type": "application/json"},
@@ -815,8 +815,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       final response = await http.post(
-        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
-        Uri.parse('http://192.168.1.82:3001/send'), 
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
+        // Uri.parse('http://192.168.1.82:3001/send'), 
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -864,8 +864,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       final response = await http.post(
-        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
-        Uri.parse('http://192.168.1.82:3001/send'), 
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'), 
+        // Uri.parse('http://192.168.1.82:3001/send'), 
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -901,8 +901,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     try {
       await http.post(
-        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        Uri.parse('http://192.168.1.82:3001/send'),
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        // Uri.parse('http://192.168.1.82:3001/send'),
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -1022,8 +1022,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       }
       print("Vou enviar ReRouteNotification");
       await http.post(
-        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
-        Uri.parse('http://192.168.1.82:3001/send'),
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/send'),
+        // Uri.parse('http://192.168.1.82:3001/send'),
         // Uri.parse('http://10.101.121.11:3001/send'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({

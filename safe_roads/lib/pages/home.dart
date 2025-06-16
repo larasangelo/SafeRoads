@@ -159,8 +159,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       _httpClient = http.Client();
 
       final response = await _httpClient!.post( 
-        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
-        Uri.parse('http://192.168.1.82:3001/route'),
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
+        // Uri.parse('http://192.168.1.82:3001/route'),
         // Uri.parse('http://10.101.121.11:3001/route'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -349,8 +349,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       final response = await http.post(
-        // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/geocode'),
-        Uri.parse('http://192.168.1.82:3001/geocode'),
+        Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/geocode'),
+        // Uri.parse('http://192.168.1.82:3001/geocode'),
         // Uri.parse('http://10.101.121.11:3001/geocode'), // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"address": address}),
@@ -404,8 +404,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     try {
       final response = await http
           .get(
-            // Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&country=Portugal&lang=en'),
-            Uri.parse('http://192.168.1.82:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
+            Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/search?query=${Uri.encodeComponent(query)}&limit=5&country=Portugal&lang=en'),
+            // Uri.parse('http://192.168.1.82:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'),
             // Uri.parse('http://10.101.121.11:3001/search?query=${Uri.encodeComponent(query)}&limit=5&lang=en'), // testar na uni
           )
           .timeout(Duration(seconds: 10));
