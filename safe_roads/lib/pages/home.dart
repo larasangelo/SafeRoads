@@ -651,6 +651,70 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     }
   }
 
+  Widget _buildInfoBox(BuildContext context, int i) {
+    var entry = _routesWithPoints.entries.elementAt(i);
+    var routeSegments = entry.value;
+
+    if (routeSegments.isEmpty) return const SizedBox.shrink();
+
+    var midSegmentIndex = routeSegments.length ~/ 2;
+    if (midSegmentIndex >= routeSegments.length) midSegmentIndex = routeSegments.length - 1;
+    if (midSegmentIndex < 0) midSegmentIndex = 0;
+
+    LatLng midPoint = routeSegments[midSegmentIndex]['start'] as LatLng;
+
+    double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0;
+    double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
+    double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
+
+    bool isSelectedRoute = entry.key == _selectedRouteKey;
+    bool isAdjustedRoute = entry.key == 'adjustedRoute';
+
+    Color boxColor = isSelectedRoute
+        ? Colors.purple.withValues(alpha: 0.8)
+        : Colors.grey.withValues(alpha: 0.6);
+    Color textColor = isSelectedRoute ? Colors.white : Colors.black;
+
+    double iconSize = MediaQuery.of(context).size.width * 0.04;
+    double padding = MediaQuery.of(context).size.width * 0.022;
+    double fontSize = MediaQuery.of(context).size.width * 0.032;
+
+    return Positioned(
+      left: screenX,
+      top: screenY,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedRouteKey = entry.key;
+          });
+        },
+        child: Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: boxColor,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isAdjustedRoute)
+                Icon(Icons.star, color: Colors.yellow, size: iconSize),
+              Text(
+                "${_times[entry.key]}",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  fontSize: fontSize,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -828,86 +892,20 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   ),
                   Stack(
                     children: [
-                      // Add Info Boxes on Routes
+                      // First render all UNSELECTED info boxes
                       for (var i = 0; i < _routesWithPoints.entries.length; i++)
-                        if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
-                          Builder(
-                            builder: (context) {
-                              var entry = _routesWithPoints.entries.elementAt(i);
-                              var routeSegments = entry.value; // Renamed to reflect segments
+                        if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty &&
+                            _routesWithPoints.entries.elementAt(i).key != _selectedRouteKey)
+                          _buildInfoBox(context, i),
 
-                              // Check if routeSegments has elements before trying to access an index
-                              if (routeSegments.isEmpty) {
-                                return const SizedBox.shrink(); // Return an empty widget if no segments
-                              }
-
-                              // Get the middle segment's index
-                              var midSegmentIndex = routeSegments.length ~/ 2;
-                              // Ensure midSegmentIndex is valid
-                              if (midSegmentIndex >= routeSegments.length) {
-                                midSegmentIndex = routeSegments.length - 1; // Fallback to the last segment if calculation is off for very short routes
-                              }
-                              if (midSegmentIndex < 0) { // Handle empty or single-segment routes
-                                midSegmentIndex = 0;
-                              }
-
-                              // Access the 'start' LatLng from the chosen segment
-                              LatLng midPoint = routeSegments[midSegmentIndex]['start'] as LatLng; // Directly cast to LatLng
-
-                              // Compute dynamic offset to avoid overlap
-                              double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
-                              double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
-                              double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
-
-                              // Ensure selected route's box is more visible
-                              bool isSelectedRoute = entry.key == _selectedRouteKey;
-                              bool isAdjustedRoute = entry.key == 'adjustedRoute'; // Check if it's the adjusted route
-                              Color boxColor = isSelectedRoute ? Colors.purple.withValues(alpha:0.8) : Colors.grey..withValues(alpha:0.6); // Corrected Colors.grey.withValues to withOpacity
-                              Color textColor = isSelectedRoute ? Colors.white : Colors.black;
-
-                              // MediaQuery for dynamic sizing based on screen size
-                              double iconSize = MediaQuery.of(context).size.width * 0.04;
-                              double padding = MediaQuery.of(context).size.width * 0.022;
-                              double fontSize = MediaQuery.of(context).size.width * 0.032;
-
-                              return Positioned(
-                                left: screenX,
-                                top: screenY,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedRouteKey = entry.key;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.all(padding),
-                                    decoration: BoxDecoration(
-                                      color: boxColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (isAdjustedRoute)
-                                          Icon(Icons.star, color: Colors.yellow, size: iconSize),
-                                        Text(
-                                          "${_times[entry.key]}",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: textColor,
-                                            fontSize: fontSize,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                      // Then render the SELECTED info box last (on top)
+                      if (_selectedRouteKey != null)
+                        for (var i = 0; i < _routesWithPoints.entries.length; i++)
+                          if (_routesWithPoints.entries.elementAt(i).key == _selectedRouteKey)
+                            _buildInfoBox(context, i),
                     ],
                   ),
+
             Positioned(
               top: MediaQuery.of(context).size.height * 0.05, 
               left: MediaQuery.of(context).size.width * 0.025, 
@@ -1250,7 +1248,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                             return Text(
                                               LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
                                               style: TextStyle(
-                                                fontSize: MediaQuery.of(context).size.width * 0.035,
+                                                fontSize: MediaQuery.of(context).size.width * 0.03,
                                                 color: Colors.grey[700],
                                               ),
                                             );
@@ -1278,7 +1276,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                               return Text(
                                                 message,
                                                 style: TextStyle(
-                                                  fontSize: MediaQuery.of(context).size.width * 0.035,
+                                                  fontSize: MediaQuery.of(context).size.width * 0.03,
                                                   color: Colors.grey[700],
                                                 ),
                                               );
@@ -1289,7 +1287,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                           return Text(
                                             LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
                                             style: TextStyle(
-                                              fontSize: MediaQuery.of(context).size.width * 0.035,
+                                              fontSize: MediaQuery.of(context).size.width * 0.03,
                                               color: Colors.grey[700],
                                             ),
                                           );
@@ -1418,9 +1416,18 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 Widget _buildRiskMessage(String text, Color color, BuildContext context) {
   double screenWidth = MediaQuery.of(context).size.width;
 
-  String imagePath = (color == Colors.red)
-    ? "assets/icons/warning_red.png"
-    : "assets/icons/warning_orange.png";
+  String imagePath;
+  if (color == Colors.red) {
+    imagePath = "assets/icons/warning_red.png";
+  } else if (color == Colors.deepOrangeAccent) {
+    imagePath = "assets/icons/warning_deepOrange.png";
+  } else if (color == Color.fromRGBO(224, 174, 41, 1)) {
+    imagePath = "assets/icons/warning_orange.png";
+  } else if (color == Colors.yellow) {
+    imagePath = "assets/icons/warning_yellow.png";
+  } else{
+    imagePath = "assets/icons/warning_yellow.png";
+  }
 
   return Padding(
     padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),

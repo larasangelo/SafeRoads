@@ -17,6 +17,9 @@ class _EditProfileState extends State<EditProfile> {
   String email = ProfileConfig.defaultEmail;
   String country = ProfileConfig.defaultCountry;
   String selectedImage = ProfileConfig.defaultAvatar;
+  bool _isUpdating = false;
+  late String initialAvatar;
+  bool _profileLoaded = false;
 
   final ProfileController _profileController = ProfileController();
   final TextEditingController _usernameController = TextEditingController();
@@ -29,7 +32,10 @@ class _EditProfileState extends State<EditProfile> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    fetchUserProfile();
+    if (!_profileLoaded) {
+      fetchUserProfile();
+      _profileLoaded = true;
+    }
   }
 
   Future<void> fetchUserProfile() async {
@@ -42,7 +48,12 @@ class _EditProfileState extends State<EditProfile> {
         email = profileData['email']!;
         country = profileData['country']!;
         selectedImage = profileData['avatar']!;
+        initialAvatar = profileData['avatar']!; // store initial avatar
+
+        _usernameController.text = username;
+        _countryController.text = country;
       });
+
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -51,22 +62,34 @@ class _EditProfileState extends State<EditProfile> {
     }
   }
 
+  bool _hasChanges() {
+    return _usernameController.text.trim() != username ||
+          _countryController.text.trim() != country ||
+          selectedImage != initialAvatar ||
+          (_currentPasswordController.text.isNotEmpty && _newPasswordController.text.isNotEmpty);
+  }
+
   Future<void> updateProfile() async {
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+
+    if (!_hasChanges()) {
+      Navigator.pop(context, false); // No update needed
+      return;
+    }
+
+    setState(() {
+      _isUpdating = true;
+    });
+
     try {
       await _profileController.updateUser(
         context: context,
-        username: _usernameController.text.trim().isNotEmpty
-            ? _usernameController.text.trim()
-            : username,
+        username: _usernameController.text.trim(),
         email: email,
-        country: _countryController.text.trim().isNotEmpty
-            ? _countryController.text.trim()
-            : country,
+        country: _countryController.text.trim(),
         avatar: selectedImage,
       );
 
-      // Change password if both fields are filled
       if (_currentPasswordController.text.isNotEmpty &&
           _newPasswordController.text.isNotEmpty) {
         await _profileController.changePassword(
@@ -74,14 +97,12 @@ class _EditProfileState extends State<EditProfile> {
           _newPasswordController.text.trim(),
         );
 
-        if (!mounted) return; // Ensure the widget is still mounted before using context
-
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'passwordUpdated'))),
         );
       } else {
-        if (!mounted) return; // Ensure the widget is still mounted before using context
-
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(LanguageConfig.getLocalizedString(languageCode, 'profileUpdated'))),
         );
@@ -90,11 +111,16 @@ class _EditProfileState extends State<EditProfile> {
       if (!mounted) return;
       Navigator.pop(context, true);
     } catch (e) {
-      if (!mounted) return; // Ensure the widget is still mounted before using context
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("${LanguageConfig.getLocalizedString(languageCode, 'errorUpdatingProfile')}: $e")),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdating = false;
+        });
+      }
     }
   }
 
@@ -163,22 +189,21 @@ class _EditProfileState extends State<EditProfile> {
 
   Widget buildTextField(
     TextEditingController? controller,
-    String label,
     double fontSize, {
     bool obscure = false,
     bool enabled = true,
+    String? hint,    // Optional hint text inside input box
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
       enabled: enabled,
       decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(fontSize: fontSize),
+        hintText: hint,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
         filled: true,
-        // fillColor: Colors.grey[200],
       ),
+      style: TextStyle(fontSize: fontSize),
     );
   }
 
@@ -198,86 +223,97 @@ class _EditProfileState extends State<EditProfile> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: Theme.of(context).colorScheme.primary, // This sets the back arrow color
+        foregroundColor: Theme.of(context).colorScheme.primary,
         title: Text(
           LanguageConfig.getLocalizedString(languageCode, 'editProfile'),
           style: TextStyle(
             color: Theme.of(context).colorScheme.primary,
           ),
         ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.primary),
+          onPressed: updateProfile,
+        ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(horizontalPadding),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: spacing),
-                Center(
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: avatarRadius,
-                        backgroundImage: AssetImage(selectedImage),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: _showImagePicker,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              shape: BoxShape.circle,
+      body: Stack(
+        children: [SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(horizontalPadding),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // SizedBox(height: spacing),
+                  Center(
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: avatarRadius,
+                          backgroundImage: AssetImage(selectedImage),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _showImagePicker,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              padding: EdgeInsets.all(iconSize * 0.4),
+                              child: Icon(Icons.edit, size: iconSize, color: Theme.of(context).colorScheme.onPrimary),
                             ),
-                            padding: EdgeInsets.all(iconSize * 0.4),
-                            child: Icon(Icons.edit, size: iconSize, color: Theme.of(context).colorScheme.onPrimary),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: spacing * 2),
-                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterUsername'), fontSize),
-                buildTextField(_usernameController, username, fontSize),
-                SizedBox(height: spacing),
-                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterEmail'), fontSize),
-                buildTextField(null, email, fontSize, enabled: false),
-                SizedBox(height: spacing),
-                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterCountry'), fontSize),
-                buildTextField(_countryController, country, fontSize),
-                SizedBox(height: spacing),
-                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'currentPass'), fontSize),
-                buildTextField(_currentPasswordController, LanguageConfig.getLocalizedString(languageCode, 'enterCurrent'), fontSize, obscure: true),
-                SizedBox(height: spacing),
-                buildLabel(LanguageConfig.getLocalizedString(languageCode, 'newPass'), fontSize),
-                buildTextField(_newPasswordController, LanguageConfig.getLocalizedString(languageCode, 'enterNew'), fontSize, obscure: true),
-                SizedBox(height: spacing * 1.5),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: updateProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      padding: EdgeInsets.symmetric(vertical: spacing),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                    child: Text(
-                      LanguageConfig.getLocalizedString(languageCode, 'update'),
-                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: buttonFontSize),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: spacing * 2),
+                  buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterUsername'), fontSize),
+                  buildTextField(_usernameController, fontSize),
+                  SizedBox(height: spacing),
+                  buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterEmail'), fontSize),
+                  buildTextField(null, fontSize, enabled: false, hint: email),
+                  SizedBox(height: spacing),
+                  buildLabel(LanguageConfig.getLocalizedString(languageCode, 'enterCountry'), fontSize),
+                  buildTextField(_countryController, fontSize),
+                  SizedBox(height: spacing),
+                  buildLabel(LanguageConfig.getLocalizedString(languageCode, 'currentPass'), fontSize),
+                  buildTextField(_currentPasswordController, fontSize, obscure: true, hint: LanguageConfig.getLocalizedString(languageCode, 'enterCurrent')),
+                  SizedBox(height: spacing),
+                  buildLabel(LanguageConfig.getLocalizedString(languageCode, 'newPass'), fontSize),
+                  buildTextField(_newPasswordController, fontSize, obscure: true, hint: LanguageConfig.getLocalizedString(languageCode, 'enterNew')),
+                  SizedBox(height: spacing * 1.5),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: updateProfile,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        padding: EdgeInsets.symmetric(vertical: spacing),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                      ),
+                      child: Text(
+                        LanguageConfig.getLocalizedString(languageCode, 'update'),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: buttonFontSize),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
+        if (_isUpdating)
+          Container(
+            color: Colors.black.withOpacity(0.3),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      ]),
     );
   }
 }

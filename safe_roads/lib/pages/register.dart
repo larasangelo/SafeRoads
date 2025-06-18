@@ -13,6 +13,8 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  bool _isRegistering = false;
+
   final AuthController _authController = AuthController();
 
   final TextEditingController _usernameController = TextEditingController();
@@ -43,141 +45,159 @@ class _RegisterPageState extends State<RegisterPage> {
           },
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(screenWidth * 0.06), 
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(height: screenHeight * 0.02), 
-                Text(
-                  LanguageConfig.getLocalizedString(languageCode, 'helloRegister'), 
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.08, 
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: screenHeight * 0.04), 
-                // Username Field
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: LanguageConfig.getLocalizedString(languageCode, 'enterUsername'), 
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(screenWidth * 0.06), 
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: screenHeight * 0.02), 
+                  Text(
+                    LanguageConfig.getLocalizedString(languageCode, 'helloRegister'), 
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.08, 
+                      fontWeight: FontWeight.bold,
                     ),
-                    filled: true,
-                    // fillColor: Theme.of(context).colorScheme.onPrimary,
                   ),
-                ),
-                SizedBox(height: screenHeight * 0.02), 
-                // Email Field
-                TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: LanguageConfig.getLocalizedString(languageCode, 'enterEmail'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    // fillColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                SizedBox(height: screenHeight * 0.02), 
-                // Password Field
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: LanguageConfig.getLocalizedString(languageCode, 'pass'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    // fillColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  obscureText: true,
-                ),
-                SizedBox(height: screenHeight * 0.02), 
-                // Confirm Password Field
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  decoration: InputDecoration(
-                    labelText: LanguageConfig.getLocalizedString(languageCode, 'confirmPass'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    filled: true,
-                    // fillColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  obscureText: true,
-                ),
-                SizedBox(height: screenHeight * 0.03), 
-                // Register Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      _authController.registerUser(
-                        context: context,
-                        username: _usernameController.text.trim(),
-                        email: _emailController.text.trim(),
-                        password: _passwordController.text.trim(),
-                        confirmPassword: _confirmPasswordController.text.trim(),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
-                      shape: RoundedRectangleBorder(
+                  SizedBox(height: screenHeight * 0.04), 
+                  // Username Field
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: LanguageConfig.getLocalizedString(languageCode, 'enterUsername'), 
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10.0),
                       ),
-                    ),
-                    child: Text(
-                      LanguageConfig.getLocalizedString(languageCode, 'register'),
-                      style: TextStyle(
-                        fontSize: screenWidth * 0.05, 
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
+                      filled: true,
+                      // fillColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
-                ),
-                SizedBox(height: screenHeight * 0.02), 
-                // Login Now Text
-                Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/login');
-                    },
-                    child: RichText(
-                      text: TextSpan(
-                        text: LanguageConfig.getLocalizedString(languageCode, 'accountAlready'),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: screenWidth * 0.04, 
+                  SizedBox(height: screenHeight * 0.02), 
+                  // Email Field
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: LanguageConfig.getLocalizedString(languageCode, 'enterEmail'),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      filled: true,
+                      // fillColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  SizedBox(height: screenHeight * 0.02), 
+                  // Password Field
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      labelText: LanguageConfig.getLocalizedString(languageCode, 'pass'),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      filled: true,
+                      // fillColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                    obscureText: true,
+                  ),
+                  SizedBox(height: screenHeight * 0.02), 
+                  // Confirm Password Field
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    decoration: InputDecoration(
+                      labelText: LanguageConfig.getLocalizedString(languageCode, 'confirmPass'),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      filled: true,
+                      // fillColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                    obscureText: true,
+                  ),
+                  SizedBox(height: screenHeight * 0.03), 
+                  // Register Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        setState(() {
+                          _isRegistering = true;
+                        });
+
+                        await _authController.registerUser(
+                          context: context,
+                          username: _usernameController.text.trim(),
+                          email: _emailController.text.trim(),
+                          password: _passwordController.text.trim(),
+                          confirmPassword: _confirmPasswordController.text.trim(),
+                        );
+
+                        if (mounted) {
+                          setState(() {
+                            _isRegistering = false;
+                          });
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
                         ),
-                        children: [
-                          TextSpan(
-                            text: LanguageConfig.getLocalizedString(languageCode, 'loginNow'),
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                              fontSize: screenWidth * 0.04, 
-                            ),
-                          ),
-                        ],
+                      ),
+                      child: Text(
+                        LanguageConfig.getLocalizedString(languageCode, 'register'),
+                        style: TextStyle(
+                          fontSize: screenWidth * 0.05, 
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: screenHeight * 0.02), 
+                  // Login Now Text
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/login');
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          text: LanguageConfig.getLocalizedString(languageCode, 'accountAlready'),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: screenWidth * 0.04, 
+                          ),
+                          children: [
+                            TextSpan(
+                              text: LanguageConfig.getLocalizedString(languageCode, 'loginNow'),
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                                fontSize: screenWidth * 0.04, 
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
+        if (_isRegistering)
+          Container(
+            color: Colors.black.withOpacity(0.3),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+      ])
     );
   }
 }

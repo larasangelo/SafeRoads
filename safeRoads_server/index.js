@@ -457,7 +457,7 @@ app.post("/route", async (req, res) => {
       const formattedDistanceAtMaxRisk = 
         distanceAtMaxRisk < 1000
           ? `${Math.round(distanceAtMaxRisk)} m`
-          : `${(distanceAtMaxRisk / 1000).toFixed(2)} km`;
+          : `${Math.round(distanceAtMaxRisk / 1000)} km`;
 
       // Store route data for comparison (adjusting for new structure)
       allRoutes[key] = routeSegments;
