@@ -899,10 +899,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           _buildInfoBox(context, i),
 
                       // Then render the SELECTED info box last (on top)
-                      if (_selectedRouteKey != null)
-                        for (var i = 0; i < _routesWithPoints.entries.length; i++)
-                          if (_routesWithPoints.entries.elementAt(i).key == _selectedRouteKey)
-                            _buildInfoBox(context, i),
+                      for (var i = 0; i < _routesWithPoints.entries.length; i++)
+                        if (_routesWithPoints.entries.elementAt(i).key == _selectedRouteKey)
+                          _buildInfoBox(context, i),
                     ],
                   ),
 
@@ -1031,7 +1030,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
                         padding: EdgeInsets.symmetric(
                           vertical: MediaQuery.of(context).size.height * 0.02, 
                           horizontal: MediaQuery.of(context).size.width * 0.05, 
@@ -1040,7 +1039,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       child: Text(
                         LanguageConfig.getLocalizedString(languageCode, 'setDestination'),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSecondary,
                           fontSize: MediaQuery.of(context).size.width * 0.035, 
                         ),
                       ),
@@ -1051,23 +1050,11 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             Positioned(
               bottom: MediaQuery.of(context).size.width * 0.05,
               right: MediaQuery.of(context).size.width * 0.05,
-              child: ElevatedButton(
-                onPressed: () {
-                  _reCenter();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  minimumSize: Size(MediaQuery.of(context).size.width * 0.15, MediaQuery.of(context).size.width * 0.15), // square-ish and small
-                  padding: EdgeInsets.zero, // no extra padding
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8), // slightly rounded square
-                  ),
-                ),
-                child: Icon(
-                  Icons.my_location,
-                  color: Colors.white,
-                  size: 24, // smaller icon
-                ),
+              child: FloatingActionButton(
+                onPressed: _reCenter,
+                // mini: true, // Make it a smaller button
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                child: Icon(Icons.gps_fixed, color: Theme.of(context).colorScheme.onSecondary),
               ),
             ),
             //button when 

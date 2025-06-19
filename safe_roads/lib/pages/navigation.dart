@@ -80,6 +80,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   double? _lastBearing;
   String _remainingTimeFormatted = '';
   String _remainingDistanceFormatted = '';
+  bool _isMapCentered = true;
 
   // Extract LatLng safely
   LatLng _getLatLngFromMap(Map<String, dynamic> map) {
@@ -137,6 +138,16 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     location = Location();
     _mapController = MapController();
+    
+    _mapController.mapEventStream.listen((MapEvent mapEvent) {
+      if (mapEvent is MapEventMoveEnd) { // This covers both pan and zoom end events
+        if (_isMapCentered) {
+          setState(() {
+            _isMapCentered = false;
+          });
+        }
+      }
+    });
 
     // Assign the callback to handle rerouting
     _notifications.onSwitchRoute = switchToAdjustedRoute;
@@ -343,8 +354,10 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       NavigationConfig.estimatedArrivalTime = _remainingTimeFormatted; 
     });
 
-    // Keep the map centered on the current position
-    _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
+    // Only move the map if it's supposed to be centered
+    if (_isMapCentered && currentPosition != null) {
+      _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
+    }
   }
 
   String _formatDistance(double meters) {
@@ -427,7 +440,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         bearing = _smoothBearing(heading);
       });
 
-      if (currentPosition != null && !isAnimating) {
+      if (currentPosition != null && !isAnimating && _isMapCentered) { // Only rotate if centered
         _mapController.rotate(bearing);
       }
     });
@@ -472,7 +485,10 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         }
       });
 
-      _mapController.move(intermediatePosition, 19.0); // bearing handled by compass
+      // Only move the map during animation if it's supposed to be centered
+      if (_isMapCentered) {
+        _mapController.move(intermediatePosition, 19.0); // bearing handled by compass
+      }
     }
 
     // Final position and animation end state
@@ -481,6 +497,19 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       isAnimating = false;
       previousPosition = end; // Ensure the final position is set
     });
+  }
+
+  // New function to recenter the map
+  void _recenterMap() {
+    if (currentPosition != null) {
+      setState(() {
+        _isMapCentered = true;
+      });
+      _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
+      if (_lastBearing != null) { // Apply bearing if compass is active
+        _mapController.rotate(_lastBearing!);
+      }
+    }
   }
 
   // Calculate the bearing between two LatLng points
@@ -1170,6 +1199,18 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
               },
             ),
           ),
+           // Recenter Button
+          if (!_isMapCentered)
+            Positioned(
+              bottom: screenHeight * 0.17, // Adjust position to be above the info bar
+              right: screenWidth * 0.05,
+              child: FloatingActionButton(
+                onPressed: _recenterMap,
+                // mini: true, // Make it a smaller button
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                child: Icon(Icons.gps_fixed, color: Theme.of(context).colorScheme.onSecondary),
+              ),
+            ),
           if (!_destinationReached)
             Positioned(
               bottom: 0,
