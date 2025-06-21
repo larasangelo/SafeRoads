@@ -533,7 +533,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
           );
         },
         title: Text(
-          LanguageConfig.getLocalizedString(selectedLanguage, 'riskAlertDistance'),
+          LanguageConfig.getLocalizedString(selectedLanguage, 'riskAlertDistanceInfoIcon'),
           style: TextStyle(fontSize: screenWidth * 0.04), 
         ),
         trailing: DropdownButton<String>(
@@ -583,7 +583,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
           );
         },
         title: Text(
-          LanguageConfig.getLocalizedString(selectedLanguage, 'reRouteAlertDistance'),
+          LanguageConfig.getLocalizedString(selectedLanguage, 'reRouteAlertDistanceInfoIcon'),
           style: TextStyle(fontSize: screenWidth * 0.04), 
         ),
         trailing: DropdownButton<String>(

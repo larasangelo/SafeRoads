@@ -1,7 +1,10 @@
+// pages/navigation_bar.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import for SystemNavigator.pop()
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
-import 'package:safe_roads/configuration/navigation_bar_config.dart';
+import 'package:safe_roads/models/navigation_bar_visibility.dart';
+// import 'package:safe_roads/configuration/navigation_bar_config.dart'; // REMOVE THIS IMPORT
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/about.dart';
 import 'package:safe_roads/pages/home.dart';
@@ -15,16 +18,15 @@ class NavigationBarExample extends StatefulWidget {
 }
 
 class NavigationBarExampleState extends State<NavigationBarExample> {
-  int _selectedIndex = NavigationBarConfig.selectedIndex;
-  bool _showNavigationBar = NavigationBarConfig.showNavigationBar;
-  final PageController _pageController = NavigationBarConfig.pageController;
-  final PageStorageBucket _bucket = NavigationBarConfig.bucket; // For persisting state
+  int _selectedIndex = 1;
 
-  // Toggle navigation bar visibility
-  void toggleNavigationBar(bool show) {
-    setState(() {
-      _showNavigationBar = show;
-    });
+  late PageController _pageController;
+  final PageStorageBucket _bucket = PageStorageBucket();
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
   }
 
   @override
@@ -33,19 +35,61 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
     super.dispose();
   }
 
-  Future<bool> _onWillPopExit() async {
-    // This exits the app
-    return true; // If you want to show a confirmation dialog before exiting, return false and show dialog
+  // New method to show the exit confirmation dialog
+  Future<bool> _showExitConfirmationDialog() async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LanguageConfig.getLocalizedString(
+            Provider.of<UserPreferences>(context).languageCode, 'exitAppTitle')),
+        content: Text(LanguageConfig.getLocalizedString(
+            Provider.of<UserPreferences>(context).languageCode, 'exitAppMessage')),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), 
+            child: Text(LanguageConfig.getLocalizedString(
+                Provider.of<UserPreferences>(context).languageCode, 'no')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true), 
+            child: Text(LanguageConfig.getLocalizedString(
+                Provider.of<UserPreferences>(context).languageCode, 'yes')),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  Future<void> _handlePopAction() async {
+    // If the current page is the "Home" page (MapPage at index 1)
+    if (_selectedIndex == 1) {
+      // Show confirmation dialog
+      final bool? shouldExit = await _showExitConfirmationDialog();
+      if (shouldExit == true) {
+        // If user confirms, exit the app
+        SystemNavigator.pop();
+      }
+      // If user cancels, do nothing (stay on MapPage)
+    } else {
+      // If we are not on the "Home" page, navigate to the "Home" page.
+      _pageController.jumpToPage(1); // Navigate to the MapPage (Home)
+    }
   }
 
  @override
   Widget build(BuildContext context) {
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
+    // Listen to the NavigationBarVisibility provider
+    final navigationBarVisibility = Provider.of<NavigationBarVisibility>(context);
+    bool _showNavigationBar = navigationBarVisibility.isVisible; // Get state from provider
 
-    return WillPopScope(
-      onWillPop: () async {
-        // Exit the app instead of navigating back
-        return await _onWillPopExit();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) {
+          return;
+        }
+        await _handlePopAction();
       },
       child: Scaffold(
         body: PageView(
@@ -64,7 +108,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
             const Profile(),
           ],
         ),
-        bottomNavigationBar: _showNavigationBar
+        bottomNavigationBar: _showNavigationBar // Use the state from the provider
             ? NavigationBar(
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 selectedIndex: _selectedIndex,

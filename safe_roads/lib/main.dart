@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/firebase_options.dart';
+import 'package:safe_roads/models/navigation_bar_visibility.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/monochrome_theme.dart';
@@ -62,14 +63,10 @@ void main() async {
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Notifications setup
   final Notifications notifications = Notifications();
   await notifications.setupNotificationChannels();
 
-  // Explicitly request permissions
   await requestLocationPermissions();
-
-  // Initialize background service
   await initializeService();
 
   runApp(
@@ -77,13 +74,12 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => UserPreferences()),
         ChangeNotifierProvider(create: (_) => NotificationPreferences()),
+        ChangeNotifierProvider(create: (_) => NavigationBarVisibility()), 
       ],
-      child: MyApp(), // Use MyApp to manage lifecycle
+      child: MyApp(),
     ),
   );
 }
-
-GlobalKey<NavigationBarExampleState> navigationBarKey = GlobalKey<NavigationBarExampleState>();
 
 // Function to initialize background service
 Future<void> initializeService() async {
@@ -452,7 +448,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         '/welcome': (context) => const WelcomePage(),
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
-        '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
+        '/navigation': (context) => NavigationBarExample(),
         '/editProfile': (context) => const EditProfile(),
       },
       debugShowCheckedModeBanner: false,
