@@ -124,7 +124,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     NavigationConfig.currentRiskLevel = 0;
     NavigationConfig.detectedRiskZones.clear();  
     NavigationConfig.upcomingRisks.clear(); 
-    // _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
+    _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
     
     // print("enteringNewRiskZone: $enteringNewRiskZone");
     // print("NavigationConfig.enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}");

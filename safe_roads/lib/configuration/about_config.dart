@@ -30,6 +30,10 @@ class AboutConfig {
         "title": LanguageConfig.getLocalizedString(languageCode, 'who'),
         "body": LanguageConfig.getLocalizedString(languageCode, 'whoBody'),
       },
+      {
+        "title": LanguageConfig.getLocalizedString(languageCode, 'probabilityLegendTitle'),
+        "body": "__legend__", // special marker to insert the legend widget
+      },
     ];
   }
 }

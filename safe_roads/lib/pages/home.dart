@@ -276,6 +276,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
       setDestVis = true;
       _isFetchingRoute = false;
     });
+    _reCenter();
   }
 
   void _adjustMapToBounds() {
@@ -553,9 +554,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
 
     controller.addListener(() {
-      _mapController.move(
+      _mapController.moveAndRotate(
         LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
         zoomTween.evaluate(animation),
+        0.0,
       );
     });
 
@@ -719,6 +721,74 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     );
   }
 
+  // Function to show the risk legend pop-up
+  void _showRiskLegendPopup(BuildContext context) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(LanguageConfig.getLocalizedString(languageCode, 'infos')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start, // Align text to the start
+            children: [
+              _buildLegendItem(context, Colors.red, LanguageConfig.getLocalizedString(languageCode, 'highProbabilityTitle')),
+              _buildLegendItem(context, Colors.deepOrangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumHighProbabilityTitle')),
+              _buildLegendItem(context, Colors.orangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumProbabilityTitle')),
+              _buildLegendItem(context, Colors.yellow, LanguageConfig.getLocalizedString(languageCode, 'mediumLowProbabilityTitle')),
+              _buildLegendItem(context, Colors.purple, LanguageConfig.getLocalizedString(languageCode, 'lowProbabilityTitle')),
+              // Add a small space before the explanation
+              const SizedBox(height: 20),
+              // The new explanation text
+              Text(
+                LanguageConfig.getLocalizedString(languageCode, 'highestRiskExplanation'),
+                style: TextStyle(
+                  fontSize: MediaQuery.of(context).size.width * 0.035, // Adjust font size as needed
+                  color: Theme.of(context).colorScheme.onSurfaceVariant, // A slightly subdued color
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Ok'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLegendItem(BuildContext context, Color color, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Container(
+            width: 35,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -841,7 +911,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                             } else if (raster > mediumHighRisk) {
                               lineColor = Colors.deepOrangeAccent;
                             } else if (raster > mediumRisk) {
-                              lineColor = Colors.orange;
+                              lineColor = Colors.orangeAccent;
                             } else if (raster > mediumLowRisk) {
                               lineColor = Colors.yellow;
                             } else {
@@ -1047,14 +1117,34 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             Positioned(
               bottom: MediaQuery.of(context).size.width * 0.05,
               right: MediaQuery.of(context).size.width * 0.05,
-              child: FloatingActionButton(
-                onPressed: _reCenter,
-                // mini: true, // Make it a smaller button
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                child: Icon(Icons.gps_fixed, color: Theme.of(context).colorScheme.onSecondary),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end, // Aligns buttons to the bottom
+                children: [
+                  // Re-center Button
+                  FloatingActionButton(
+                    heroTag: "btn1", // Add a unique heroTag for each FloatingActionButton
+                    onPressed: _reCenter,
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    child: Icon(Icons.gps_fixed, color: Theme.of(context).colorScheme.onSecondary),
+                  ),
+                ],
               ),
             ),
             //button when 
+            if (_routesWithPoints.isNotEmpty)
+              Positioned(
+                // Calculate the top position dynamically
+                // It should be above the _boxHeight + some padding from the bottom
+                bottom: _boxHeight + (MediaQuery.of(context).size.width * 0.03), // Adjust this value for desired padding
+                left: MediaQuery.of(context).size.width * 0.05,
+                child: FloatingActionButton(
+                  heroTag: "btn2",
+                  onPressed: () => _showRiskLegendPopup(context),
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  mini: true, // Keeping it mini as per your request
+                  child: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSecondary),
+                ),
+              ),
             if (_routesWithPoints.isNotEmpty)
               Positioned(
                 bottom: 0,
@@ -1161,7 +1251,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                 Flexible(
                                   child: _buildRiskMessage(
                                     buildMessage('mediumProbability', speciesList, riskDistance),
-                                    const Color.fromRGBO(224, 174, 41, 1),
+                                    Colors.orangeAccent,
                                     context,
                                   ),
                                 ),
@@ -1255,8 +1345,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                               final adjustedCost = calculateRiskAwareCost(_routesWithPoints['adjustedRoute']!);
                                               final selectedCost = calculateRiskAwareCost(_routesWithPoints[_selectedRouteKey]!);
 
-                                              print("adjustedCost: $adjustedCost");
-                                              print("selectedCost: $selectedCost");
+                                              // print("adjustedCost: $adjustedCost");
+                                              // print("selectedCost: $selectedCost");
 
                                               if (adjustedCost > 0) {
                                                 final costFactor = selectedCost / adjustedCost;
@@ -1375,7 +1465,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                           backgroundColor: _selectedRouteKey == 'adjustedRoute' ||
                                                   !_routesWithPoints.containsKey('adjustedRoute')
                                               ? Colors.green
-                                              : const Color.fromRGBO(224, 174, 41, 1),
+                                              : Colors.orangeAccent,
                                         ),
                                       child: Text(
                                         LanguageConfig.getLocalizedString(languageCode, 'start'),
@@ -1411,7 +1501,7 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
     imagePath = "assets/icons/warning_red.png";
   } else if (color == Colors.deepOrangeAccent) {
     imagePath = "assets/icons/warning_deepOrange.png";
-  } else if (color == Color.fromRGBO(224, 174, 41, 1)) {
+  } else if (color == Colors.orangeAccent) {
     imagePath = "assets/icons/warning_orange.png";
   } else if (color == Colors.yellow) {
     imagePath = "assets/icons/warning_yellow.png";
