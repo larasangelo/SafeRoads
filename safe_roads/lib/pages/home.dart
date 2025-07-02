@@ -1164,7 +1164,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 ],
               ),
             ),
-            if (_routesWithPoints.isEmpty && _addressController.text.trim() == selectedDestination?.trim())
+            if (_routesWithPoints.isEmpty)
               Positioned(
                 bottom: MediaQuery.of(context).size.width * 0.05,
                 right: MediaQuery.of(context).size.width * 0.05,
