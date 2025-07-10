@@ -553,7 +553,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
     // Determine buffer dynamically based on the route's size
     double buffer = (latRange + lngRange) * 0.15; // 15% of total span
-    double bottomBuffer = buffer * 4; // Extra buffer at the bottom
+    double bottomBuffer = buffer * 5; // Extra buffer at the bottom
 
     return LatLngBounds(
       LatLng(minLat - bottomBuffer, minLng - buffer), // Bottom-left corner
@@ -744,73 +744,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     );
   }
 
-  // Function to show the risk legend pop-up
-  void _showRiskLegendPopup(BuildContext context) {
-    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(LanguageConfig.getLocalizedString(languageCode, 'infos')),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start, // Align text to the start
-            children: [
-              _buildLegendItem(context, Colors.red, LanguageConfig.getLocalizedString(languageCode, 'highProbabilityTitle')),
-              _buildLegendItem(context, Colors.deepOrangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumHighProbabilityTitle')),
-              _buildLegendItem(context, Colors.orangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumProbabilityTitle')),
-              _buildLegendItem(context, Colors.yellow, LanguageConfig.getLocalizedString(languageCode, 'mediumLowProbabilityTitle')),
-              _buildLegendItem(context, Colors.purple, LanguageConfig.getLocalizedString(languageCode, 'lowProbabilityTitle')),
-              // Add a small space before the explanation
-              const SizedBox(height: 20),
-              // The new explanation text
-              Text(
-                LanguageConfig.getLocalizedString(languageCode, 'highestRiskExplanation'),
-                style: TextStyle(
-                  fontSize: MediaQuery.of(context).size.width * 0.035, // Adjust font size as needed
-                  color: Theme.of(context).colorScheme.onSurfaceVariant, // A slightly subdued color
-                ),
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Ok'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildLegendItem(BuildContext context, Color color, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Container(
-            width: 35,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   double _getSheetSizeFraction(BuildContext context) {
     final selectedRoute = _routesWithPoints[_selectedRouteKey];
@@ -877,7 +811,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
               children: [
                 TileLayer(
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: const ['a', 'b', 'c'],
+                  tileProvider: NetworkTileProvider(
+                    headers: {
+                      'User-Agent': 'SafeRoads/1.0',
+                    },
+                  ),
+                  userAgentPackageName: 'com.example.safe_roads',
                 ),
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
@@ -1164,6 +1103,18 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 ],
               ),
             ),
+            Positioned(
+              bottom: 8,
+              left: 8,
+              child: Container(
+                color: Colors.white.withValues(alpha: 0.7),
+                padding: const EdgeInsets.all(4.0),
+                child: Text(
+                  '© OpenStreetMap contributors',
+                  style: TextStyle(fontSize: 10, color: Colors.black),
+                ),
+              ),
+            ),
             if (_routesWithPoints.isEmpty)
               Positioned(
                 bottom: MediaQuery.of(context).size.width * 0.05,
@@ -1182,31 +1133,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                 ),
               ),
             //button when 
-            if (_routesWithPoints.isNotEmpty && _addressController.text.trim() == selectedDestination?.trim())
-              AnimatedBuilder(
-                animation: _draggableController,
-                builder: (context, child) {
-                  final screenHeight = MediaQuery.of(context).size.height;
-                  final bottomPadding = MediaQuery.of(context).size.width * 0.03;
-
-                  // Avoid using size before attachment
-                  final sheetHeight = _draggableController.isAttached
-                      ? _draggableController.size * screenHeight
-                      : screenHeight * 0.45; // fallback to initial size
-
-                  return Positioned(
-                    bottom: sheetHeight + bottomPadding,
-                    left: MediaQuery.of(context).size.width * 0.05,
-                    child: FloatingActionButton(
-                      heroTag: "btn2",
-                      onPressed: () => _showRiskLegendPopup(context),
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                      mini: true,
-                      child: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSecondary),
-                    ),
-                  );
-                },
-              ),
             if (_routesWithPoints.isNotEmpty)
               DraggableScrollableSheet(
                 controller: _draggableController,
@@ -1403,7 +1329,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                                   LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
                                                   style: TextStyle(
                                                     fontSize: MediaQuery.of(context).size.width * 0.03,
-                                                    color: Colors.grey[700],
+                                                    color: Theme.of(context).colorScheme.onSecondary,
                                                   ),
                                                 );
                                               }
@@ -1431,7 +1357,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                                     message,
                                                     style: TextStyle(
                                                       fontSize: MediaQuery.of(context).size.width * 0.03,
-                                                      color: Colors.grey[700],
+                                                      color: Theme.of(context).colorScheme.onSecondary,
                                                     ),
                                                   );
                                                 }
@@ -1570,6 +1496,74 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 }
 
+// Function to show the risk legend pop-up
+void _showRiskLegendPopup(BuildContext context) {
+  String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(LanguageConfig.getLocalizedString(languageCode, 'infos')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, // Align text to the start
+          children: [
+            _buildLegendItem(context, Colors.red, LanguageConfig.getLocalizedString(languageCode, 'highProbabilityTitle')),
+            _buildLegendItem(context, Colors.deepOrangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumHighProbabilityTitle')),
+            _buildLegendItem(context, Colors.orangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumProbabilityTitle')),
+            _buildLegendItem(context, Colors.yellow, LanguageConfig.getLocalizedString(languageCode, 'mediumLowProbabilityTitle')),
+            _buildLegendItem(context, Colors.purple, LanguageConfig.getLocalizedString(languageCode, 'lowProbabilityTitle')),
+            // Add a small space before the explanation
+            const SizedBox(height: 20),
+            // The new explanation text
+            Text(
+              LanguageConfig.getLocalizedString(languageCode, 'highestRiskExplanation'),
+              style: TextStyle(
+                fontSize: MediaQuery.of(context).size.width * 0.035, // Adjust font size as needed
+                color: Theme.of(context).colorScheme.onSurfaceVariant, // A slightly subdued color
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Ok'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildLegendItem(BuildContext context, Color color, String label) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      children: [
+        Container(
+          width: 35,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 Widget _buildRiskMessage(String text, Color color, BuildContext context) {
   double screenWidth = MediaQuery.of(context).size.width;
 
@@ -1582,7 +1576,7 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
     imagePath = "assets/icons/warning_orange.png";
   } else if (color == Colors.yellow) {
     imagePath = "assets/icons/warning_yellow.png";
-  } else{
+  } else {
     imagePath = "assets/icons/warning_yellow.png";
   }
 
@@ -1596,7 +1590,7 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
           width: screenWidth * 0.14,
         ),
         SizedBox(width: screenWidth * 0.05),
-        Expanded( // Wrap the Text widget with Expanded
+        Expanded(
           child: Text(
             text,
             textAlign: TextAlign.left,
@@ -1606,6 +1600,14 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
               color: color,
             ),
           ),
+        ),
+        SizedBox(width: 8), // spacing between text and button
+        FloatingActionButton(
+          heroTag: "btn2",
+          onPressed: () => _showRiskLegendPopup(context),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          mini: true,
+          child: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSecondary),
         ),
       ],
     ),
