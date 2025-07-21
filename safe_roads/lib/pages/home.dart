@@ -119,12 +119,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
           // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-          const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+          // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+          // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+          // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
           13.0,
         );
       }
@@ -516,12 +518,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
             // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-            const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+            // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+            // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+            // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
             destination,
           );
         }
@@ -667,12 +671,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   void _reCenter() {
     if (_currentLocation != null) {
       _mapController.moveAndRotate(
-        // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
         // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-        // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-        const LatLng(38.756546, -9.155300), //Current location for testing at FCUL //TODO: PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
+        // LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        // LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+        // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+        // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL //TODO: PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -926,12 +932,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   MarkerLayer(
                     markers: [
                       Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
                         // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                        point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+                        // point: LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+                        // point: LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+                        // point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL 
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -1001,8 +1009,12 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                           if (_currentLocation != null) {
                             _mapController.move(
                               // Use your actual current location here, not hardcoded ones.
-                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+                              // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+                              // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL 39.81852034026171, -7.496767173765267
                               13.0,
                             );
                           }

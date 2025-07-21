@@ -1135,7 +1135,12 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
               children: [
                 TileLayer(
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: const ['a', 'b', 'c'],
+                  tileProvider: NetworkTileProvider(
+                    headers: {
+                      'User-Agent': 'SafeRoads/1.0',
+                    },
+                  ),
+                  userAgentPackageName: 'com.example.safe_roads',
                 ),
                 PolylineLayer(
                   polylines: [

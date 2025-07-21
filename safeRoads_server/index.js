@@ -392,7 +392,7 @@ app.post("/route", async (req, res) => {
               end: { lat: endCoord[1], lon: endCoord[0] },
               // Assign the raster value and species directly to this micro-segment
               raster_value: row.risk_value,
-              species: row.risk_value > 0.3 && row.species && row.species.length > 0 ? row.species : [],
+              species: row.risk_value > 0.1 && row.species && row.species.length > 0 ? row.species : [], //0.2
               // For a small point-to-point segment, its time is a fraction of the full geojson segment time.
               // Calculate this fraction based on distance.
               // This is a more precise way to distribute time across micro-segments.
@@ -413,8 +413,8 @@ app.post("/route", async (req, res) => {
       const getRiskCategory = (value) => {
         if (value >= 0.6) return 'high';
         if (value >= 0.5) return 'mediumHigh';
-        if (value >= 0.3) return 'medium';
-        if (value >= 0.2) return 'mediumLow';
+        if (value >= 0.17) return 'medium'; //0.3
+        if (value >= 0.1) return 'mediumLow'; //0.2
         return 'low';
       };
 
