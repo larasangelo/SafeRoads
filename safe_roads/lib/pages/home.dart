@@ -97,7 +97,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     //TODO: METER ISTO COMENTÁRIO QUANDO SE ESTÁ A FAZER OS TESTES
 
     // Periodically update location every 30 seconds
-    // _locationUpdateTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateCurrentLocation());
+    _locationUpdateTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateCurrentLocation());
   }
 
   Future<void> _requestLocationPermission() async {
@@ -126,7 +126,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
           // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
           // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
           // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
-          // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+          // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+          // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL 
           13.0,
         );
       }
@@ -525,6 +526,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
             // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
             // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
             // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+            // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
             // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
             destination,
           );
@@ -678,7 +680,8 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         // LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
         // LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
         // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
-        // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL //TODO: PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
+        // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+        // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL // PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -939,6 +942,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                         // point: LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
                         // point: LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+                        // point: LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
                         // point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL 
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
@@ -1008,13 +1012,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
                           if (_currentLocation != null) {
                             _mapController.move(
-                              // Use your actual current location here, not hardcoded ones.
                               LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                               // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                               // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
                               // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
                               // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
-                              // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL 39.81852034026171, -7.496767173765267
+                              // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+                              // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL 
                               13.0,
                             );
                           }

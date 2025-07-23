@@ -124,7 +124,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     NavigationConfig.currentRiskLevel = 0;
     NavigationConfig.detectedRiskZones.clear();  
     NavigationConfig.upcomingRisks.clear(); 
-    _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
+    // _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
     
     // print("enteringNewRiskZone: $enteringNewRiskZone");
     // print("NavigationConfig.enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}");
@@ -440,8 +440,10 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         bearing = _smoothBearing(heading);
       });
 
-      if (currentPosition != null && !isAnimating && _isMapCentered) { // Only rotate if centered
-        _mapController.rotate(bearing);
+      if (currentPosition != null && !isAnimating && _isMapCentered) {
+        double adjustedBearing = (360 - bearing) % 360; // Invert direction
+
+        _mapController.rotate(adjustedBearing);
       }
     });
   }
