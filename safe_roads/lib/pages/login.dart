@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/loading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //   final prefs = await SharedPreferences.getInstance();
+    //   await prefs.setBool('isLoggedIn', false);
+    // });
     String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     double screenHeight = MediaQuery.of(context).size.height;
     double screenWidth = MediaQuery.of(context).size.width;
@@ -149,6 +154,8 @@ class _LoginPageState extends State<LoginPage> {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setBool('isLoggedIn', true);
                         print("Login: Saved isLoggedIn = ${prefs.getBool('isLoggedIn')}");
+
+                        await initializeService();
 
                         // Ensure the widget is still mounted before navigation
                         if (!context.mounted) return;

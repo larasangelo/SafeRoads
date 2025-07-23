@@ -85,10 +85,12 @@ class About extends StatelessWidget {
                                   tilePadding,
                                   textPaddingBottom,
                                 ),
-                                child: Text(
-                                  LanguageConfig.getLocalizedString(languageCode, section['body']!),
-                                  style: theme.textTheme.bodyMedium,
-                                ),
+                                child: section['body'] == '__legend__'
+                                  ? _buildLegendContent(context, languageCode)
+                                  : Text(
+                                      LanguageConfig.getLocalizedString(languageCode, section['body']!),
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
                               ),
                             ],
                           ),
@@ -152,6 +154,44 @@ class About extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLegendContent(BuildContext context, String languageCode) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLegendItem(context, Colors.red, LanguageConfig.getLocalizedString(languageCode, 'highProbabilityTitle')),
+        _buildLegendItem(context, Colors.deepOrangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumHighProbabilityTitle')),
+        _buildLegendItem(context, Colors.orangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumProbabilityTitle')),
+        _buildLegendItem(context, Colors.yellow, LanguageConfig.getLocalizedString(languageCode, 'mediumLowProbabilityTitle')),
+        _buildLegendItem(context, Colors.purple, LanguageConfig.getLocalizedString(languageCode, 'lowProbabilityTitle')),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(BuildContext context, Color color, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Container(
+            width: 35,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
       ),
     );
   }

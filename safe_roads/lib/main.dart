@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:safe_roads/app_lifecycle_observer.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/firebase_options.dart';
+import 'package:safe_roads/models/navigation_bar_visibility.dart';
 import 'package:safe_roads/models/notification_preferences.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/monochrome_theme.dart';
@@ -65,14 +66,10 @@ void main() async {
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Notifications setup
   final Notifications notifications = Notifications();
   await notifications.setupNotificationChannels();
 
-  // Explicitly request permissions
   await requestLocationPermissions();
-
-  // Initialize background service
   await initializeService();
 
   runApp(
@@ -80,17 +77,22 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => UserPreferences()),
         ChangeNotifierProvider(create: (_) => NotificationPreferences()),
+        ChangeNotifierProvider(create: (_) => NavigationBarVisibility()), 
       ],
-      child: MyApp(), // Use MyApp to manage lifecycle
+      child: MyApp(),
     ),
   );
 }
 
-GlobalKey<NavigationBarExampleState> navigationBarKey = GlobalKey<NavigationBarExampleState>();
-
 // Function to initialize background service
 Future<void> initializeService() async {
   final service = FlutterBackgroundService();
+
+  final isRunning = await service.isRunning();
+  if (isRunning) {
+    print("Service already running. Skipping start.");
+    return;
+  }
 
   const AndroidNotificationChannel channel = AndroidNotificationChannel(
     'my_foreground', // id
@@ -160,7 +162,7 @@ Future<void> requestLocationPermissions() async {
   }
 }
 
-const double mediumRiskThreshold = 0.3;
+const double mediumRiskThreshold = 0.17; //0.3
 const double highRiskThreshold = 0.5;
 DateTime lastNotificationTime = DateTime.now().subtract(Duration(seconds: 30));
 
@@ -194,7 +196,7 @@ void onStart(ServiceInstance service) async {
   Timer? notificationTimer;
   DateTime localLastNotificationTime = DateTime.now().subtract(const Duration(seconds: 30));
 
-  Timer.periodic(const Duration(seconds: 20), (monitorTimer) async {
+  Timer.periodic(const Duration(seconds: 10), (monitorTimer) async { //20
     await prefs.reload(); // Always reload to get the latest SharedPreferences state
     print("=== Background Check (onStart) ===");
 
@@ -238,7 +240,7 @@ void onStart(ServiceInstance service) async {
         print("User is driving without navigation. Starting risk check timer.");
 
         notificationTimer =
-            Timer.periodic(const Duration(seconds: 15), (timer) async {
+            Timer.periodic(const Duration(seconds: 5), (timer) async { //15
           final selectedSpecies = prefs.getStringList('selectedSpecies') ?? [];
           final languageCode = prefs.getString('languageCode') ?? 'en';
           final fcmToken = prefs.getString('fcmToken');
@@ -249,7 +251,7 @@ void onStart(ServiceInstance service) async {
               currentPosition.longitude, selectedSpecies);
 
           if (risk >= mediumRiskThreshold &&
-              DateTime.now().difference(localLastNotificationTime).inSeconds >= 15 &&
+              DateTime.now().difference(localLastNotificationTime).inSeconds >= 5 && //15
               fcmToken != null) {
             print("User is on a Risk Zone");
             localLastNotificationTime = DateTime.now();
@@ -395,9 +397,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         print("App is in background (paused).");
         break;
       case AppLifecycleState.detached:
-        print("State is detached, calling _stopBackgroundServiceAndLogout.");
+        // print("State is detached, calling _stopBackgroundServiceAndLogout.");
+        print("State is detached");
         _setAppForegroundState(false); // Ensure it's marked as not in foreground
-        _stopBackgroundServiceAndLogout();
+        // _stopBackgroundServiceAndLogout();
         break;
       case AppLifecycleState.hidden: // Only on Android API 34+
         _setAppForegroundState(false);
@@ -412,30 +415,44 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     print("SharedPreferences: isAppInForeground set to $isForeground");
   }
 
-  Future<void> _stopBackgroundServiceAndLogout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isLoggedIn', false);
-    final isLoggedInCheck = prefs.getBool('isLoggedIn');
-    print("isLoggedIn set to $isLoggedInCheck in SharedPreferences on termination.");
-    print("User logged out status updated due to app termination (detached state).");
-    await Future.delayed(const Duration(milliseconds: 500));
-  }
+  // Future<void> _stopBackgroundServiceAndLogout() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.setBool('isLoggedIn', false);
+  //   final isLoggedInCheck = prefs.getBool('isLoggedIn');
+  //   print("isLoggedIn set to $isLoggedInCheck in SharedPreferences on termination.");
+  //   print("User logged out status updated due to app termination (detached state).");
+  //   await Future.delayed(const Duration(milliseconds: 500));
+  // }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: monochromeTheme, // Light theme
-      darkTheme: monochromeDarkTheme, // Dark theme
-      themeMode: ThemeMode.system, // Respect device setting
-      initialRoute: '/welcome',
+      theme: monochromeTheme,
+      darkTheme: monochromeDarkTheme,
+      themeMode: ThemeMode.system,
+      home: FutureBuilder(
+        future: SharedPreferences.getInstance(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Loading();
+          }
+          final prefs = snapshot.data as SharedPreferences;
+          final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+
+          if (isLoggedIn) {
+            return const NavigationBarExample();
+          } else {
+            return const WelcomePage();
+          }
+        },
+      ),
       routes: {
-        '/': (context) => const Loading(),
         '/home': (context) => const MapPage(),
         '/welcome': (context) => const WelcomePage(),
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
-        '/navigation': (context) => NavigationBarExample(key: navigationBarKey),
-        '/editProfile': (context) => const EditProfile()
+        '/navigation': (context) => NavigationBarExample(),
+        '/editProfile': (context) => const EditProfile(),
       },
       debugShowCheckedModeBanner: false,
     );

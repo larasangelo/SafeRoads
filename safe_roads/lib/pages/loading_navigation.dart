@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:safe_roads/configuration/language_config.dart';
+import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/pages/navigation.dart'; 
 
 class LoadingNavigationPage extends StatefulWidget {
@@ -81,6 +84,7 @@ class _LoadingNavigationPageState extends State<LoadingNavigationPage> {
 
   @override
   Widget build(BuildContext context) {
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -98,7 +102,7 @@ class _LoadingNavigationPageState extends State<LoadingNavigationPage> {
             ),
             SizedBox(height: screenHeight * 0.03),
             Text(
-              'Loading your route',
+              LanguageConfig.getLocalizedString(languageCode, 'loadingNavigation'),
               style: TextStyle(
                 fontSize: screenWidth * 0.05,
                 fontWeight: FontWeight.w500,

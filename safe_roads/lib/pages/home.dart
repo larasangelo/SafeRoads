@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+// import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+// import 'package:path_provider/path_provider.dart';
 import 'package:safe_roads/configuration/home_config.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/log_service.dart';
 import 'package:safe_roads/main.dart';
+import 'package:safe_roads/models/navigation_bar_visibility.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/pages/loading_navigation.dart';
@@ -40,6 +41,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   String? selectedDestination = HomeConfig.defaultSelectedDestination;
   Map<String, String> _distances = HomeConfig.defaultDistances;
   Map<String, String> _times = HomeConfig.defaultTimes;
+  Map<String, String> _distancesAtMaxRisk = HomeConfig.defaultDistancesAtMaxRisk;
   bool setDestVis = HomeConfig.defaultSetDestVis;
   bool _isFetchingRoute = HomeConfig.defaultIsFetchingRoute;
   bool _cancelFetchingRoute = HomeConfig.defaultCancelFetchingRoute;
@@ -47,9 +49,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   Map<String, dynamic> userPreferences = HomeConfig.defaultUserPreferences;
   String _selectedRouteKey = HomeConfig.defaultRouteKey;
   double _boxHeight = HomeConfig.defaultBoxHeight;
+  double mediumLowRisk = HomeConfig.mediumLowRisk;
   double mediumRisk = HomeConfig.mediumRisk;
+  double mediumHighRisk = HomeConfig.mediumHighRisk;
   double highRisk = HomeConfig.highRisk;
   Timer? _locationUpdateTimer;
+  http.Client? _httpClient; // Declare an http client4
+  late DraggableScrollableController _draggableController;
+  // final FocusNode _addressFocusNode = FocusNode();
+
 
   @override
   bool get wantKeepAlive => true;
@@ -59,6 +67,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     super.initState();
     _requestLocationPermission();
     _setupAutocompleteListener();
+    _draggableController = DraggableScrollableController();
     // Wait for preferences to load, then fetch routes
     Provider.of<UserPreferences>(context, listen: false)
         .initializePreferences()
@@ -73,6 +82,21 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         await notifications.setupFirebaseMessaging(context, null); // Set up FCM
       }
     });
+
+    _addressController.addListener(() {
+      final input = _addressController.text.trim();
+      if (destinationSelected && input != selectedDestination?.trim()) {
+        // If the user starts changing the destination manually
+        setState(() {
+          destinationSelected = false;
+          selectedDestination = ''; // Optional reset
+          _suggestions.clear();
+          _resetRouteUI(false);
+        });
+      }
+    });
+
+    //TODO: METER ISTO COMENTÁRIO QUANDO SE ESTÁ A FAZER OS TESTES
 
     // Periodically update location every 30 seconds
     _locationUpdateTimer = Timer.periodic(Duration(seconds: 30), (_) => _updateCurrentLocation());
@@ -97,12 +121,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     setState(() {
       if (_currentLocation != null) {
         _mapController.move(
-          // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
           // const LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
           // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
           // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
           // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-          const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
+          // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+          // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+          // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+          // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL 
           13.0,
         );
       }
@@ -111,7 +138,6 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   Future<void> _updateCurrentLocation() async {
     Location location = Location();
-
     try {
       final newLocation = await location.getLocation();
 
@@ -138,7 +164,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 
   Future<void> _fetchRoute(LatLng start, LatLng end) async {
-    String languageCode = Provider.of<UserPreferences>(context, listen:false).languageCode;
+    String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
     try {
       setState(() {
         _isFetchingRoute = true; // Show the progress bar
@@ -147,80 +173,93 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
       // Access the updated values from the UserPreferences provider
       final userPreferences = Provider.of<UserPreferences>(context, listen: false);
-      bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
+      bool lowRisk = userPreferences.lowRisk;
       List<Object?> selectedSpecies = userPreferences.selectedSpecies;
 
       print("lowRisk: $lowRisk");
       print("HOME selectedSpecies: $selectedSpecies");
 
-      final response = await http.post(
+      _httpClient = http.Client();
+
+      final response = await _httpClient!.post( 
         Uri.parse('https://ecoterra.rd.ciencias.ulisboa.pt/route'),
         // Uri.parse('http://192.168.1.82:3001/route'),
-        // Uri.parse('http://10.101.121.11:3001/route'), // Para testar na uni
+        // Uri.parse('http://10.101.121.11:3001/route'),    // Para testar na uni
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "start": {"lat": start.latitude, "lon": start.longitude},
           "end": {"lat": end.latitude, "lon": end.longitude},
-          "lowRisk": lowRisk, 
+          "lowRisk": lowRisk,
           "selectedSpecies": selectedSpecies,
         }),
       );
 
-      if (_cancelFetchingRoute) return; // Exit if route-fetching is canceled
+      // After the request, if we still have the client, close it
+      // This ensures resources are released, even if not cancelled.
+      _httpClient?.close();
+      _httpClient = null; // Clear the client reference
+
+      if (_cancelFetchingRoute) {
+        // If cancellation was requested while waiting for response,
+        // ensure UI is reset and return.
+        _resetRouteUI(true); // Call a new function to encapsulate UI reset
+        return;
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Iterate through returned routes (defaultRoute and/or adjustedRoute)
-        Map<String, List<Map<String, dynamic>>> routesWithPoints = {};
+        Map<String, List<Map<String, dynamic>>> routesWithSegments = {};
         Map<String, String> distances = {};
         Map<String, String> times = {};
-        Map<String, bool> hasRisk = {}; 
+        Map<String, bool> hasRisk = {};
+        Map<String, double> maxRiskValue = {};
+        Map<String, String> distanceAtMaxRisk = {};
+
 
         data.forEach((key, routeData) {
-          List<Map<String, dynamic>> pointsWithRaster = (routeData['route'] as List).map((point) {
-            return {
-              'latlng': LatLng(point['lat'], point['lon']),
-              'raster_value': point['raster_value'],
-              'species': point['species'],
-            };
-          }).toList();
+          List<Map<String, dynamic>> segments = [];
+          if (routeData['segments'] is List) {
+            segments = (routeData['segments'] as List).map((segmentMap) {
+              return {
+                'start': LatLng(segmentMap['start']['lat'], segmentMap['start']['lon']),
+                'end': LatLng(segmentMap['end']['lat'], segmentMap['end']['lon']),
+                'raster_value': segmentMap['raster_value'],
+                'species': List<String>.from(segmentMap['species'] ?? []),
+                'time_to_next_seconds': (segmentMap['time_to_next_seconds'] as num?)?.toDouble() ?? 0.0,
+                'segment_distance': segmentMap['segment_distance'],
+              };
+            }).toList();
+          } else {
+            print("Warning: 'segments' key not found or not a List for route $key");
+            return;
+          }
 
-          routesWithPoints[key] = pointsWithRaster;
+          routesWithSegments[key] = segments;
           distances[key] = routeData['distance'];
           times[key] = routeData['time'];
           hasRisk[key] = routeData['hasRisk'];
+          maxRiskValue[key] = (routeData['maxRiskValue'] as num?)?.toDouble() ?? 0.0;
+          distanceAtMaxRisk[key] = routeData['distanceAtMaxRisk'] as String? ?? '0 meters';
+
         });
 
-        print("routesWithPoints $routesWithPoints");
+        print("routesWithSegments: $routesWithSegments");
+        print("maxRiskValue: $maxRiskValue");
+        print("distanceAtMaxRisk: $distanceAtMaxRisk");
 
-        // Write defaultRoute to a local file
-        final defaultRoute = routesWithPoints['default'];
-        if (defaultRoute != null) {
-          final directory = await getApplicationDocumentsDirectory();
-          final file = File('${directory.path}/default_route.json');
-
-          // Convert to JSON and write to file
-          final jsonContent = jsonEncode(defaultRoute.map((point) => {
-            'lat': point['latlng'].latitude,
-            'lon': point['latlng'].longitude,
-            'raster_value': point['raster_value'],
-            'species': point['species'],
-          }).toList());
-
-          await file.writeAsString(jsonContent);
-          print("defaultRoute written to: ${file.path}");
+        if(mounted){
+          // Access the NavigationBarVisibility provider and set its state
+          Provider.of<NavigationBarVisibility>(context, listen: false).setVisibility(false);
         }
-
-        // Hide the navigation bar when the user gets the route
-        navigationBarKey.currentState?.toggleNavigationBar(false);
-
+        
         setState(() {
-          _routesWithPoints = routesWithPoints;
+          _routesWithPoints = routesWithSegments;
           _distances = distances;
           _times = times;
-          _isFetchingRoute = false; // Hide the progress bar
+          _isFetchingRoute = false;
           _selectedRouteKey = _routesWithPoints.keys.first;
+          _distancesAtMaxRisk = distanceAtMaxRisk;
         });
         _adjustMapToBounds();
 
@@ -228,22 +267,72 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         throw Exception("${LanguageConfig.getLocalizedString(languageCode, 'failFetchingRoute')}: ${response.body}");
       }
     } catch (e) {
-      if (!_cancelFetchingRoute) {
-        print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')}: $e");
+      if (e is http.ClientException && e.message == 'Connection closed before full header was received') {
+        // This is often the exception thrown when the client is closed prematurely
+        print("Route fetching was cancelled.");
+      } else if (!_cancelFetchingRoute) { // Only log if not explicitly cancelled by user
+        print("${LanguageConfig.getLocalizedString(languageCode, 'errorFetchingRoute')} $e");
       }
       setState(() {
         _isFetchingRoute = false; // Hide the progress bar
       });
+    } finally {
+      // Ensure the client is closed even if an error occurs
+      _httpClient?.close();
+      _httpClient = null;
     }
+  }
+
+  void _resetRouteUI(bool deleteAddress) {
+    setState(() {
+      _routesWithPoints.clear();
+      _distances.clear(); 
+      _times.clear();   
+      _distancesAtMaxRisk.clear();    
+      _selectedRouteKey = ""; 
+      destinationSelected = false;
+      selectedDestination = "";
+      _destinationLocation = null;
+      _suggestions.clear();
+      setDestVis = true;
+      _isFetchingRoute = false;
+    });
+    if (deleteAddress) {
+      setState(() {
+        _addressController.text = "";
+        // Re-focus the TextField so the keyboard stays visible
+        // _addressFocusNode.requestFocus();
+      });
+    }
+    _reCenter();
   }
 
   void _adjustMapToBounds() {
     if (_routesWithPoints.isNotEmpty) {
-      final allPoints = _routesWithPoints.values
-          .expand((list) => list.map((p) => p['latlng'] as LatLng))
-          .toList();
+      // Collect all unique LatLng points from all route segments
+      final List<LatLng> allPoints = [];
 
-      if (allPoints.length < 2) return;
+      for (var routeSegments in _routesWithPoints.values) {
+        for (final segment in routeSegments) {
+          // Add start point of the segment
+          if (segment['start'] is LatLng) {
+            allPoints.add(segment['start'] as LatLng);
+          }
+          // Add end point of the segment
+          if (segment['end'] is LatLng) {
+            allPoints.add(segment['end'] as LatLng);
+          }
+        }
+      }
+
+      if (allPoints.length < 2) {
+        // If there are less than 2 points, maybe center on the first point if it exists
+        // or simply return without adjusting the map.
+        if (allPoints.isNotEmpty) {
+          _animatedMapMove(allPoints.first, 15.0); // A default zoom
+        }
+        return;
+      }
 
       final bounds = _calculateBounds(allPoints);
 
@@ -415,7 +504,13 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
   Future<void> _setDestination() async {
     if (_addressController.text.isNotEmpty) {
-      final LatLng? destination = await _getCoordinatesFromAddress(_addressController.text);
+      String address = _addressController.text.trim();
+      // Check if "Portugal" is already in the address (case-insensitive)
+      if (!address.toLowerCase().contains('portugal')) {
+        address += ', Portugal';
+      }
+      final LatLng? destination = await _getCoordinatesFromAddress(address);
+
       if (destination != null) {
         // Smoothly move the map to the destination
         _animatedMapMove(destination, 15.0); // Zoom level 15 for closer view
@@ -426,11 +521,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
         if (_currentLocation != null) {
           await _fetchRoute(
-            // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
             // const LatLng(38.902464, -9.163266), // Current location for testing Ribas de Baixo
             // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
             // const LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-            const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+            // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+            // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+            // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+            // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL
             destination,
           );
           final logService = LogService();
@@ -480,7 +579,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
 
     // Determine buffer dynamically based on the route's size
     double buffer = (latRange + lngRange) * 0.15; // 15% of total span
-    double bottomBuffer = buffer * 4; // Extra buffer at the bottom
+    double bottomBuffer = buffer * 5; // Extra buffer at the bottom
 
     return LatLngBounds(
       LatLng(minLat - bottomBuffer, minLng - buffer), // Bottom-left corner
@@ -504,9 +603,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
 
     controller.addListener(() {
-      _mapController.move(
+      _mapController.moveAndRotate(
         LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
         zoomTween.evaluate(animation),
+        0.0,
       );
     });
 
@@ -573,10 +673,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
         }
       }
 
-      if (totalMinutes == 0) {
-        print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
-        return null;
-      }
+      // if (totalMinutes == 0) {
+      //   print(LanguageConfig.getLocalizedString(languageCode, 'invalidTime'));
+      //   return null;
+      // }
 
       DateTime arrivalTime = now.add(Duration(minutes: totalMinutes));
 
@@ -593,11 +693,15 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   void _reCenter() {
     if (_currentLocation != null) {
       _mapController.moveAndRotate(
-        // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
         // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
         // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
         // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-        const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        // LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+        // LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+        // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+        // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+        // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL // PARA TESTES PLANEAMENTO DEVE ESTAR ESTA OPÇÃO ATIVA
         HomeConfig.defaultZoom, // initialZoom
         0.0, // Reset rotation to 0 degrees
       );
@@ -605,10 +709,99 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     }
   }
 
+  Widget _buildInfoBox(BuildContext context, int i) {
+    var entry = _routesWithPoints.entries.elementAt(i);
+    var routeSegments = entry.value;
+
+    if (routeSegments.isEmpty) return const SizedBox.shrink();
+
+    var midSegmentIndex = routeSegments.length ~/ 2;
+    if (midSegmentIndex >= routeSegments.length) midSegmentIndex = routeSegments.length - 1;
+    if (midSegmentIndex < 0) midSegmentIndex = 0;
+
+    LatLng midPoint = routeSegments[midSegmentIndex]['start'] as LatLng;
+
+    double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0;
+    double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
+    double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
+
+    bool isSelectedRoute = entry.key == _selectedRouteKey;
+    bool isAdjustedRoute = entry.key == 'adjustedRoute';
+
+    Color boxColor = isSelectedRoute
+        ? Colors.purple.withValues(alpha: 0.8)
+        : Colors.grey.withValues(alpha: 0.6);
+    Color textColor = isSelectedRoute ? Colors.white : Colors.black;
+
+    double iconSize = MediaQuery.of(context).size.width * 0.04;
+    double padding = MediaQuery.of(context).size.width * 0.022;
+    double fontSize = MediaQuery.of(context).size.width * 0.032;
+
+    return Positioned(
+      left: screenX,
+      top: screenY,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedRouteKey = entry.key;
+          });
+        },
+        child: Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: boxColor,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isAdjustedRoute)
+                Icon(Icons.star, color: Colors.yellow, size: iconSize),
+              Text(
+                "${_times[entry.key]}",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                  fontSize: fontSize,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  
+
+  double _getSheetSizeFraction(BuildContext context) {
+    final selectedRoute = _routesWithPoints[_selectedRouteKey];
+
+    if (selectedRoute == null) return HomeConfig.defaultRiskBoxHeight;
+
+    bool hasHighRisk = selectedRoute.any((point) => point['raster_value'] > highRisk);
+    bool hasMediumHighRisk = selectedRoute.any((point) =>
+        point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk);
+    bool hasMediumRisk = selectedRoute.any((point) =>
+        point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk);
+    bool hasMediumLowRisk = selectedRoute.any((point) =>
+        point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk);
+
+    final hasAnyRisk = hasHighRisk || hasMediumHighRisk || hasMediumRisk || hasMediumLowRisk;
+
+    // Return the fractional height (e.g. 0.43 instead of pixels)
+    return hasAnyRisk
+        ? HomeConfig.adjustedRiskBoxHeight  // should be something like 0.43
+        : HomeConfig.defaultRiskBoxHeight;  // e.g. 0.25
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
     _locationUpdateTimer?.cancel();
+    _addressController.dispose();
+    // _addressFocusNode.dispose();
     super.dispose();
   }
 
@@ -621,10 +814,14 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
     bool lowRisk = userPreferences.lowRisk; // This gives you the updated value
 
     final selectedTime = _times[_selectedRouteKey];
+    // print("selectedTime: $selectedTime");
 
     final String? arrivalTime = selectedTime != null
         ? calculateArrivalTime(selectedTime)
         : null;
+    
+    final bool hasRoutes = _routesWithPoints.isNotEmpty;
+    final double sheetSize = hasRoutes ? _getSheetSizeFraction(context) : 0.0;
 
     return 
       Scaffold(
@@ -643,96 +840,130 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
               children: [
                 TileLayer(
                   urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: const ['a', 'b', 'c'],
+                  tileProvider: NetworkTileProvider(
+                    headers: {
+                      'User-Agent': 'SafeRoads/1.0',
+                    },
+                  ),
+                  userAgentPackageName: 'com.example.safe_roads',
                 ),
                 if (_routesWithPoints.isNotEmpty)
                   PolylineLayer(
                     polylines: [
+                      // --- Other Routes (Not Selected) ---
                       ..._routesWithPoints.entries.expand<Polyline>((entry) {
                         if (entry.key == _selectedRouteKey) return [];
 
-                        final routePoints = entry.value;
-                        if (routePoints.length < 2) return [];
+                        final routeSegments = entry.value;
+                        if (routeSegments.isEmpty) return [];
 
-                        // Extract LatLng points safely
-                        final points = routePoints
-                          .where((point) => point['latlng'] is LatLng)
-                          .map((point) => point['latlng'] as LatLng)
-                          .toList();
+                        final List<LatLng> points = [];
+
+                        // Add the start point of the first segment
+                        if (routeSegments.first['start'] is LatLng) {
+                          points.add(routeSegments.first['start'] as LatLng);
+                        }
+
+                        // Add the end point of each segment
+                        for (final segment in routeSegments) {
+                          if (segment['end'] is LatLng) {
+                            points.add(segment['end'] as LatLng);
+                          }
+                        }
 
                         if (points.length < 2) return [];
 
                         return [
-                          // Border polyline
                           Polyline(
                             points: points,
                             strokeWidth: 8.0,
-                            color: Color.fromRGBO(171, 145, 242, 0.9)
+                            color: const Color.fromRGBO(171, 145, 242, 0.9),
                           ),
-                          // Main polyline
                           Polyline(
                             points: points,
                             strokeWidth: 4.0,
-                            color: Color.fromRGBO(211, 173, 253, 0.9),
+                            color: const Color.fromRGBO(211, 173, 253, 0.9),
                           ),
                         ];
                       }),
-                      // SELECTED ROUTE with dynamic color and unified border
-                      if (_routesWithPoints.containsKey(_selectedRouteKey)) ...[
-                        // Draw one thick, dark polyline underneath (the border)
-                        Polyline(
-                          points: _routesWithPoints[_selectedRouteKey]!
-                            .where((p) => p['latlng'] is LatLng)
-                            .map((p) => p['latlng'] as LatLng)
-                            .toList(),
-                          strokeWidth: 8.0,
-                          color: Colors.black.withValues(alpha: 0.8), // Dark outline
-                        ),
 
-                        // Draw each colored segment on top
-                        ..._routesWithPoints[_selectedRouteKey]!
-                          .sublist(0, _routesWithPoints[_selectedRouteKey]!.length - 1)
-                          .asMap()
-                          .entries
-                          .where((entry) {
-                            final current = entry.value;
-                            final next = _routesWithPoints[_selectedRouteKey]![entry.key + 1];
-                            return current['latlng'] is LatLng && next['latlng'] is LatLng;
-                          })
-                          .map((entry) {
-                            final index = entry.key;
-                            final current = entry.value;
-                            final next = _routesWithPoints[_selectedRouteKey]![index + 1];
+                      // --- SELECTED ROUTE with dynamic color and unified border ---
+                      if (_routesWithPoints.containsKey(_selectedRouteKey)) ...() {
+                        final selectedRouteSegments = _routesWithPoints[_selectedRouteKey]!;
 
-                            final points = [current['latlng'] as LatLng, next['latlng'] as LatLng];
+                        final List<Polyline> selectedPolylines = [];
 
-                            Color lineColor;
-                            final raster = current['raster_value'];
+                        final List<LatLng> selectedRouteAllPoints = [];
+                        if (selectedRouteSegments.isNotEmpty) {
+                          if (selectedRouteSegments.first['start'] is LatLng) {
+                            selectedRouteAllPoints.add(selectedRouteSegments.first['start'] as LatLng);
+                          }
+                          for (final segment in selectedRouteSegments) {
+                            if (segment['end'] is LatLng) {
+                              selectedRouteAllPoints.add(segment['end'] as LatLng);
+                            }
+                          }
+                        }
+
+                        if (selectedRouteAllPoints.length >= 2) {
+                          selectedPolylines.add(
+                            Polyline(
+                              points: selectedRouteAllPoints,
+                              strokeWidth: 8.0,
+                              color: Colors.black.withValues(alpha:0.8),
+                            ),
+                          );
+                        }
+
+                        for (final segment in selectedRouteSegments) {
+                          final startPoint = segment['start'] as LatLng;
+                          final endPoint = segment['end'] as LatLng;
+
+                          Color lineColor;
+                          final raster = segment['raster_value'];
+
+                          if (raster != null) {
                             if (raster > highRisk) {
                               lineColor = Colors.red;
+                            } else if (raster > mediumHighRisk) {
+                              lineColor = Colors.deepOrangeAccent;
                             } else if (raster > mediumRisk) {
-                              lineColor = Colors.orange;
+                              lineColor = Colors.orangeAccent;
+                            } else if (raster > mediumLowRisk) {
+                              lineColor = Colors.yellow;
                             } else {
                               lineColor = Colors.purple;
                             }
-                            return Polyline(
-                              points: points,
+                          } else {
+                            lineColor = Colors.purple;
+                          }
+
+                          selectedPolylines.add(
+                            Polyline(
+                              points: [startPoint, endPoint],
                               strokeWidth: 4.0,
                               color: lineColor,
-                            );
-                          })
-                      ],
+                            ),
+                          );
+                        }
+
+                        return selectedPolylines;
+                      }(),
                     ],
                   ),
                   if (_currentLocation != null)
                   MarkerLayer(
                     markers: [
                       Marker(
-                        // point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                        point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
                         // point: LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
                         // point: LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
                         // point: LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                        point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        // point: const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                        // point: LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+                        // point: LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+                        // point: LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+                        // point: LatLng(38.756546, -9.155300), //Current location for testing at FCUL 
                         child: Image(
                           image: const AssetImage("assets/icons/pin.png"),
                           width: MediaQuery.of(context).size.width * 0.11,
@@ -755,117 +986,60 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                   ),
                   Stack(
                     children: [
-                      // Add Info Boxes on Routes
-                      for (var i = 0; i < _routesWithPoints.entries.length; i++) 
-                        if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty)
-                          Builder(
-                            builder: (context) {
-                              var entry = _routesWithPoints.entries.elementAt(i);
-                              var routePoints = entry.value;
-                              var midPointIndex = routePoints.length ~/ 2;
+                      // First render all UNSELECTED info boxes
+                      for (var i = 0; i < _routesWithPoints.entries.length; i++)
+                        if (_routesWithPoints.entries.elementAt(i).value.isNotEmpty &&
+                            _routesWithPoints.entries.elementAt(i).key != _selectedRouteKey)
+                          _buildInfoBox(context, i),
 
-                              // Get midpoint coordinates
-                              LatLng midPoint = routePoints[midPointIndex]['latlng'];
-
-                              // Compute dynamic offset to avoid overlap
-                              double offsetDirection = (i % 2 == 0) ? -1.0 : 1.0; // Alternate sides
-                              double screenX = _calculateScreenX(midPoint, offsetXFactor: 0.08 * offsetDirection);
-                              double screenY = _calculateScreenY(midPoint, offsetYFactor: 0.08 * offsetDirection);
-
-                              // Ensure selected route's box is more visible
-                              bool isSelectedRoute = entry.key == _selectedRouteKey;
-                              bool isAdjustedRoute = entry.key == 'adjustedRoute'; // Check if it's the adjusted route
-                              Color boxColor = isSelectedRoute ? Colors.purple.withValues(alpha: 0.8) : Colors.grey.withValues(alpha: 0.6);
-                              Color textColor = isSelectedRoute ? Colors.white : Colors.black;
-
-                              // MediaQuery for dynamic sizing based on screen size
-                              double iconSize = MediaQuery.of(context).size.width * 0.04; 
-                              double padding = MediaQuery.of(context).size.width * 0.022; 
-                              double fontSize = MediaQuery.of(context).size.width * 0.032; 
-
-                              return Positioned(
-                                left: screenX,
-                                top: screenY,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedRouteKey = entry.key;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.all(padding),
-                                    decoration: BoxDecoration(
-                                      color: boxColor,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (isAdjustedRoute)
-                                          Icon(Icons.star, color: Colors.yellow, size: iconSize),
-                                        Text(
-                                          "${_times[entry.key]}",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: textColor,
-                                            fontSize: fontSize,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                      // Then render the SELECTED info box last (on top)
+                      for (var i = 0; i < _routesWithPoints.entries.length; i++)
+                        if (_routesWithPoints.entries.elementAt(i).key == _selectedRouteKey)
+                          _buildInfoBox(context, i),
                     ],
                   ),
+
             Positioned(
               top: MediaQuery.of(context).size.height * 0.05, 
               left: MediaQuery.of(context).size.width * 0.025, 
               right: MediaQuery.of(context).size.width * 0.025, 
               child: Column(
                 children: [
-             
                   TextField(
+                    // focusNode: _addressFocusNode,
                     controller: _addressController,
-                    readOnly: destinationSelected,
+                    // readOnly: destinationSelected,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(50.0),
                       ),
                       labelText: LanguageConfig.getLocalizedString(languageCode, 'enterDestination'),
                       filled: true,
-                      // fillColor: Colors.white,
-                      prefixIcon: Icon(Icons.search, size: MediaQuery.of(context).size.width * 0.06), 
+                      prefixIcon: Icon(Icons.search, size: MediaQuery.of(context).size.width * 0.06),
                       suffixIcon: IconButton(
-                        icon: Icon(Icons.close, size: MediaQuery.of(context).size.width * 0.06), 
+                        icon: Icon(Icons.close, size: MediaQuery.of(context).size.width * 0.06),
                         onPressed: () {
-                          navigationBarKey.currentState?.toggleNavigationBar(true);
+                          // Use the provider to set the visibility
+                          Provider.of<NavigationBarVisibility>(context, listen: false).setVisibility(true);
 
-                          // Reset the map state and UI elements
+                          _httpClient?.close();
+                          _httpClient = null;
+
                           setState(() {
-                            _cancelFetchingRoute = true; // Cancel the route-fetching process
-                            _routesWithPoints.clear();
-                            destinationSelected = false;
-                            selectedDestination = "";
-                            _destinationLocation = null;
-                            _addressController.text = "";
-                            _suggestions.clear();
-                            setDestVis = true;
-                            _isFetchingRoute = false;
+                            _cancelFetchingRoute = true;
+                            _resetRouteUI(true);
                           });
 
-                          // Center the map on the user's current location
                           if (_currentLocation != null) {
                             _mapController.move(
-                              // LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              // LatLng(38.902464, -9.163266), // Test with coordinates of Ribas de Baixo
-                              // LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
-                              // LatLng(41.7013562, -8.1685668), // Current location for testing in the North (type: são bento de sexta freita)
-                              const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
-                              13.0, // Adjust zoom level as needed
+                              LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              // const LatLng(37.08000502817415, -8.113855290887736), // Test with coordinates of Edificio Portugal
+                              // const LatLng(41.641963, -7.949505), // Current location for testing in the North (type: minas da borralha)
+                              // const LatLng(39.81852034026171, -7.496767173765267), // Test with coordinates of Castelo Branco
+                              // const LatLng(41.80590995108254, -6.755227425055696), // Test with coordinates of Bragança
+                              // const LatLng(38.9036947049258, -9.175511629060402), // Test with coordinates of Futebol Clube Ribadense
+                              // const LatLng(38.756546, -9.155300), //Current location for testing at FCUL 
+                              13.0,
                             );
                           }
                         },
@@ -924,7 +1098,9 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                   _suggestions.clear();
                                   destinationSelected = true;
                                   selectedDestination = _addressController.text;
+                                  setDestVis = false;
                                 });
+                                _setDestination();
                               },
                             );
                           },
@@ -937,7 +1113,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       ),
                     ),
 
-                  if (_routesWithPoints.isEmpty && setDestVis)
+                  if (_routesWithPoints.isEmpty && setDestVis && _addressController.text.isNotEmpty)
                     ElevatedButton(
                       onPressed: () {
                         _setDestination();
@@ -946,7 +1122,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: Theme.of(context).colorScheme.secondary,
                         padding: EdgeInsets.symmetric(
                           vertical: MediaQuery.of(context).size.height * 0.02, 
                           horizontal: MediaQuery.of(context).size.width * 0.05, 
@@ -955,7 +1131,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                       child: Text(
                         LanguageConfig.getLocalizedString(languageCode, 'setDestination'),
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSecondary,
                           fontSize: MediaQuery.of(context).size.width * 0.035, 
                         ),
                       ),
@@ -964,307 +1140,391 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
               ),
             ),
             Positioned(
-              bottom: MediaQuery.of(context).size.width * 0.05,
-              right: MediaQuery.of(context).size.width * 0.05,
-              child: ElevatedButton(
-                onPressed: () {
-                  _reCenter();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  minimumSize: Size(MediaQuery.of(context).size.width * 0.15, MediaQuery.of(context).size.width * 0.15), // square-ish and small
-                  padding: EdgeInsets.zero, // no extra padding
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8), // slightly rounded square
-                  ),
-                ),
-                child: Icon(
-                  Icons.my_location,
-                  color: Colors.white,
-                  size: 24, // smaller icon
+              bottom: 8,
+              left: 8,
+              child: Container(
+                color: Colors.white.withValues(alpha: 0.7),
+                padding: const EdgeInsets.all(4.0),
+                child: Text(
+                  '© OpenStreetMap contributors',
+                  style: TextStyle(fontSize: 10, color: Colors.black),
                 ),
               ),
             ),
+            if (_routesWithPoints.isEmpty)
+              Positioned(
+                bottom: MediaQuery.of(context).size.width * 0.05,
+                right: MediaQuery.of(context).size.width * 0.05,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end, // Aligns buttons to the bottom
+                  children: [
+                    // Re-center Button
+                    FloatingActionButton(
+                      heroTag: "btn1", // Add a unique heroTag for each FloatingActionButton
+                      onPressed: _reCenter,
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      child: Icon(Icons.gps_fixed, color: Theme.of(context).colorScheme.onSecondary),
+                    ),
+                  ],
+                ),
+              ),
             //button when 
             if (_routesWithPoints.isNotEmpty)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: _boxHeight,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    // color: Colors.white,
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    shape: BoxShape.rectangle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey,
-                        spreadRadius: 5,
-                        blurRadius: 7,
-                        offset: Offset(0, 5), // changes position of shadow
-                      ),
-                    ],
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(30.0),
+              DraggableScrollableSheet(
+                controller: _draggableController,
+                initialChildSize: sheetSize,
+                maxChildSize: sheetSize,
+                minChildSize: 0.05,
+                builder: (BuildContext context, ScrollController scrollController) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.grey,
+                          spreadRadius: 5,
+                          blurRadius: 7,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
                     ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_routesWithPoints[_selectedRouteKey] != null)
-                        ...() {
-                          bool hasHighRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > highRisk);
-                          bool hasMediumRisk = _routesWithPoints[_selectedRouteKey]!
-                              .any((point) => point['raster_value'] > mediumRisk && point['raster_value'] <= highRisk);
-
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            setState(() {
-                              _boxHeight = (hasHighRisk || hasMediumRisk)
-                                  ? MediaQuery.of(context).size.height * HomeConfig.adjustedRiskBoxHeight
-                                  : MediaQuery.of(context).size.height * HomeConfig.defaultRiskBoxHeight;
-                            });
-                          });
-
-                          if (hasHighRisk) {
-                            Set<String> speciesList = {};
-                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > highRisk) {
-                                speciesList.addAll(List<String>.from(point['species']));
-                              }
-                            }
-
-                            List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
-                            ).toList();
-
-                            return [
-                              Flexible(
-                                child: _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'highProbability')} ${translatedSpecies.join(', ')}",
-                                  Colors.red,
-                                  context,
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(0, MediaQuery.of(context).size.width * 0.03, 0, 0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 5,
+                                margin: const EdgeInsets.only(top: 8, bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[400],
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
-                            ];
-                          } else if (hasMediumRisk) {
-                            Set<String> speciesList = {};
-                            for (var point in _routesWithPoints[_selectedRouteKey]!) {
-                              if (point['raster_value'] > mediumRisk && point['raster_value'] <= highRisk) {
-                                speciesList.addAll(List<String>.from(point['species']));
+                            ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_routesWithPoints[_selectedRouteKey] != null)
+                            ...() {
+                              final selectedRoute = _routesWithPoints[_selectedRouteKey]!;
+                              bool hasHighRisk = selectedRoute.any((point) => point['raster_value'] > highRisk);
+                              bool hasMediumHighRisk = selectedRoute.any((point) =>
+                                  point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk);
+                              bool hasMediumRisk = selectedRoute.any((point) =>
+                                  point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk);
+                              bool hasMediumLowRisk = selectedRoute.any((point) =>
+                                  point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk);
+
+                              // WidgetsBinding.instance.addPostFrameCallback((_) {
+                              //   setState(() {
+                              //     _boxHeight = (hasHighRisk || hasMediumRisk || hasMediumHighRisk || hasMediumLowRisk)
+                              //         ? MediaQuery.of(context).size.height * HomeConfig.adjustedRiskBoxHeight
+                              //         : MediaQuery.of(context).size.height * HomeConfig.defaultRiskBoxHeight;
+                              //   });
+                              // });
+
+                              String buildMessage(String key, Set<String> species, String? distance) {
+                                final speciesText = species.map((s) => LanguageConfig.getLocalizedString(languageCode, s)).join(', ');
+                                final distanceText = distance != null && distance.isNotEmpty
+                                    ? " ${LanguageConfig.getLocalizedString(languageCode, 'in')} $distance"
+                                    : "";
+                                return "${LanguageConfig.getLocalizedString(languageCode, key)} $speciesText$distanceText";
                               }
-                            }
 
-                            List<String> translatedSpecies = speciesList.map(
-                              (species) => LanguageConfig.getLocalizedString(languageCode, species),
-                            ).toList();
+                              String? riskDistance = _distancesAtMaxRisk[_selectedRouteKey];
 
-                            return [
-                              Flexible(
-                                child: _buildRiskMessage(
-                                  "${LanguageConfig.getLocalizedString(languageCode, 'mediumProbability')} ${translatedSpecies.join(', ')}",
-                                  Color.fromRGBO(224, 174, 41, 1),
-                                  context,
-                                ),
-                              ),
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.03), 
-                            ];
-                          }
-                          return [];
-                        }(),
-                      if (_routesWithPoints.isNotEmpty)
-                       Center(
-                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.05),
-                          child: Column(
-                            children: [
-                              // MAIN ROW: Left image column + Right route info column
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,  // Align content at the start of the row
-                                children: [
-                                  // LEFT COLUMN - Image
-                                  SizedBox(
-                                    width: MediaQuery.of(context).size.width * 0.16,  // Width of the image column
-                                    child: Center(
-                                      child: Image(
-                                        image: _selectedRouteKey == 'adjustedRoute'
-                                            ? const AssetImage("assets/icons/frog_green.png")
-                                            : (_routesWithPoints.containsKey('adjustedRoute')
-                                                ? const AssetImage("assets/icons/frog_orange.png")
-                                                : const AssetImage("assets/icons/frog_green.png")),
-                                        width: MediaQuery.of(context).size.width * 0.14,  // Adjust image size
-                                      ),
+
+                              if (hasHighRisk) {
+                                Set<String> speciesList = selectedRoute
+                                    .where((point) => point['raster_value'] > highRisk)
+                                    .expand((point) => List<String>.from(point['species']))
+                                    .toSet();
+
+                                return [
+                                  SizedBox( 
+                                    width: double.infinity,
+                                    child: _buildRiskMessage(
+                                      buildMessage('highProbability', speciesList, riskDistance),
+                                      Colors.red,
+                                      context,
                                     ),
                                   ),
-                         
-                                  SizedBox(width: MediaQuery.of(context).size.width * 0.03), // Space between the image and text columns
-                         
-                                  // RIGHT COLUMN - Route Info
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Arrival Time
-                                        Text(
-                                          "${LanguageConfig.getLocalizedString(languageCode, 'arrivalTime')} ${calculateArrivalTime(_times[_selectedRouteKey]!) ?? LanguageConfig.getLocalizedString(languageCode, 'unknown')}",
-                                          style: TextStyle(
-                                            fontSize: MediaQuery.of(context).size.width * 0.045,
-                                            fontWeight: FontWeight.bold,
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                                ];
+                              } else if (hasMediumHighRisk) {
+                                Set<String> speciesList = selectedRoute
+                                    .where((point) =>
+                                        point['raster_value'] > mediumHighRisk && point['raster_value'] <= highRisk)
+                                    .expand((point) => List<String>.from(point['species']))
+                                    .toSet();
+
+                                return [
+                                  SizedBox( 
+                                    width: double.infinity,
+                                    child: _buildRiskMessage(
+                                      buildMessage('mediumHighProbability', speciesList, riskDistance),
+                                      Colors.deepOrangeAccent,
+                                      context,
+                                    ),
+                                  ),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                                ];
+                              } else if (hasMediumRisk) {
+                                Set<String> speciesList = selectedRoute
+                                    .where((point) =>
+                                        point['raster_value'] > mediumRisk && point['raster_value'] <= mediumHighRisk)
+                                    .expand((point) => List<String>.from(point['species']))
+                                    .toSet();
+
+                                return [
+                                  SizedBox( 
+                                    width: double.infinity,
+                                    child: _buildRiskMessage(
+                                      buildMessage('mediumProbability', speciesList, riskDistance),
+                                      Colors.orangeAccent,
+                                      context,
+                                    ),
+                                  ),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                                ];
+                              } else if (hasMediumLowRisk) {
+                                Set<String> speciesList = selectedRoute
+                                    .where((point) =>
+                                        point['raster_value'] > mediumLowRisk && point['raster_value'] <= mediumRisk)
+                                    .expand((point) => List<String>.from(point['species']))
+                                    .toSet();
+
+                                return [
+                                  SizedBox( 
+                                    width: double.infinity,
+                                    child: _buildRiskMessage(
+                                      buildMessage('mediumLowProbability', speciesList, riskDistance),
+                                      Colors.yellow,
+                                      context,
+                                    ),
+                                  ),
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                                ];
+                              }
+                              return [];
+                            }(),
+                          if (_routesWithPoints.isNotEmpty)
+                          Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.05),
+                              child: Column(
+                                children: [
+                                  // MAIN ROW: Left image column + Right route info column
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,  // Align content at the start of the row
+                                    children: [
+                                      // LEFT COLUMN - Image
+                                      SizedBox(
+                                        width: MediaQuery.of(context).size.width * 0.16,  // Width of the image column
+                                        child: Center(
+                                          child: Image(
+                                            image: _selectedRouteKey == 'adjustedRoute'
+                                                ? const AssetImage("assets/icons/frog_green.png")
+                                                : (_routesWithPoints.containsKey('adjustedRoute')
+                                                    ? const AssetImage("assets/icons/frog_orange.png")
+                                                    : const AssetImage("assets/icons/frog_green.png")),
+                                            width: MediaQuery.of(context).size.width * 0.14,  // Adjust image size
                                           ),
                                         ),
-                         
-                                        const SizedBox(height: 4),
-                         
-                                        // Comment below arrival time
-                                        Text(
-                                          _selectedRouteKey == 'adjustedRoute'
-                                              ? LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill')
-                                              : (_routesWithPoints.containsKey('adjustedRoute')
-                                                  ? LanguageConfig.getLocalizedString(languageCode, 'notBestOption')
-                                                  : LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill')),
-                                          style: TextStyle(
-                                            fontSize: MediaQuery.of(context).size.width * 0.035,
-                                            color: Colors.grey[700],
+                                      ),
+                            
+                                      SizedBox(width: MediaQuery.of(context).size.width * 0.03), // Space between the image and text columns
+                            
+                                      // RIGHT COLUMN - Route Info
+                                      Expanded(
+                                        child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Arrival Time
+                                          Text(
+                                            "${LanguageConfig.getLocalizedString(languageCode, 'arrivalTime')} ${calculateArrivalTime(_times[_selectedRouteKey]!) ?? LanguageConfig.getLocalizedString(languageCode, 'unknown')}",
+                                            style: TextStyle(
+                                              fontSize: MediaQuery.of(context).size.width * 0.045,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
-                                        ),
-                         
-                                        SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-                         
-                                        // Distance + Duration row
-                                        Row(
-                                          crossAxisAlignment: CrossAxisAlignment.center,  // Ensure texts align vertically
+
+                                          const SizedBox(height: 4),
+
+                                          // Comment below arrival time (dynamic cost comparison)
+                                          Builder(
+                                            builder: (context) {
+                                              if (_selectedRouteKey == 'adjustedRoute') {
+                                                return Text(
+                                                  LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
+                                                  style: TextStyle(
+                                                    fontSize: MediaQuery.of(context).size.width * 0.03,
+                                                    color: Theme.of(context).colorScheme.onSecondary,
+                                                  ),
+                                                );
+                                              }
+
+                                              if (_routesWithPoints.containsKey('adjustedRoute') && _routesWithPoints.containsKey('defaultRoute')) {
+                                                double calculateRiskAwareCost(List<Map<String, dynamic>> segments) {
+                                                  return segments.fold(0.0, (sum, segment) {
+                                                    final double distance = (segment['segment_distance'] ?? 0.0).toDouble();
+                                                    final double risk = (segment['raster_value'] ?? 0.0).toDouble();
+                                                    return sum + (distance * (1 + risk * 4));
+                                                  });
+                                                }
+
+                                                final adjustedCost = calculateRiskAwareCost(_routesWithPoints['adjustedRoute']!);
+                                                final selectedCost = calculateRiskAwareCost(_routesWithPoints[_selectedRouteKey]!);
+
+                                                // print("adjustedCost: $adjustedCost");
+                                                // print("selectedCost: $selectedCost");
+
+                                                if (adjustedCost > 0) {
+                                                  final costFactor = selectedCost / adjustedCost;
+                                                  final template = LanguageConfig.getLocalizedString(languageCode, 'routeCostMultiplier');
+                                                  final message = template.replaceAll('{x}', costFactor.toStringAsFixed(2));
+                                                  return Text(
+                                                    message,
+                                                    style: TextStyle(
+                                                      fontSize: MediaQuery.of(context).size.width * 0.03,
+                                                      color: Theme.of(context).colorScheme.onSecondary,
+                                                    ),
+                                                  );
+                                                }
+                                              }
+
+                                              // Default fallback message
+                                              return Text(
+                                                LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
+                                                style: TextStyle(
+                                                  fontSize: MediaQuery.of(context).size.width * 0.03,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              );
+                                            },
+                                          ),
+
+                                          SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+
+                                          // Distance + Duration row
+                                          Row(
+                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                                style: TextStyle(
+                                                  fontSize: MediaQuery.of(context).size.width * 0.036,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const SizedBox(
+                                                height: 15,
+                                                child: VerticalDivider(
+                                                  color: Colors.grey,
+                                                  width: 1,
+                                                  thickness: 1,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
+                                                style: TextStyle(
+                                                  fontSize: MediaQuery.of(context).size.width * 0.036,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      ),
+                                      SizedBox(width: MediaQuery.of(context).size.width * 0.03), 
+
+                                      // Conditionally display the Switch Route Button if 'adjustedRoute' exists
+                                      if (_routesWithPoints.containsKey('adjustedRoute') && !lowRisk)
+                                        Column(
                                           children: [
-                                            Text(
-                                              _distances[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                              style: TextStyle(
-                                                fontSize: MediaQuery.of(context).size.width * 0.036,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),  
-                                            const SizedBox(
-                                              height: 15,  // Divider height
-                                              child: VerticalDivider(
-                                                color: Colors.grey,  // Divider color
-                                                width: 1,  // Divider width
-                                                thickness: 1,  // Divider thickness
-                                                indent: 0,  // Optional, adjust the distance from the top
-                                                endIndent: 0,  // Optional, adjust the distance from the bottom
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),  // Adds space between the divider and the next text
-                                            Text(
-                                              _times[_selectedRouteKey] ?? LanguageConfig.getLocalizedString(languageCode, 'unknown'),
-                                              style: TextStyle(
-                                                fontSize: MediaQuery.of(context).size.width * 0.036,
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  final keys = _routesWithPoints.keys.toList();
+                                                  int currentIndex = keys.indexOf(_selectedRouteKey);
+                                                  _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
+                                                });
+                                              },
+                                              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
+                                              child: Text(
+                                                LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
+                                                style: TextStyle(
+                                                  fontSize: MediaQuery.of(context).size.width * 0.040,
+                                                  color: Theme.of(context).colorScheme.onPrimary,
+                                                ),
+                                                textAlign: TextAlign.center,
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                    ],
                                   ),
-                                  SizedBox(width: MediaQuery.of(context).size.width * 0.03), 
+                            
+                                  SizedBox(height: MediaQuery.of(context).size.height * 0.020), 
+                            
+                                  // BOTTOM ROW: Start button
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          if (_routesWithPoints.containsKey(_selectedRouteKey)) {
+                                            List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
 
-                                  // Conditionally display the Switch Route Button if 'adjustedRoute' exists
-                                  if (_routesWithPoints.containsKey('adjustedRoute') && !lowRisk)
-                                    Column(
-                                      children: [
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              final keys = _routesWithPoints.keys.toList();
-                                              int currentIndex = keys.indexOf(_selectedRouteKey);
-                                              _selectedRouteKey = keys[(currentIndex + 1) % keys.length];
-                                            });
-                                          },
-                                          style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
-                                          child: Text(
-                                            LanguageConfig.getLocalizedString(languageCode, 'switchRoute'),
-                                            style: TextStyle(
-                                              fontSize: MediaQuery.of(context).size.width * 0.040,
-                                              color: Theme.of(context).colorScheme.onPrimary,
-                                            ),
-                                            textAlign: TextAlign.center,
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => LoadingNavigationPage(
+                                                  _routesWithPoints,
+                                                  _selectedRouteKey,
+                                                  selectedRoute,
+                                                  _distances,
+                                                  _times,
+                                                  arrivalTime,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: _selectedRouteKey == 'adjustedRoute' ||
+                                                    !_routesWithPoints.containsKey('adjustedRoute')
+                                                ? Colors.green
+                                                : Colors.orangeAccent,
+                                          ),
+                                        child: Text(
+                                          LanguageConfig.getLocalizedString(languageCode, 'start'),
+                                          style: TextStyle(
+                                            fontSize: MediaQuery.of(context).size.width * 0.045,
+                                            color: Colors.white,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                         
-                              SizedBox(height: MediaQuery.of(context).size.height * 0.02), 
-                         
-                              // BOTTOM ROW: Start button
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      if (_routesWithPoints.containsKey(_selectedRouteKey)) {
-                                        List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
-
-                                        final String routeTypeChosen;
-
-                                        if (_routesWithPoints.length == 1) {
-                                          routeTypeChosen = 'onlyAvailable'; 
-                                        } else {
-                                          routeTypeChosen = _selectedRouteKey == 'adjustedRoute' ? 'adjusted' : 'default';
-                                        }
-
-                                        final logService = LogService();
-                                        await logService.updateDestination(
-                                          sessionId: SessionManager().sessionId!,
-                                          destinationId: SessionManager().destinationId!,
-                                          updates: {
-                                            'routeChosen': routeTypeChosen,
-                                          },
-                                        );
-
-                                        if (!context.mounted) return;
-
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => LoadingNavigationPage(
-                                              _routesWithPoints,
-                                              _selectedRouteKey,
-                                              selectedRoute,
-                                              _distances,
-                                              _times,
-                                              arrivalTime,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
-
-                                     style: ElevatedButton.styleFrom(
-                                        backgroundColor: _selectedRouteKey == 'adjustedRoute' ||
-                                                !_routesWithPoints.containsKey('adjustedRoute')
-                                            ? Colors.green
-                                            : const Color.fromRGBO(224, 174, 41, 1),
                                       ),
-                                    child: Text(
-                                      LanguageConfig.getLocalizedString(languageCode, 'start'),
-                                      style: TextStyle(
-                                        fontSize: MediaQuery.of(context).size.width * 0.045,
-                                        color: Colors.white,
-                                      ),
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        ),
-                       )
-                    ]
+                            ),
+                          )
+                        ]
+                      ),
+                    ]),
                   ),
-                ),
-              ),
+                  ),
+                );
+              }),
             ]),
           ],
         ),
@@ -1272,12 +1532,89 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   }
 }
 
+// Function to show the risk legend pop-up
+void _showRiskLegendPopup(BuildContext context) {
+  String languageCode = Provider.of<UserPreferences>(context, listen: false).languageCode;
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text(LanguageConfig.getLocalizedString(languageCode, 'infos')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, // Align text to the start
+          children: [
+            _buildLegendItem(context, Colors.red, LanguageConfig.getLocalizedString(languageCode, 'highProbabilityTitle')),
+            _buildLegendItem(context, Colors.deepOrangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumHighProbabilityTitle')),
+            _buildLegendItem(context, Colors.orangeAccent, LanguageConfig.getLocalizedString(languageCode, 'mediumProbabilityTitle')),
+            _buildLegendItem(context, Colors.yellow, LanguageConfig.getLocalizedString(languageCode, 'mediumLowProbabilityTitle')),
+            _buildLegendItem(context, Colors.purple, LanguageConfig.getLocalizedString(languageCode, 'lowProbabilityTitle')),
+            // Add a small space before the explanation
+            const SizedBox(height: 20),
+            // The new explanation text
+            Text(
+              LanguageConfig.getLocalizedString(languageCode, 'highestRiskExplanation'),
+              style: TextStyle(
+                fontSize: MediaQuery.of(context).size.width * 0.035, // Adjust font size as needed
+                color: Theme.of(context).colorScheme.onSurfaceVariant, // A slightly subdued color
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Ok'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildLegendItem(BuildContext context, Color color, String label) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      children: [
+        Container(
+          width: 35,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 Widget _buildRiskMessage(String text, Color color, BuildContext context) {
   double screenWidth = MediaQuery.of(context).size.width;
 
-  String imagePath = (color == Colors.red)
-    ? "assets/icons/warning_red.png"
-    : "assets/icons/warning_orange.png";
+  String imagePath;
+  if (color == Colors.red) {
+    imagePath = "assets/icons/warning_red.png";
+  } else if (color == Colors.deepOrangeAccent) {
+    imagePath = "assets/icons/warning_deepOrange.png";
+  } else if (color == Colors.orangeAccent) {
+    imagePath = "assets/icons/warning_orange.png";
+  } else if (color == Colors.yellow) {
+    imagePath = "assets/icons/warning_yellow.png";
+  } else {
+    imagePath = "assets/icons/warning_yellow.png";
+  }
 
   return Padding(
     padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
@@ -1289,16 +1626,24 @@ Widget _buildRiskMessage(String text, Color color, BuildContext context) {
           width: screenWidth * 0.14,
         ),
         SizedBox(width: screenWidth * 0.05),
-        Expanded( // Wrap the Text widget with Expanded
+        Expanded(
           child: Text(
             text,
             textAlign: TextAlign.left,
             style: TextStyle(
-              fontSize: screenWidth * 0.05,
+              fontSize: screenWidth * 0.045,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
+        ),
+        SizedBox(width: 8), // spacing between text and button
+        FloatingActionButton(
+          heroTag: "btn2",
+          onPressed: () => _showRiskLegendPopup(context),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          mini: true,
+          child: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSecondary),
         ),
       ],
     ),

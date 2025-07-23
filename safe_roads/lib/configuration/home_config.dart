@@ -9,6 +9,7 @@ class HomeConfig {
   static Map<String, List<Map<String, dynamic>>> defaultRoutesWithPoints = {};
   static Map<String, String> defaultDistances = {};
   static Map<String, String> defaultTimes = {};
+  static Map<String, String> defaultDistancesAtMaxRisk = {};
 
   static bool defaultDestinationSelected = false;
   static bool defaultSetDestVis = true;
@@ -18,9 +19,12 @@ class HomeConfig {
   static String? defaultSelectedDestination;
   static Map<String, dynamic> defaultUserPreferences = {};
 
-  static const double defaultRiskBoxHeight = 0.30;
-  static const double adjustedRiskBoxHeight = 0.40;
+  static const double defaultRiskBoxHeight = 0.35;
+  static const double adjustedRiskBoxHeight = 0.45;
+  static const double draggableMinHeightFactor = 0.08;
 
-  static double mediumRisk = 0.3;
-  static double highRisk = 0.5;
+  static double mediumLowRisk = 0.1; //0.2
+  static double mediumRisk = 0.17; //0.3
+  static double mediumHighRisk = 0.5;
+  static double highRisk = 0.6;
 }
