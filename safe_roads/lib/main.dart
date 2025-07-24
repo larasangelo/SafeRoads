@@ -162,7 +162,7 @@ Future<void> requestLocationPermissions() async {
   }
 }
 
-const double mediumRiskThreshold = 0.17; //0.3
+const double mediumRiskThreshold = 0.3; //0.3
 const double highRiskThreshold = 0.5;
 DateTime lastNotificationTime = DateTime.now().subtract(Duration(seconds: 30));
 
@@ -196,7 +196,7 @@ void onStart(ServiceInstance service) async {
   Timer? notificationTimer;
   DateTime localLastNotificationTime = DateTime.now().subtract(const Duration(seconds: 30));
 
-  Timer.periodic(const Duration(seconds: 10), (monitorTimer) async { //20
+  Timer.periodic(const Duration(seconds: 20), (monitorTimer) async { //20
     await prefs.reload(); // Always reload to get the latest SharedPreferences state
     print("=== Background Check (onStart) ===");
 
@@ -240,7 +240,7 @@ void onStart(ServiceInstance service) async {
         print("User is driving without navigation. Starting risk check timer.");
 
         notificationTimer =
-            Timer.periodic(const Duration(seconds: 5), (timer) async { //15
+            Timer.periodic(const Duration(seconds: 15), (timer) async { //15
           final selectedSpecies = prefs.getStringList('selectedSpecies') ?? [];
           final languageCode = prefs.getString('languageCode') ?? 'en';
           final fcmToken = prefs.getString('fcmToken');
@@ -251,7 +251,7 @@ void onStart(ServiceInstance service) async {
               currentPosition.longitude, selectedSpecies);
 
           if (risk >= mediumRiskThreshold &&
-              DateTime.now().difference(localLastNotificationTime).inSeconds >= 5 && //15
+              DateTime.now().difference(localLastNotificationTime).inSeconds >= 15 && //15
               fcmToken != null) {
             print("User is on a Risk Zone");
             localLastNotificationTime = DateTime.now();

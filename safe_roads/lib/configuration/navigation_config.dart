@@ -35,8 +35,8 @@ class NavigationConfig {
   static Set<Map<String, dynamic>> detectedRiskZones = {};  
   static Map<Map<String, dynamic>, double> upcomingRisks = {}; // Store multiple risk points
 
-  static double mediumLowRisk = 0.1; //0.2
-  static double mediumRisk = 0.17; //0.3
+  static double mediumLowRisk = 0.2; //0.2
+  static double mediumRisk = 0.3; //0.3
   static double mediumHighRisk = 0.5;
   static double highRisk = 0.6;
 
