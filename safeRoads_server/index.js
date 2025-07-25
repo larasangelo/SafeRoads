@@ -445,8 +445,9 @@ app.post("/route", async (req, res) => {
           ? `${totalDistance.toFixed(0)} m`
           : `${(totalDistance / 1000).toFixed(2)} km`;
 
-      const totalHours = Math.floor(totalTime / 3600);
-      const remainingSeconds = totalTime % 3600;
+      const totalTimeWithBuffer = totalTime * 1.2; // Increase by 20% because the user inst alwasy going full speed
+      const totalHours = Math.floor(totalTimeWithBuffer / 3600);
+      const remainingSeconds = totalTimeWithBuffer % 3600;
       const totalMinutes = Math.round(remainingSeconds / 60);
       const formattedTime =
         totalHours > 0

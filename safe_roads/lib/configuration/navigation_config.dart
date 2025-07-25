@@ -23,9 +23,9 @@ class NavigationConfig {
   static List<dynamic> notifiedDivergences = [];
   static bool firstRiskDetected = false;
   static String defaultTime = "0 min";
-  static double cameraZoom = 19.0;
-  static double threshold = 0.0001;
-  static int animationSteps = 20;
+  static double cameraZoom = 17.0;
+  static double threshold = 0.001; //0.0001
+  static int animationSteps = 20; //20
   static int timePerStep = 50;
 
   static double routeDeviationThreshold = 50.0;

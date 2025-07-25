@@ -248,7 +248,7 @@ void onStart(ServiceInstance service) async {
               currentPosition.longitude, selectedSpecies);
 
           if (risk >= mediumRiskThreshold &&
-              DateTime.now().difference(localLastNotificationTime).inSeconds >= 5 && //15
+              DateTime.now().difference(localLastNotificationTime).inSeconds >= 20 && //15 dantes, 20 para nao receber com tanta frequencia
               fcmToken != null) {
             print("User is on a Risk Zone");
             localLastNotificationTime = DateTime.now();
