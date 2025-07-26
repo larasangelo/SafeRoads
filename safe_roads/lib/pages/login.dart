@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:provider/provider.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/main.dart';
@@ -154,6 +155,9 @@ class _LoginPageState extends State<LoginPage> {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setBool('isLoggedIn', true);
                         print("Login: Saved isLoggedIn = ${prefs.getBool('isLoggedIn')}");
+
+                        final service = FlutterBackgroundService();
+                        service.invoke('updateLoginStatus', {'isLoggedIn': true});
 
                         await initializeService();
 
