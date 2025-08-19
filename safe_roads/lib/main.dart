@@ -159,7 +159,7 @@ Future<void> requestLocationPermissions() async {
   }
 }
 
-const double mediumRiskThreshold = 0.17; //0.3
+const double mediumRiskThreshold = 0.3; //0.17 NO TESTE NAV
 const double highRiskThreshold = 0.5;
 DateTime lastNotificationTime = DateTime.now().subtract(Duration(seconds: 30));
 

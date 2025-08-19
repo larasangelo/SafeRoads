@@ -175,6 +175,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         // and trigger animation if needed.
         if (previousPosition != null && !isAnimating) {
           _animateMarker(previousPosition!, newPosition);
+          _updateRouteProgress();
         } else {
           setState(() {
             previousPosition = currentPosition;
@@ -205,7 +206,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         //   // This line is potentially redundant if `_updateRouteProgress` is already called
         //   // within the `setState` block above, or if `_animateMarker` calls it on completion.
         //   // Make sure it's called exactly once per location update.
-        //   // _updateRouteProgress(); // Consider if this is truly needed here or if _animateMarker handles it.
+        //   _updateRouteProgress(); // Consider if this is truly needed here or if _animateMarker handles it.
         // }
 
         // Check for off-route or risk zones
@@ -250,6 +251,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   }
 
   void _updateRouteProgress() {
+    print("Entro no _updateRouteProgress");
     if (currentPosition == null || routeCoordinates.isEmpty) {
       NavigationConfig.estimatedArrivalTime = ""; // Clear time if no route/position
       _remainingDistanceFormatted = "0 m";
