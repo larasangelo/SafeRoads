@@ -126,7 +126,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     NavigationConfig.currentRiskLevel = 0;
     NavigationConfig.detectedRiskZones.clear();  
     NavigationConfig.upcomingRisks.clear(); 
-    // _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
+    _startCompassListener(); //TODO: ESTAR EM COMENTÁRIO PARA O EMULADOR
     
     // print("enteringNewRiskZone: $enteringNewRiskZone");
     // print("NavigationConfig.enteringNewRiskZone: ${NavigationConfig.enteringNewRiskZone}");
@@ -164,15 +164,25 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
       if (loc.latitude != null && loc.longitude != null) {
         LatLng newPosition = LatLng(loc.latitude!, loc.longitude!);
 
+        // Calculate raw bearing first
+        double rawBearing = 0.0;
+        if (currentPosition != null) { // Use currentPosition as start for bearing calc
+          rawBearing = _calculateBearing(currentPosition!, newPosition);
+        }
+
+        // Apply smoothing
+        bearing = _smoothBearing(rawBearing); // Assign the smoothed bearing
+
         // Only update previousPosition if not currently animating,
         // and trigger animation if needed.
         if (previousPosition != null && !isAnimating) {
           _animateMarker(previousPosition!, newPosition);
+          _updateRouteProgress();
         } else {
           setState(() {
             previousPosition = currentPosition;
             currentPosition = newPosition;
-            // When not animating, update progress immediately after currentPosition changes
+            // bearing is already updated above
             _updateRouteProgress();
           });
         }
@@ -181,7 +191,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         if (NavigationConfig.isFirstLocationUpdate) { // Use NavigationConfig's flag
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (currentPosition != null) {
-              _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
+              // _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
+              _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
               NavigationConfig.isFirstLocationUpdate = false; // Update the flag
             }
           });
@@ -197,7 +208,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
         //   // This line is potentially redundant if `_updateRouteProgress` is already called
         //   // within the `setState` block above, or if `_animateMarker` calls it on completion.
         //   // Make sure it's called exactly once per location update.
-        //   // _updateRouteProgress(); // Consider if this is truly needed here or if _animateMarker handles it.
+        //   _updateRouteProgress(); // Consider if this is truly needed here or if _animateMarker handles it.
         // }
 
         // Check for off-route or risk zones
@@ -242,6 +253,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   }
 
   void _updateRouteProgress() {
+    print("Entro no _updateRouteProgress");
     if (currentPosition == null || routeCoordinates.isEmpty) {
       NavigationConfig.estimatedArrivalTime = ""; // Clear time if no route/position
       _remainingDistanceFormatted = "0 m";
@@ -358,7 +370,13 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
     // Only move the map if it's supposed to be centered
     if (_isMapCentered && currentPosition != null) {
-      _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
+      // Ensure bearing is calculated before moving and rotating the map
+      if (previousPosition != null && currentPosition != null) {
+        bearing = _calculateBearing(previousPosition!, currentPosition!);
+      }
+      // _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing); // Add bearing here
+      _mapController.move(currentPosition!, NavigationConfig.cameraZoom); // Add bearing here
+
     }
   }
 
@@ -491,7 +509,7 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
 
       // Only move the map during animation if it's supposed to be centered
       if (_isMapCentered) {
-        _mapController.move(intermediatePosition, 19.0); // bearing handled by compass
+        _mapController.move(intermediatePosition, NavigationConfig.cameraZoom); // bearing handled by compass
       }
     }
 
@@ -503,16 +521,19 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     });
   }
 
-  // New function to recenter the map
+  // Function to recenter the map
   void _recenterMap() {
     if (currentPosition != null) {
       setState(() {
         _isMapCentered = true;
       });
-      _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
-      if (_lastBearing != null) { // Apply bearing if compass is active
-        _mapController.rotate(_lastBearing!);
+      // Ensure bearing is updated before recentering if it might have changed
+      if (previousPosition != null && currentPosition != null) {
+        bearing = _calculateBearing(previousPosition!, currentPosition!);
       }
+      // _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing); // Use moveAndRotate
+      _mapController.move(currentPosition!, NavigationConfig.cameraZoom); // Add bearing here
+
     }
   }
 
@@ -838,12 +859,14 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     // Define notification message based on risk level
     if (riskValue > NavigationConfig.highRisk) {
       title = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgTitle')}: $speciesNames!";
-      body = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
+      // body = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgBody')}: $speciesNames.";
     } else {
       // This 'else' condition covers Medium-High, Medium, Medium-Low, and Low if needed.
       // Ensure NavigationConfig constants are used correctly for these ranges.
       title = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgTitle')}: $speciesNames ${LanguageConfig.getLocalizedString(languageCode, 'atRisk')}";
-      body = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
+      // body = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgBody')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgBody')}: $speciesNames.";
     }
 
     try {
@@ -889,10 +912,12 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
     // Define notification message based on risk level
     if (riskValue > NavigationConfig.highRisk) {
       title = "${LanguageConfig.getLocalizedString(languageCode, 'highRiskMsgTitle')}: $speciesNames!";
-      body = "${LanguageConfig.getLocalizedString(languageCode, 'warning')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
+      // body = "${LanguageConfig.getLocalizedString(languageCode, 'warning')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'caution')}";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'warning')}: $speciesNames.";
     } else {
       title = "${LanguageConfig.getLocalizedString(languageCode, 'mediumRiskMsgTitle')}: $speciesNames ${LanguageConfig.getLocalizedString(languageCode, 'atRisk')}";
-      body = "${LanguageConfig.getLocalizedString(languageCode, 'riskZoneHere')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
+      // body = "${LanguageConfig.getLocalizedString(languageCode, 'riskZoneHere')}: $speciesNames. ${LanguageConfig.getLocalizedString(languageCode, 'stayAlert')}";
+      body = "${LanguageConfig.getLocalizedString(languageCode, 'riskZoneHere')}: $speciesNames.";
     }
 
     try {
@@ -1138,7 +1163,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
                 onMapReady: () {
                   // This code runs AFTER the map is rendered and ready for interaction
                   if (currentPosition != null) {
-                    _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
+                    // _mapController.moveAndRotate(currentPosition!, NavigationConfig.cameraZoom, bearing);
+                    _mapController.move(currentPosition!, NavigationConfig.cameraZoom);
                     // Also update the initial progress here
                     _updateRouteProgress();
                   }

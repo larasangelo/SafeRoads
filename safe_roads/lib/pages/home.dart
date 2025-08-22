@@ -1404,7 +1404,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                                 LanguageConfig.getLocalizedString(languageCode, 'bestToAvoidRoadkill'),
                                                 style: TextStyle(
                                                   fontSize: MediaQuery.of(context).size.width * 0.03,
-                                                  color: Colors.grey[700],
+                                                  // color: Colors.grey[700],
                                                 ),
                                               );
                                             },

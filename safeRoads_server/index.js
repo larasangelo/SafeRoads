@@ -342,15 +342,28 @@ app.post("/route", async (req, res) => {
         const geojson = JSON.parse(row.geojson);
         const segmentDistance = parseFloat(row.length_m);
 
-        const speed =
-          row.reverse_cost === -1 ? row.maxspeed_forward : row.maxspeed_backward;
+        const maxSpeed = row.reverse_cost === -1 ? row.maxspeed_forward : row.maxspeed_backward;
 
-        if (!speed || speed <= 0) {
-          console.warn("Invalid speed value for segment, skipping:", row);
-          return;
+        if (!maxSpeed || maxSpeed <= 0) {
+            console.warn("Invalid maxSpeed value for segment, skipping:", row);
+            return;
         }
 
-        const speedMps = (speed * 1000) / 3600;
+        // Define a reduction factor (e.g., 80% of max speed)
+        const speedReductionFactor = 0.80; // Represents 80% of max speed
+        const effectiveSpeed = maxSpeed * speedReductionFactor; // Speed in km/h or m/s depending on maxSpeed unit
+
+        if (effectiveSpeed <= 0) {
+            console.warn("Effective speed is zero or negative after reduction, skipping:", row);
+            return;
+        }
+
+        const effectiveSpeed_mps = effectiveSpeed * 1000 / 3600; // Assuming maxSpeed is in km/h
+        const timeToTraverseSegment = segmentDistance / effectiveSpeed_mps;
+
+        console.log(`Segment: ${index}, Max Speed: ${maxSpeed} km/h, Effective Speed: ${effectiveSpeed.toFixed(2)} km/h, Time: ${timeToTraverseSegment.toFixed(2)} seconds`);
+
+        const speedMps = (effectiveSpeed * 1000) / 3600;
         const segmentTimeSeconds = segmentDistance / speedMps;
         totalTime += segmentTimeSeconds;
         totalDistance += segmentDistance;

@@ -149,11 +149,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
 
     if (shouldSignOut == true) {
       final prefs = await SharedPreferences.getInstance();
+      final service = FlutterBackgroundService();
       await prefs.setBool('isLoggedIn', false);
+      service.invoke('updateLoginStatus', {'isLoggedIn': false});
       await _authController.logout(); // Assuming _authController handles Firebase logout or similar
 
       // Stop the background service explicitly on logout
-      final service = FlutterBackgroundService();
       if (await service.isRunning()) {
         service.invoke("stopService"); // Send a message to the background isolate to stop itself
         print("Sent stop command to background service explicitly on user logout.");

@@ -30,7 +30,7 @@ class Notifications {
 
   StreamSubscription<RemoteMessage>? _messageSubscription;
   final Map<String, Timer> _debounceTimers = {}; // Debounce timers per notification type
-  final Duration _debounceDelay = const Duration(milliseconds: 500);
+  final Duration _debounceDelay = const Duration(milliseconds: 700);
 
   // Keep track of currently displayed overlay entries
   final Set<OverlayEntry> _currentOverlays = {};
@@ -188,7 +188,7 @@ class Notifications {
           builder: (context, setState) {
             animationController = AnimationController(
               vsync: Navigator.of(context),
-              duration: const Duration(seconds: 6),
+              duration: const Duration(seconds: 8), //Adjusted to 8 instead of 6
             );
 
             animationController.forward();
@@ -354,8 +354,7 @@ class Notifications {
     overlay.insert(overlayEntry);
     _currentOverlays.add(overlayEntry); // Keep track of the new overlay
 
-    Future.delayed(const Duration(seconds: 5), () async {
-      print("FUTURE isInteracted: $isInteracted");
+    Future.delayed(const Duration(seconds: 7), () { //Adjusted to 7 instead of 5
       if (_currentOverlays.contains(overlayEntry) && !isInteracted) {
         isInteracted = true;
         _removeOverlay(overlayEntry);

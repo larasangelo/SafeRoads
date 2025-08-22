@@ -162,7 +162,7 @@ Future<void> requestLocationPermissions() async {
   }
 }
 
-const double mediumRiskThreshold = 0.3; //0.3
+const double mediumRiskThreshold = 0.3; //0.17 NO TESTE NAV
 const double highRiskThreshold = 0.5;
 DateTime lastNotificationTime = DateTime.now().subtract(Duration(seconds: 30));
 
@@ -196,25 +196,34 @@ void onStart(ServiceInstance service) async {
   Timer? notificationTimer;
   DateTime localLastNotificationTime = DateTime.now().subtract(const Duration(seconds: 30));
 
-  Timer.periodic(const Duration(seconds: 20), (monitorTimer) async { //20
-    await prefs.reload(); // Always reload to get the latest SharedPreferences state
-    print("=== Background Check (onStart) ===");
+  bool isLoggedIn0 = prefs.getBool('isLoggedIn') ?? false; // Cached value controlled by message
 
-    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-    final isAppInForeground = prefs.getBool('isAppInForeground') ?? true; // Default to true if not set
+  service.on('updateLoginStatus').listen((event) {
+    final incoming = event?['isLoggedIn'];
+    if (incoming is bool) {
+      isLoggedIn0 = incoming;
+      print("Background service: isLoggedIn updated to $isLoggedIn0 via service event.");
+    }
+  });
 
-    // New Condition: Only proceed if logged in AND app is NOT in foreground
-    if (!isLoggedIn) {
+  Timer.periodic(const Duration(seconds: 10), (monitorTimer) async {
+    await prefs.reload(); // still needed for species, languageCode, etc.
+
+    final isAppInForeground = prefs.getBool('isAppInForeground') ?? true;
+
+    print("=== Background Check ===");
+    print("[Memory] isLoggedIn = $isLoggedIn0, isAppInForeground = $isAppInForeground");
+
+    if (!isLoggedIn0) {
       print("User is not logged in. Background service is active, but not performing driving checks.");
       if (notificationTimer != null) {
         notificationTimer?.cancel();
         notificationTimer = null;
-        print("Risk check timer cancelled as user is not logged in.");
+        print("Risk check timer cancelled because user is not logged in.");
       }
       return;
     }
 
-    // Now, check if the app is in the foreground. If it is, we don't run the risk checks.
     if (isAppInForeground) {
       print("User is logged in, but app is in foreground. Skipping background risk checks.");
       if (notificationTimer != null) {
@@ -225,8 +234,8 @@ void onStart(ServiceInstance service) async {
       return;
     }
 
-    // From this point onwards, we know the user IS logged in AND the app IS NOT in the foreground.
     print("User is logged in and app is in background. Performing background checks.");
+
 
     try {
       final position = await Geolocator.getCurrentPosition(
@@ -251,7 +260,7 @@ void onStart(ServiceInstance service) async {
               currentPosition.longitude, selectedSpecies);
 
           if (risk >= mediumRiskThreshold &&
-              DateTime.now().difference(localLastNotificationTime).inSeconds >= 15 && //15
+              DateTime.now().difference(localLastNotificationTime).inSeconds >= 20 && //15 dantes, 20 para nao receber com tanta frequencia
               fcmToken != null) {
             print("User is on a Risk Zone");
             localLastNotificationTime = DateTime.now();

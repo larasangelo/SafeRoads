@@ -23,9 +23,9 @@ class NavigationConfig {
   static List<dynamic> notifiedDivergences = [];
   static bool firstRiskDetected = false;
   static String defaultTime = "0 min";
-  static double cameraZoom = 19.0;
-  static double threshold = 0.0001;
-  static int animationSteps = 20;
+  static double cameraZoom = 17.0;
+  static double threshold = 0.001; //0.0001
+  static int animationSteps = 20; //20
   static int timePerStep = 50;
 
   static double routeDeviationThreshold = 50.0;
@@ -35,8 +35,8 @@ class NavigationConfig {
   static Set<Map<String, dynamic>> detectedRiskZones = {};  
   static Map<Map<String, dynamic>, double> upcomingRisks = {}; // Store multiple risk points
 
-  static double mediumLowRisk = 0.2; //0.2
-  static double mediumRisk = 0.3; //0.3
+  static double mediumLowRisk = 0.2; //0.1 NO TESTE NAV
+  static double mediumRisk = 0.3; //0.17 NO TESTE NAV
   static double mediumHighRisk = 0.5;
   static double highRisk = 0.6;
 
