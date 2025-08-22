@@ -1479,9 +1479,34 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
                                       ElevatedButton(
-                                        onPressed: () {
+                                        onPressed: () async { // Make the function async
                                           if (_routesWithPoints.containsKey(_selectedRouteKey)) {
                                             List<Map<String, dynamic>> selectedRoute = _routesWithPoints[_selectedRouteKey] ?? [];
+
+                                            // Determine which route was chosen for logging
+                                            String chosenRouteType = '';
+                                            if (_selectedRouteKey == 'adjustedRoute') {
+                                              chosenRouteType = 'adjustedRoute';
+                                            } else if (_selectedRouteKey == 'defaultRoute') {
+                                              chosenRouteType = 'defaultRoute';
+                                            } else {
+                                              chosenRouteType = 'unknown'; // Fallback for other cases
+                                            }
+
+                                            // Log the chosen route
+                                            final logService = LogService();
+                                            final sessionId = SessionManager().sessionId;
+                                            final destinationId = SessionManager().destinationId;
+
+                                            if (sessionId != null && destinationId != null) {
+                                              await logService.updateDestination(
+                                                sessionId: sessionId,
+                                                destinationId: destinationId,
+                                                updates: {
+                                                  'routeChosen': chosenRouteType,
+                                                },
+                                              );
+                                            }
 
                                             Navigator.push(
                                               context,
@@ -1499,11 +1524,10 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
                                           }
                                         },
                                         style: ElevatedButton.styleFrom(
-                                            backgroundColor: _selectedRouteKey == 'adjustedRoute' ||
-                                                    !_routesWithPoints.containsKey('adjustedRoute')
-                                                ? Colors.green
-                                                : Colors.orangeAccent,
-                                          ),
+                                          backgroundColor: _selectedRouteKey == 'adjustedRoute' || !_routesWithPoints.containsKey('adjustedRoute')
+                                              ? Colors.green
+                                              : Colors.orangeAccent,
+                                        ),
                                         child: Text(
                                           LanguageConfig.getLocalizedString(languageCode, 'start'),
                                           style: TextStyle(

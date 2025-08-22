@@ -354,7 +354,7 @@ class Notifications {
     overlay.insert(overlayEntry);
     _currentOverlays.add(overlayEntry); // Keep track of the new overlay
 
-    Future.delayed(const Duration(seconds: 7), () { //Adjusted to 7 instead of 5
+    Future.delayed(const Duration(seconds: 7), () async { //Adjusted to 7 instead of 5
       if (_currentOverlays.contains(overlayEntry) && !isInteracted) {
         isInteracted = true;
         _removeOverlay(overlayEntry);
