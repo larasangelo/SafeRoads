@@ -18,6 +18,7 @@ import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
 import 'package:safe_roads/session_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class NavigationPage extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> routesWithPoints;
@@ -104,6 +105,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
  @override
   void initState() {
     WidgetsBinding.instance.addObserver(this);
+    // Keep screen awake while navigation is active
+    WakelockPlus.enable();
     NavigationConfig.isNavigationActive = true;
     _setNavigationStatus(true);
     // Reset NavigationConfig values
@@ -1130,6 +1133,8 @@ class _NavigationPageState extends State<NavigationPage> with WidgetsBindingObse
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+   // Allow screen to sleep again when leaving
+    WakelockPlus.disable();
     NavigationConfig.isNavigationActive = false;
     _setNavigationStatus(false);
     // Cancel location updates
