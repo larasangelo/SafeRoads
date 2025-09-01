@@ -152,20 +152,21 @@ class _LoginPageState extends State<LoginPage> {
                         );
 
                         print("loginSuccess: $loginSuccess");
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('isLoggedIn', true);
-                        print("Login: Saved isLoggedIn = ${prefs.getBool('isLoggedIn')}");
-
-                        final service = FlutterBackgroundService();
-                        service.invoke('updateLoginStatus', {'isLoggedIn': true});
-
-                        await initializeService();
 
                         // Ensure the widget is still mounted before navigation
                         if (!context.mounted) return;
 
                         // Navigate based on login result
                         if (loginSuccess) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isLoggedIn', true);
+                          print("Login: Saved isLoggedIn = ${prefs.getBool('isLoggedIn')}");
+
+                          final service = FlutterBackgroundService();
+                          service.invoke('updateLoginStatus', {'isLoggedIn': true});
+
+                          await initializeService();
+
                           Navigator.pushReplacementNamed(context, '/navigation');
                         } else {
                           Navigator.pushReplacementNamed(context, '/login');
@@ -179,6 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                         }
                       }
                     },
+
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02), 

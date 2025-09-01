@@ -161,7 +161,11 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
       }
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/welcome',
+        (Route<dynamic> route) => false, // removes all previous routes
+      );
     }
   }
 
