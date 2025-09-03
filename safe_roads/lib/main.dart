@@ -236,7 +236,11 @@ void onStart(ServiceInstance service) async {
 
     try {
       final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
       final speed = position.speed;
       final isDriving = speed > 10.0;
 
@@ -252,7 +256,10 @@ void onStart(ServiceInstance service) async {
           final fcmToken = prefs.getString('fcmToken');
 
           final currentPosition = await Geolocator.getCurrentPosition(
-              desiredAccuracy: LocationAccuracy.high);
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+                ),
+              );
           final risk = await getRiskLevel(currentPosition.latitude,
               currentPosition.longitude, selectedSpecies);
 

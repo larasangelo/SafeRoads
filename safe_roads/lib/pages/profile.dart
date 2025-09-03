@@ -510,7 +510,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     );
   }
 
-  buildRiskNotificationDropdown() {
+  Padding buildRiskNotificationDropdown() {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
@@ -560,7 +560,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, Automati
     );
   }
 
-  buildRerouteNotificationDropdown() {
+  Padding buildRerouteNotificationDropdown() {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 

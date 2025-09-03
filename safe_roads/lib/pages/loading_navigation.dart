@@ -60,7 +60,7 @@ class _LoadingNavigationPageState extends State<LoadingNavigationPage> {
     final loc = await location.getLocation();
     currentPosition = LatLng(loc.latitude!, loc.longitude!);
 
-    print("formattedTime: ${widget.formattedTime}");
+    // print("formattedTime: ${widget.formattedTime}");
 
     // Wait 3 extra seconds to simulate map load (optional)
     await Future.delayed(const Duration(seconds: 3));

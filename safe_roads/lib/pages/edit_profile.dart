@@ -310,7 +310,7 @@ class _EditProfileState extends State<EditProfile> {
         ),
         if (_isUpdating)
           Container(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             child: const Center(child: CircularProgressIndicator()),
           ),
       ]),
