@@ -14,6 +14,8 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   bool _isRegistering = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   final AuthController _authController = AuthController();
 
@@ -21,6 +23,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  
 
   final _formKey = GlobalKey<FormState>();
 
@@ -100,9 +103,18 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                       filled: true,
-                      // fillColor: Theme.of(context).colorScheme.onPrimary,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                   ),
                   SizedBox(height: screenHeight * 0.02), 
                   // Confirm Password Field
@@ -114,9 +126,18 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.circular(10.0),
                       ),
                       filled: true,
-                      // fillColor: Theme.of(context).colorScheme.onPrimary,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
                     ),
-                    obscureText: true,
+                    obscureText: _obscureConfirmPassword,
                   ),
                   SizedBox(height: screenHeight * 0.03), 
                   // Register Button
@@ -194,7 +215,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         if (_isRegistering)
           Container(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             child: const Center(child: CircularProgressIndicator()),
           ),
       ])

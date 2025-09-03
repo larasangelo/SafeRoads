@@ -167,6 +167,7 @@ class _LoginPageState extends State<LoginPage> {
 
                           await initializeService();
 
+                          if (!context.mounted) return;
                           Navigator.pushReplacementNamed(context, '/navigation');
                         } else {
                           Navigator.pushReplacementNamed(context, '/login');

@@ -64,7 +64,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
     // If the current page is the "Home" page (MapPage at index 1)
     if (_selectedIndex == 1) {
       // Show confirmation dialog
-      final bool? shouldExit = await _showExitConfirmationDialog();
+      final bool shouldExit = await _showExitConfirmationDialog();
       if (shouldExit == true) {
         // If user confirms, exit the app
         SystemNavigator.pop();
@@ -81,7 +81,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
     String languageCode = Provider.of<UserPreferences>(context).languageCode;
     // Listen to the NavigationBarVisibility provider
     final navigationBarVisibility = Provider.of<NavigationBarVisibility>(context);
-    bool _showNavigationBar = navigationBarVisibility.isVisible; // Get state from provider
+    bool showNavigationBar = navigationBarVisibility.isVisible; // Get state from provider
 
     return PopScope(
       canPop: false,
@@ -108,7 +108,7 @@ class NavigationBarExampleState extends State<NavigationBarExample> {
             const Profile(),
           ],
         ),
-        bottomNavigationBar: _showNavigationBar // Use the state from the provider
+        bottomNavigationBar: showNavigationBar // Use the state from the provider
             ? NavigationBar(
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 selectedIndex: _selectedIndex,

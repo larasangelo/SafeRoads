@@ -12,7 +12,7 @@ import 'package:safe_roads/configuration/home_config.dart';
 import 'package:safe_roads/configuration/language_config.dart';
 import 'package:safe_roads/controllers/profile_controller.dart';
 import 'package:safe_roads/log_service.dart';
-import 'package:safe_roads/main.dart';
+// import 'package:safe_roads/main.dart';
 import 'package:safe_roads/models/navigation_bar_visibility.dart';
 import 'package:safe_roads/models/user_preferences.dart';
 import 'package:safe_roads/notifications.dart';
@@ -48,7 +48,7 @@ class _MapPageState extends State<MapPage> with TickerProviderStateMixin, Automa
   final ProfileController _profileController = ProfileController();
   Map<String, dynamic> userPreferences = HomeConfig.defaultUserPreferences;
   String _selectedRouteKey = HomeConfig.defaultRouteKey;
-  double _boxHeight = HomeConfig.defaultBoxHeight;
+  // double _boxHeight = HomeConfig.defaultBoxHeight;
   double mediumLowRisk = HomeConfig.mediumLowRisk;
   double mediumRisk = HomeConfig.mediumRisk;
   double mediumHighRisk = HomeConfig.mediumHighRisk;
