@@ -163,7 +163,7 @@ Future<void> requestLocationPermissions() async {
 }
 
 const double mediumRiskThreshold = 0.3; //0.17 NO TESTE NAV
-const double highRiskThreshold = 0.5;
+const double highRiskThreshold = 0.6;
 DateTime lastNotificationTime = DateTime.now().subtract(Duration(seconds: 30));
 
 @pragma('vm:entry-point')

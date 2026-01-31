@@ -15,5 +15,8 @@
     "express": "^4.21.2",
     "firebase-admin": "^12.7.0",
     "pg": "^8.13.1"
+  },
+  "overrides": {
+    "fast-xml-parser": "^5.3.4"
   }
 }

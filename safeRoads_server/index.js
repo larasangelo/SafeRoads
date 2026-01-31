@@ -426,8 +426,8 @@ app.post("/route", async (req, res) => {
       const getRiskCategory = (value) => {
         if (value >= 0.6) return 'high';
         if (value >= 0.5) return 'mediumHigh';
-        if (value >= 0.17) return 'medium'; //0.3
-        if (value >= 0.1) return 'mediumLow'; //0.2
+        if (value >= 0.3) return 'medium'; //0.17
+        if (value >= 0.2) return 'mediumLow'; //0.1
         return 'low';
       };
 
